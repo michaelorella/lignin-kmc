@@ -309,3 +309,32 @@ def analyze(adjacency = None, nodes = None):
 
     return {'Chain Lengths':yields,'Bonds':bondDistributions,
             'RCF Yields':rcfYields,'RCF Bonds':rcfBonds}
+
+def degree(adj):
+    '''
+    Determines the degree for each monomer within the polymer chain. The "degree" concept in graph theory
+    is the number of edges connected to a node. In the context of lignin, that is simply the number of
+    connected residues to a specific residue, and can be used to determine derived properties like the
+    branching coefficient.
+
+    Inputs:
+        adj     -- DOK_MATRIX   -- the adjacency matrix for the lignin polymer that has been simulated
+
+    Outputs:
+        The degree for each monomer as a numpy array.
+    '''
+    return np.bincount(adj.nonzero()[0])
+
+def branchingcoefficient(adj):
+    '''
+    Based on the definition in Dellon et al. (10.1021/acs.energyfuels.7b01150), this is the number of
+    monomers with degree 3 or more divided by the total number of monomers.
+
+    Inputs:
+        adj     -- DOK_MATRIX   -- the adjacency matrix for the lignin polymer that has been simulated
+
+    Outputs:
+        The branching coefficient that corresponds to the adjacency matrix.
+    '''
+    degrees = degree(adj)
+    return np.sum(degrees >= 3) / len(degrees)

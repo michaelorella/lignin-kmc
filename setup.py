@@ -8,5 +8,5 @@ setup(name='ligninkmc',
 	license='MIT',
 	packages=['ligninkmc'],
 	python_requires=">3.6", #Required for f-strings support.
-	install_requires=['scipy', 'numpy', 'matplotlib', 'joblib', 'ipython'], #rdkit isn't installable via pip.
+	install_requires=['scipy', 'numpy', 'matplotlib', 'joblib', 'ipython', 'networkx'], #rdkit isn't installable via pip.
 	zip_safe=False)
