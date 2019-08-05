@@ -384,7 +384,10 @@ def run(nMax = 10 , tFinal = 10, rates = None, initialState = None, initialEvent
     #Build the dictionary of events
     eventDict = {}
     for event in events:
-        rvec[hash(event)] = event.rate / n
+        if event.key == 'grow':
+            rvec[hash(event)] = event.rate
+        else:
+            rvec[hash(event)] = event.rate / n
         eventDict[hash(event)] = event
 
     if dynamics:
