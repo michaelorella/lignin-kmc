@@ -1,5 +1,5 @@
 import sys
-if 'rdkit' in sys.modules:
+try:
     from rdkit import Chem
     from rdkit.Chem import AllChem
     from rdkit.Chem import Draw
@@ -8,8 +8,16 @@ if 'rdkit' in sys.modules:
     from rdkit.Chem.Draw import IPythonConsole
     from rdkit.Chem.Draw.MolDrawing import MolDrawing, DrawingOptions
     DrawingOptions.bondLineWidth = 1.2
-if 'networkx' in sys.modules:
+    hasRDKit = True
+except ImportError:
+    hasRDKit = False
+try:
     import networkx as nx
+    #This function depends on the sparse matrix library.
+    import scipy.sparse as sp
+    hasNetworkX = True
+except ImportError:
+    hasNetworkX = False
 import itertools
 import re
 
@@ -441,8 +449,11 @@ def generatePsfgen(adj, monomers, fname="psfgen.tcl", segname="L", toppardirecto
             raise ValueError
     fout.write("regenerate angles dihedrals\nwritepsf %s.psf" % segname)
     fout.close()
-if 'rdkit' in sys.modules:
+if hasRDKit:
     def moltosvg(mol,molSize=(450,150),kekulize=True):
+        '''
+        Using the RDKit library, draws a representation of the generated molecule.
+        '''
         mc = Chem.Mol(mol.ToBinary())
         if kekulize:
             try:
@@ -460,7 +471,14 @@ if 'rdkit' in sys.modules:
         drawer.FinishDrawing()
         svg = drawer.GetDrawingText()
         return svg.replace('svg:','')
-if 'networkx' in sys.modules:
+else:
+    def moltosvg(mol,molSize=(450,150),kekulize=True):
+        '''
+        This would normally generate a representation of the molecule, but RDKit is not installed.
+        '''
+        print("RDKit not available!")
+        return None
+if hasNetworkX:
     def generateGraphRepresentation(adj,nodeList):
         '''
         Creates a directed graph in NetworkX for a simplified representation of the lignin topology.
