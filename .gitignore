@@ -1,0 +1,6 @@
+/dist/
+/lignin-kmc.iml
+/ligninkmc.egg-info/
+/.idea/
+/build/
+ligninkmc/__pycache__/
