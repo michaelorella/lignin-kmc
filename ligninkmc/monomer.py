@@ -1,6 +1,7 @@
 # !/usr/bin/env python
 # coding=utf-8
 
+
 class Monomer:
     """
     Class definition for monomer objects. This is highly generic such that it can be easily extended to more types of

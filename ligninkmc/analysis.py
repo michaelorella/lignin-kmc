@@ -17,6 +17,7 @@ analysis = kmc.analyze( adjacency = adj , nodes = mons )
 import scipy.sparse as sp
 import numpy as np
 from collections import Counter
+from ligninkmc.kmc_common import (AO4, B1, B1_ALT, B5, BB, BO4, C5C5, C5O4)
 
 
 ################################################################################
@@ -131,7 +132,7 @@ def break_bond(adj=None, bond_type=None):
 
     a = sp.dok_matrix((5,5))
     a[1,0] = 4; a[0,1] = 8; a[2,3] = 8; a[3,2] = 8;
-    breakBond(a,'bo4').todense()
+    breakBond(a,BO4).todense()
 
     [[0,0,0,0,0],
      [0,0,0,0,0],
@@ -144,7 +145,7 @@ def break_bond(adj=None, bond_type=None):
                       [0,8,0,0,0],
                       [0,0,0,0,0],
                       [0,0,0,0,0]])
-   breakBond(a, 'b1alt')
+   breakBond(a, B1_ALT)
 
     [[0,0,0,0,0],
      [0,0,1,0,0],
@@ -161,28 +162,26 @@ def break_bond(adj=None, bond_type=None):
     """
     new_adj = adj.todok(1)  # Copy the matrix into a new matrix
 
-    breakage = {'b1': (lambda row, col: (adj[(row, col)] == 1 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
-                                                                                            adj[(col, row)] == 1)),
-                'b1alt': (lambda row, col: (adj[(row, col)] == 1 and
-                                            adj[(col, row)] == 8) or
-                                           (adj[(row, col)] == 8 and
-                                            adj[(col, row)] == 1)),
-                'b5': (lambda row, col: (adj[(row, col)] == 5 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
-                                                                                            adj[(col, row)] == 5)),
-                'bo4': (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
-                                                                                             adj[(col, row)] == 4)),
-                'ao4': (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 7) or (adj[(row, col)] == 7 and
-                                                                                             adj[(col, row)] == 4)),
-                '5o4': (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 5) or (adj[(row, col)] == 5 and
-                                                                                             adj[(col, row)] == 4)),
-                'bb': (lambda row, col: (adj[(row, col)] == 8 and adj[(col, row)] == 8)),
-                '55': (lambda row, col: (adj[(row, col)] == 5 and adj[(col, row)] == 5))}
+    breakage = {B1: (lambda break_row, col: (adj[(break_row, col)] == 1 and adj[(col, break_row)] == 8) or
+                                            (adj[(break_row, col)] == 8 and adj[(col, break_row)] == 1)),
+                B1_ALT: (lambda break_row, col: (adj[(row, col)] == 1 and adj[(col, row)] == 8) or
+                                          (adj[(row, col)] == 8 and adj[(col, row)] == 1)),
+                B5: (lambda row, col: (adj[(row, col)] == 5 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
+                                                                                          adj[(col, row)] == 5)),
+                BO4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
+                                                                                           adj[(col, row)] == 4)),
+                AO4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 7) or (adj[(row, col)] == 7 and
+                                                                                           adj[(col, row)] == 4)),
+                C5O4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 5) or (adj[(row, col)] == 5 and
+                                                                                            adj[(col, row)] == 4)),
+                BB: (lambda row, col: (adj[(row, col)] == 8 and adj[(col, row)] == 8)),
+                C5C5: (lambda row, col: (adj[(row, col)] == 5 and adj[(col, row)] == 5))}
 
     for el in adj.keys():
         row = el[0]
         col = el[1]
 
-        if breakage[bond_type](row, col) and bond_type != 'b1alt':
+        if breakage[bond_type](row, col) and bond_type != B1_ALT:
             new_adj[(row, col)] = 0
             new_adj[(col, row)] = 0
         elif breakage[bond_type](row, col):
@@ -215,14 +214,14 @@ def count_bonds(adj=None):
                             [0,0,0,8,0]] )
     countBonds(a)
 
-    { 'bo4':2 , 'b1' : 0 , 'bb' : 1 , 'b5' : 1 , '55' : 0 , 'ao4' : 0 , '5o4' : 0 }
+    { BO4:2 , B1 : 0 , BB : 1 , B5 : 1 , C5C5 : 0 , AO4: 0 , C5O4 : 0 }
     :param adj: DOK_MATRIX   -- the adjacency matrix for the lignin polymer that has been simulated
     :return: dictionary mapping bond strings to the frequency of that specific bond
     """
-    count = {'bo4': 0, 'b1': 0, 'bb': 0, 'b5': 0, '55': 0, 'ao4': 0, '5o4': 0}
-    bonds = {(4, 8): 'bo4', (8, 4): 'bo4', (8, 1): 'b1', (1, 8): 'b1', (8, 8): 'bb', (5, 5): '55', (8, 5): 'b5',
-             (5, 8): 'b5', (7, 4): 'ao4',
-             (4, 7): 'ao4', (5, 4): '5o4', (4, 5): '5o4'}
+    count = {BO4: 0, B1: 0, BB: 0, B5: 0, C5C5: 0, AO4: 0, C5O4: 0}
+    bonds = {(4, 8): BO4, (8, 4): BO4, (8, 1): B1, (1, 8): B1, (8, 8): BB, (5, 5): C5C5, (8, 5): B5,
+             (5, 8): B5, (7, 4): AO4,
+             (4, 7): AO4, (5, 4): C5O4, (4, 5): C5O4}
 
     for el in sp.triu(adj).todok().keys():  # Don't double count by looking only at the upper triangular keys
         row = el[0]
@@ -310,7 +309,7 @@ def analyze(adjacency=None, nodes=None):
 
     # Remove any excess b1 bonds from the matrix, e.g. bonds that should be
     # broken during synthesis
-    adjacency = break_bond(adj=adjacency, bond_type='b1alt')
+    adjacency = break_bond(adj=adjacency, bond_type=B1_ALT)
 
     # Examine the initial polymers before any bonds are broken
     yields = count_yields(adj=adjacency)
@@ -318,8 +317,8 @@ def analyze(adjacency=None, nodes=None):
 
     # Simulate the RCF process at complete conversion by breaking all of the
     # alkyl C-O bonds that were formed during the reaction
-    rcf_adj = break_bond(adj=break_bond(adj=break_bond(adj=adjacency, bond_type='bo4'), bond_type='ao4'),
-                         bond_type='5o4')
+    rcf_adj = break_bond(adj=break_bond(adj=break_bond(adj=adjacency, bond_type=BO4), bond_type=AO4),
+                         bond_type=C5O4)
 
     # Now count the bonds and yields remaining
     rcf_yields = count_yields(adj=rcf_adj)

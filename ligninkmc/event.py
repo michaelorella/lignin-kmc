@@ -1,6 +1,8 @@
 # !/usr/bin/env python
 # coding=utf-8
 
+from ligninkmc.kmc_common import (AO4, B1, B5, BB, BO4, C5C5, C5O4)
+
 
 class Event:
     """
@@ -11,7 +13,7 @@ class Event:
 
     ATTRIBUTES:
         key     -- str  --  Name of the bond that is being formed using the traditional nomenclature
-                            (e.g. '5o4', 'bo4', '55' etc.)
+                            (e.g. C5o4, BO4, C5C5 etc.)
         index   -- list --  N x 1 list of integers containing the unique monomer identifiers involved in the reaction
                             (N = 2 for bimolecular, 1 for unimolecular)
         rate    -- float--  Scalar floating point value with the rate of this particular reaction event
@@ -26,13 +28,13 @@ class Event:
     """
     # create dictionary that maps event keys onto numerical changes in monomer
     # state where the value is a tuple of (new reactant active point,openPos0,openPos1)
-    eventDict = {'bo4': ((-1, 7), (), (7,)),
-                 'bb': ((0, 0), (), ()),
-                 '55': ((0, 0), (), ()),
-                 '5o4': ((-1, 0), (), ()),
-                 'b5': ((-1, 0), (), ()),
-                 'b1': ((0, 7), (), (7,)),
-                 'ao4': ((-1, 4), (), ()),
+    eventDict = {BO4: ((-1, 7), (), (7,)),
+                 BB: ((0, 0), (), ()),
+                 C5C5: ((0, 0), (), ()),
+                 C5O4: ((-1, 0), (), ()),
+                 B5: ((-1, 0), (), ()),
+                 B1: ((0, 7), (), (7,)),
+                 AO4: ((-1, 4), (), ()),
                  'q': (0, (1,), ()),
                  'ox': (4, (), ())
                  }
