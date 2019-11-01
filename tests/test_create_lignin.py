@@ -3,6 +3,8 @@
 import logging
 import os
 import unittest
+from ligninkmc import Monomer
+from ligninkmc.kineticMonteCarlo import run_kmc
 from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, DEF_E_A_KCAL_MOL)
 from ligninkmc.kmc_common import TEMP, E_A_KCAL_MOL, E_A_J_PART, C5O4, OX, Q, C5C5, B5, BB, BO4, AO4, B1, MON_MON, \
     MON_DIM, DIM_DIM, DIM_MON, MONOMER, DIMER
@@ -89,3 +91,48 @@ class TestCalcRates(unittest.TestCase):
             print(e)
             print("Error when looking at rxn_type: {} substrate: {}    substrate_type:    {}"
                   "".format(rxn_type, substrate, substrate_type))
+
+
+class TestMonomers(unittest.TestCase):
+    def testCreateConiferyl(self):
+        good_mon_out = '0: coniferyl alcohol is connected to unit {0} and active at position 0'
+        mon = Monomer(0, 0)  # Makes a guaiacol unit monomer with ID = 0
+        self.assertTrue(mon == good_mon_out)
+
+    def testCreateSyringol(self):
+        # good_mon_out = '0: coniferyl alcohol is connected to unit {0} and active at position 0'
+        mon = Monomer(1, 2)  # Makes a syringol unit monomer with ID = 2
+        # self.assertTrue(mon == good_mon_out)
+        print(mon)
+
+    def testCreateCaffeoyl(self):
+        # good_mon_out = '0: coniferyl alcohol is connected to unit {0} and active at position 0'
+        mon = Monomer(2, 0)  # Makes a caffeoyl unit monomer with ID = 0
+        # self.assertTrue(mon == good_mon_out)
+        print(mon)
+
+    # def test_adj_matrix(self):
+    #     pct_s = .5
+    #     num_monos = 4
+    #     np.random.seed(10)
+    #     monomer_draw = np.random.rand(num_monos)
+    #     initial_monomers = [Monomer(int(s_or_g < pct_s), i) for i, s_or_g in zip(range(num_monos), monomer_draw)]
+    #     # #  To show the state, we will print the adjacency matrix that has been generated,
+    #     # #  although this is not the typical output examined.
+    #     # print(res[ADJ_MATRIX].to_dense())
+    #     print(initial_monomers)
+    #     pass
+
+
+# class TestRunKMC(unittest.TestCase):
+#     def test_adj_matrix(self):
+#         initial_monomers = [Monomer(int(s_or_g < pct_s), i) for i, s_or_g in zip(range(num_monos), monomer_draw)]
+#         ini_events = None
+#         ini_state = None
+#         residues = run_kmc(n_max=10, t_final=1, rates=GOOD_RXN_RATES, initial_state=ini_state,
+#                            initial_events=ini_events)
+#         # #  To show the state, we will print the adjacency matrix that has been generated,
+#         # #  although this is not the typical output examined.
+#         # print(res[ADJ_MATRIX].todense())
+#         print(residues)
+#         pass

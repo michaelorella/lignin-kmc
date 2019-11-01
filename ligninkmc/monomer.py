@@ -1,6 +1,8 @@
 # !/usr/bin/env python
 # coding=utf-8
 
+from ligninkmc.kmc_common import (MONOLIG_OHS)
+
 
 class Monomer:
     """
@@ -67,14 +69,12 @@ class Monomer:
         self.connectedTo = {i}
 
     def __str__(self):
-        trans = {0: 'coniferyl', 1: 'sinapyl', 2: 'caffeoyl'}
-        return f'{self.identity}: {trans[self.type]} alcohol is connected to {self.connectedTo} and active ' \
-               f'at {self.active}'
+        return f'{self.identity}: {MONOLIG_OHS[self.type]} alcohol is connected to unit {self.connectedTo} and ' \
+               f'active at position {self.active}'
 
     def __repr__(self):
-        trans = {0: 'coniferyl', 1: 'sinapyl', 2: 'caffeoyl'}
-        representation = f'{self.identity}: {trans[self.type]} alcohol \n'
-        return representation
+        # representation
+        return f'{self.identity}: {MONOLIG_OHS[self.type]} alcohol \n'
 
     def __eq__(self, other):  # Always compare monomers by identity alone. This should always be a unique identifier
         return self.identity == other.identity

@@ -1,13 +1,20 @@
 # !/usr/bin/env python
 # coding=utf-8
 
-# monolignol types
-G = 'G'
-S = 'S'
-C = 'C'
+# lignin subunits (phenylpropanoids)
+G = 'G'  # guaiacol (coniferyl)
+S = 'S'  # syringyl (sinapyl)
+C = 'C'  # caffeoyl
+H = 'H'  # p-hydroxyphenyl
 S4 = 'S4'
 G4 = 'G4'
 G7 = 'G7'
+LIGNIN_SUBUNITS = {0: G, 1: S, 2: C, 3: H}
+MONOLIG_OHS = {0: 'coniferyl', 1: 'sinapyl', 2: 'caffeoyl', 3: 'p-coumaryl'}
+SG_RATIO = 'sg_ratio'
+INI_MONOS = 'initial_num_monomers'
+MAX_MONOS = 'max_num_monomers'
+SIM_TIME = 'length_sim'
 
 # bond types
 AO4 = 'ao4'
@@ -21,7 +28,7 @@ C5O4 = '5o4'
 
 # reaction types
 Q = 'q'
-OX = 'ox'
+OX = 'oxidation'
 GROW = 'grow'
 
 DIMER = 'dimer'
@@ -35,3 +42,8 @@ TIME = 'time'
 TEMP = 'temperature_in_K'
 E_A_KCAL_MOL = 'e_a_in_kcal_mol'
 E_A_J_PART = 'e_a_in_j_particle'
+
+AFFECTED = 'affected'
+ADJ_MATRIX = 'adjacency_matrix'
+MONO_LIST = 'monomers'
+MONOMER_TYPES = 'monomer_types'

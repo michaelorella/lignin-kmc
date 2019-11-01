@@ -10,12 +10,18 @@ import numpy as np
 from configparser import ConfigParser
 from common_wrangler.common import (warning, process_cfg, MAIN_SEC, GOOD_RET, INPUT_ERROR, IO_ERROR, KB, H,
                                     KCAL_MOL_TO_J_PART)
-from ligninkmc.kmc_common import (E_A_KCAL_MOL, E_A_J_PART,
-                                  TEMP, AO4, B1, B5, BB, BO4, C5O4, C5C5, OX, Q, MONOMER, DIMER)
+from ligninkmc.event import Event
+from ligninkmc.monomer import Monomer
+from ligninkmc.kineticMonteCarlo import run_kmc
+from ligninkmc.kmc_common import (E_A_KCAL_MOL, E_A_J_PART, TEMP, INI_MONOS, MAX_MONOS, SIM_TIME, AFFECTED, GROW,
+                                  AO4, B1, B5, BB, BO4, C5O4, C5C5, OX, Q, MONOMER, DIMER, SG_RATIO,
+                                  ADJ_MATRIX, MONOMER_TYPES)
 
-# Defaults
+# Defaults #
+
 DEF_TEMP = 298.15  # K
-
+DEF_MAX_MONOS = 10  # number of monomers
+DEF_SIM_TIME = 1  # simulation time in seconds
 # Default activation energies input in kcal/mol from Gani et al., ACS Sustainable Chem. Eng. 2019, 7, 15, 13270-13277,
 #     https://doi.org/10.1021/acssuschemeng.9b02506,
 #     as described in Orella et al., ACS Sustainable Chem. Eng. 2019, https://doi.org/10.1021/acssuschemeng.9b03534 
@@ -58,8 +64,14 @@ DEF_E_A_KCAL_MOL = {C5O4: {(0, 0): {(MONOMER, MONOMER): 11.2, (MONOMER, DIMER): 
                     OX: {0: {MONOMER: 0.9, DIMER: 6.3}, 1: {MONOMER: 0.6, DIMER: 2.2}},
                     Q: {0: {MONOMER: 11.1, DIMER: 11.1}, 1: {MONOMER: 11.7, DIMER: 11.7}}}
 DEF_E_A_KCAL_MOL[BB][(0, 1)] = DEF_E_A_KCAL_MOL[BB][(1, 0)]
+DEF_SG = 1
+DEF_INI_MONOS = 2
+DEF_INI_RATE = 1e4
 
-DEF_CFG_VALS = {TEMP: DEF_TEMP, E_A_KCAL_MOL: DEF_E_A_KCAL_MOL, E_A_J_PART: None,
+# Keys needed for simulation
+
+DEF_CFG_VALS = {TEMP: DEF_TEMP, E_A_KCAL_MOL: DEF_E_A_KCAL_MOL, E_A_J_PART: None, SG_RATIO: DEF_SG,
+                MAX_MONOS: DEF_MAX_MONOS, SIM_TIME: DEF_SIM_TIME, INI_MONOS: DEF_INI_MONOS,
                 }
 REQ_KEYS = {}
 
@@ -80,6 +92,15 @@ def read_cfg(f_loc, cfg_proc=process_cfg):
         return DEF_CFG_VALS
 
     main_proc = cfg_proc(dict(config.items(MAIN_SEC)), DEF_CFG_VALS, REQ_KEYS)
+    # TODO: overwrite main_proc vals if specified on command line
+    # # if these values are not changed with the  is set on the command line, overwrite from config file or default
+    # if args.temp != DEF_TEMP:
+    #     # noinspection PyStatementEffect
+    #     args.config[TEMP] == args.temp
+    #     if args.temp != DEF_TEMP:
+    #         pass
+    # # noinspection PyStatementEffect
+    # args.config[TEMP] == args.temp
 
     return main_proc
 
@@ -97,16 +118,23 @@ def parse_cmdline(argv=None):
     parser.add_argument("-c", "--config", help="The location of the configuration file in ini format. This file "
                                                "can be used to overwrite default values such as for energies.",
                         default=None, type=read_cfg)
+    parser.add_argument("-i", "--initial_num_monomers", help="The initial number of monomers to be included in the "
+                                                             "simulation. The default is {}.".format(DEF_INI_MONOS),
+                        default=DEF_INI_MONOS)
+    parser.add_argument("-l", "--length_simulation", help="The length of simulation (simulation time) in seconds. The"
+                                                          "default is {} s.".format(DEF_SIM_TIME), default=DEF_SIM_TIME)
+    parser.add_argument("-m", "--max_num_monomers", help="The maximum number of monomers to be studied. The default "
+                                                         "value is {}.".format(DEF_MAX_MONOS), default=DEF_MAX_MONOS)
+    parser.add_argument("-sg", "--sg_ratio", help="The S:G (guaiacol:syringyl) ratio. "
+                                                  "The default is {}.".format(DEF_SG), default=DEF_SG)
     parser.add_argument("-t", "--temp", help="The temperature (in K) at which lignin biosynthesis should be modeled. "
                                              "The default is {} K.".format(DEF_TEMP), default=DEF_TEMP)
+    parser.add_argument("-r", "--random_seed", help="Random seed to be used (e.g. for testing mode).", default=None)
 
     args = None
     try:
         args = parser.parse_args(argv)
-        # if temperature is set on the command line, overwrite from config file or default
-        if args.temp != DEF_TEMP:
-            # noinspection PyStatementEffect
-            args.config[TEMP] == args.temp
+
     except (KeyError, IOError, SystemExit) as e:
         if hasattr(e, 'code') and e.code == 0:
             return args, GOOD_RET
@@ -132,16 +160,6 @@ def calc_rates(cfg):
                                    for sub_type in cfg[E_A_KCAL_MOL][rxn_type][substrate]}
                        for substrate in cfg[E_A_KCAL_MOL][rxn_type]} for rxn_type in cfg[E_A_KCAL_MOL]}
     # TODO: check if need to change to solution state...
-    # the nested loop below was only for debugging
-    # for bond_type in cfg[E_A_KCAL_MOL].keys():
-    #     for substrate in cfg[E_A_KCAL_MOL][bond_type]:
-    #         kcal_mon_typ_dict = cfg[E_A_KCAL_MOL][bond_type][substrate]
-    #         joul_mon_typ_dict = cfg[E_A_J_PART][bond_type][substrate]
-    #         for linked_species in kcal_mon_typ_dict:
-    #             print("bond_type: {:>3}    substrate: {}    linked_species: {:>22}    ea kcal/mol: {:5.2f}    "
-    #                   "ea j/particle: {:.2e}".format(bond_type, substrate, str(linked_species),
-    #                                                  kcal_mon_typ_dict[linked_species],
-    #                                                  joul_mon_typ_dict[linked_species]))
     rxn_rates = {}
     for rxn_type in cfg[E_A_J_PART]:
         rxn_rates[rxn_type] = {}
@@ -165,11 +183,36 @@ def main(argv=None):
         return ret
 
     cfg = args.config
-    print(cfg)
 
     try:
+        # need rates before we can start modeling reactions
         rxn_rates = calc_rates(cfg)
-        print(rxn_rates)
+
+        # decide on initial monomers, based on given SG_RATIO
+        pct_s = cfg[SG_RATIO] / (1 + cfg[SG_RATIO])
+        if args.random_seed:
+            np.random.seed(args.random_seed)
+        num_monos = cfg[INI_MONOS]
+        monomer_draw = np.random.rand(num_monos)
+        initial_monomers = [Monomer(int(s_or_g < pct_s), i) for i, s_or_g in zip(range(num_monos), monomer_draw)]
+
+        # starting event must be oxidation to create reactive species; both have a chance of being oxidized
+        starting_event = [Event(OX, [i], rxn_rates[OX][int(s_or_g < pct_s)][MONOMER])
+                          for i, s_or_g in zip(range(num_monos), monomer_draw)]
+
+        # When the monomers and starting events have been initialized, they are grouped into the "state" and "events"
+        # which are necessary to start the simulation. The final pieces of information needed to run_kmc the simulation
+        # are the maximum number of monomers that should be studied and the final simulation time.
+        ini_state = {i: {MONOMER_TYPES: initial_monomers[i], AFFECTED: {starting_event[i]}} for i in range(num_monos)}
+        ini_events = {starting_event[i] for i in range(num_monos)}
+        ini_events.add(Event(GROW, [], rate=DEF_INI_RATE, bond=cfg[SG_RATIO]))
+
+        # begin simulation
+        res = run_kmc(n_max=cfg[MAX_MONOS], t_final=cfg[SIM_TIME], rates=rxn_rates, initial_state=ini_state,
+                      initial_events=ini_events)
+        #  To show the state, we will print the adjacency matrix that has been generated,
+        #  although this is not the typical output examined.
+        print(res[ADJ_MATRIX].todense())
 
     except IOError as e:
         warning("Problems reading file: {}".format(e))

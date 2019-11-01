@@ -132,7 +132,7 @@ def break_bond(adj=None, bond_type=None):
 
     a = sp.dok_matrix((5,5))
     a[1,0] = 4; a[0,1] = 8; a[2,3] = 8; a[3,2] = 8;
-    breakBond(a,BO4).todense()
+    breakBond(a,BO4).to_dense()
 
     [[0,0,0,0,0],
      [0,0,0,0,0],

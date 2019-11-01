@@ -2,9 +2,8 @@
 # coding=utf-8
 
 """
-Written by:     Michael Orella
-Original:       6 June 2018
-Last Edited:    21 December 2018
+Written:        2018-06-06 Michael Orella
+Last Edited:    2019-11-01 by Heather Mayes
 
 Code base for simulating the in planta polymerization of monolignols through generic Gillepsie algorithm adaptations.
 Monolignols can be handled as either coniferyl alcohol, sinapyl alcohol, or caffeoyl alcohol, however extensions should
@@ -17,24 +16,19 @@ mons = [ kmc.Monomer ( 1 , i ) for i in range(5) ]
 startEvs = [ kmc.Event ( 'ox' , [i] , rates['ox'][1]['monomer'] ) for i in range(5) ]
 state = { mons[i] : {startEvents[i]} for i in range(5) }
 events = { startEvents[i] for i in range(5) }
-events.add( kmc.Event( GROW , [ ] , rate = 0 , bond = 1 ) )
-res = kmc.run( tFinal = 1e9 , rates = rates, initialState = state, initialEvents = events)
+events.add( kmc.Event(GROW, [ ], rate =0, bond=1))
+res = kmc.run_kmc(tFinal = 1e9, rates=rates, initialState=state, initialEvents=events)
 
 {'monomers': _____ , 'adjacency_matrix': _______ , TIME: ______ }
 """
 
-# Import python packages for data processing
 import scipy.sparse as sp
 import numpy as np
-
-# Import classes in this package
+import copy
 from ligninkmc.event import Event
 from ligninkmc.monomer import Monomer
-from ligninkmc.kmc_common import (AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q, GROW, TIME, DIMER, MONOMER)
-
-import copy
-
-AFFECTED = 'affected'
+from ligninkmc.kmc_common import (AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q, GROW, TIME, DIMER, MONOMER, AFFECTED,
+                                  ADJ_MATRIX, MONO_LIST)
 
 
 def quick_frag_size(monomer=None):
@@ -52,7 +46,7 @@ def quick_frag_size(monomer=None):
         return MONOMER
     elif monomer.type == 1 and monomer.open == {4, 8}:  # Syringol monomer
         return MONOMER
-    elif monomer.type == 2 and monomer.open == {4, 5, 8}:
+    elif monomer.type == 2 and monomer.open == {4, 5, 8}:  # Caffeoyl monomer
         return MONOMER
     return DIMER
 
@@ -116,7 +110,7 @@ def update_events(monomers=None, adj=None, last_event=None, events=None, rate_ve
         # This prevents having to re-search the entire space every time, saving significant computation
         for monId in affected_monomers:
             # Get the affected monomer
-            mon = monomers[monId]['mon']
+            mon = monomers[monId][MONOMER]
 
             # Get the sets of activated monomers that we could bind with
             ox = set()
@@ -125,10 +119,10 @@ def update_events(monomers=None, adj=None, last_event=None, events=None, rate_ve
             other_ids = [x for x in monomers if x != monId]
             for other in other_ids:
                 # Don't allow connections that would cyclize the polymer!
-                if monomers[other]['mon'].active == 4 and monomers[other]['mon'].identity not in mon.connectedTo:
-                    ox.add(monomers[other]['mon'])
-                elif monomers[other]['mon'].active == 7 and monomers[other]['mon'].identity not in mon.connectedTo:
-                    quinone.add(monomers[other]['mon'])
+                if monomers[other][MONOMER].active == 4 and monomers[other][MONOMER].identity not in mon.connectedTo:
+                    ox.add(monomers[other][MONOMER])
+                elif monomers[other][MONOMER].active == 7 and monomers[other][MONOMER].identity not in mon.connectedTo:
+                    quinone.add(monomers[other][MONOMER])
             bonding_partners = {BO4: ox, B5: ox, C5O4: ox, C5C5: ox, BB: ox, B1: ox,
                                 AO4: quinone}
 
@@ -243,7 +237,7 @@ def update_events(monomers=None, adj=None, last_event=None, events=None, rate_ve
 
         # Add an event to oxidize the monomer that was just added to the
         # simulation
-        oxidation = Event(OX, [cur_n - 1], r[OX][monomers[cur_n - 1]['mon'].type]['monomer'])
+        oxidation = Event(OX, [cur_n - 1], r[OX][monomers[cur_n - 1][MONOMER].type]['monomer'])
         monomers[cur_n - 1][AFFECTED].add(oxidation)
         ev_hash = hash(oxidation)
         events[ev_hash] = oxidation
@@ -289,7 +283,7 @@ def do_event(event=None, state=None, adj=None):
     """
 
     indices = event.index
-    monomers = [state[i]['mon'] for i in state]
+    monomers = [state[i][MONOMER] for i in state]
     if len(indices) == 2:  # Doing bimolecular reaction, need to adjust adj
 
         # Get the tuple of values corresponding to bond and state updates and
@@ -367,13 +361,13 @@ def do_event(event=None, state=None, adj=None):
                 pct = sg / (1 + sg)
                 mon_type = int(np.random.rand() < pct)
             new_mon = Monomer(mon_type, current_size)
-            state[current_size] = {'mon': new_mon, AFFECTED: set()}
+            state[current_size] = {MONOMER: new_mon, AFFECTED: set()}
 
 
-def run(n_max=10, t_final=10, rates=None, initial_state=None, initial_events=None, dynamics=False):
+def run_kmc(n_max=10, t_final=10, rates=None, initial_state=None, initial_events=None, dynamics=False):
     """
     Performs the Gillespie algorithm using the specific event and update implementations described by do_event and
-    update_events specifically. The initial state and events in that state are constructed and passed to the run
+    update_events specifically. The initial state and events in that state are constructed and passed to the run_kmc
     method, along with the possible rates of different bond formation events, the maximum number of monomers that
     should be included in the simulation and the total simulation time.
 
@@ -383,7 +377,7 @@ def run(n_max=10, t_final=10, rates=None, initial_state=None, initial_events=Non
     evs = [Event()]
     state = {mons[i]:{evs[i]} for i in range(5)}
     evs.add(Event(GROW))
-    run(nMax = 5 , tFinal = 10 , rates = rates , initialState = state, initialEvents = set(evs))
+    run_kmc(nMax = 5 , tFinal = 10 , rates = rates , initialState = state, initialEvents = set(evs))
 
     {TIME: , 'monomers' : , 'adjacency_matrix' : }
 
@@ -416,7 +410,7 @@ def run(n_max=10, t_final=10, rates=None, initial_state=None, initial_events=Non
 
     if dynamics:
         adj_list = [adj.copy()]
-        mon_list = [[copy.copy(state[i]['mon']) for i in state]]
+        mon_list = [[copy.copy(state[i][MONOMER]) for i in state]]
     else:  # just to make IDE happy that won't use before defined
         adj_list = []
         mon_list = []
@@ -441,13 +435,13 @@ def run(n_max=10, t_final=10, rates=None, initial_state=None, initial_events=Non
 
         if dynamics:
             adj_list.append(adj.copy())
-            mon_list.append([copy.copy(state[i]['mon']) for i in state])
+            mon_list.append([copy.copy(state[i][MONOMER]) for i in state])
 
         # Check the new state for what events are possible
         update_events(monomers=state, adj=adj, last_event=event, events=event_dict, rate_vec=r_vec, r=rates,
                       max_mon=n_max)
 
     if dynamics:
-        return {TIME: t, 'monomers': mon_list, 'adjacency_matrix': adj_list}
+        return {TIME: t, MONO_LIST: mon_list, ADJ_MATRIX: adj_list}
 
-    return {TIME: t, 'monomers': [state[i]['mon'] for i in state], 'adjacency_matrix': adj}
+    return {TIME: t, MONO_LIST: [state[i][MONOMER] for i in state], ADJ_MATRIX: adj}
