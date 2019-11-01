@@ -24,4 +24,14 @@ Q = 'q'
 OX = 'ox'
 GROW = 'grow'
 
+DIMER = 'dimer'
+MONOMER = 'monomer'
+MON_MON = (MONOMER, MONOMER)
+MON_DIM = (MONOMER, DIMER)
+DIM_MON = (DIMER, MONOMER)
+DIM_DIM = (DIMER, DIMER)
+
 TIME = 'time'
+TEMP = 'temperature_in_K'
+E_A_KCAL_MOL = 'e_a_in_kcal_mol'
+E_A_J_PART = 'e_a_in_j_particle'

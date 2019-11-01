@@ -1,9 +1,9 @@
-from ligninkmc.KineticMonteCarlo import run
-from ligninkmc.Analysis import analyze
-from ligninkmc.Event import Event
-from ligninkmc.Monomer import Monomer
+from ligninkmc.kineticMonteCarlo import run
+from ligninkmc.analysis import analyze
+from ligninkmc.event import Event
+from ligninkmc.monomer import Monomer
 try:
-	from ligninkmc.Visualization import generateMol, moltosvg
+	from ligninkmc.visualization import (generate_mol, mol_to_svg)
 except Exception as e:
 	print(e)
 	print("\nRDKit is likely not installed correctly. Visualization methods will be unavailable.")

@@ -4,3 +4,7 @@
 /.idea/
 /build/
 ligninkmc/__pycache__/
+.ipynb_checkpoints/
+Dynamics.ipynb
+Example.ipynb
+LigninPolymerizationNotebook.ipynb

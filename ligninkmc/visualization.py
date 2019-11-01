@@ -44,17 +44,17 @@ def generate_mol(adj, node_list):
                        'O 0 0 0 0 \n' +  # 5-OMe
                        'C 0 0 0 0 \n'),  # 5-OMe
                    C: ('C 0 0 0 0 \n' +  # 1
-                        'C 0 0 0 0 \n' +  # 2
-                        'C 0 0 0 0 \n' +  # 3
-                        'C 0 0 0 0 \n' +  # 4
-                        'C 0 0 0 0 \n' +  # 5
-                        'C 0 0 0 0 \n' +  # 6
-                        'C 0 0 0 0 \n' +  # 7
-                        'C 0 0 0 0 \n' +  # 8
-                        'C 0 0 0 0 \n' +  # 9
-                        'O 0 0 0 0 \n' +  # 9-OH
-                        'O 0 0 0 0 \n' +  # 3-OH
-                        'O 0 0 0 0 \n'),  # 4-OH
+                       'C 0 0 0 0 \n' +  # 2
+                       'C 0 0 0 0 \n' +  # 3
+                       'C 0 0 0 0 \n' +  # 4
+                       'C 0 0 0 0 \n' +  # 5
+                       'C 0 0 0 0 \n' +  # 6
+                       'C 0 0 0 0 \n' +  # 7
+                       'C 0 0 0 0 \n' +  # 8
+                       'C 0 0 0 0 \n' +  # 9
+                       'O 0 0 0 0 \n' +  # 9-OH
+                       'O 0 0 0 0 \n' +  # 3-OH
+                       'O 0 0 0 0 \n'),  # 4-OH
                    G4: ('C 0 0 0 0 \n' +  # 1
                         'C 0 0 0 0 \n' +  # 2
                         'C 0 0 0 0 \n' +  # 3
@@ -69,23 +69,23 @@ def generate_mol(adj, node_list):
                         'C 0 0 0 0 \n' +  # 3-OMe
                         'O 0 0 0 0 RAD=2\n'),  # 4-O
                    S4: ('C 0 0 0 0 \n' +  # 1
-                         'C 0 0 0 0 \n' +  # 2
-                         'C 0 0 0 0 \n' +  # 3
-                         'C 0 0 0 0 \n' +  # 4
-                         'C 0 0 0 0 \n' +  # 5
-                         'C 0 0 0 0 \n' +  # 6
-                         'C 0 0 0 0 \n' +  # 7
-                         'C 0 0 0 0 \n' +  # 8
-                         'C 0 0 0 0 \n' +  # 9
-                         'O 0 0 0 0 \n' +  # 9-OH
-                         'O 0 0 0 0 \n' +  # 3-OMe
+                        'C 0 0 0 0 \n' +  # 2
+                        'C 0 0 0 0 \n' +  # 3
+                        'C 0 0 0 0 \n' +  # 4
+                        'C 0 0 0 0 \n' +  # 5
+                        'C 0 0 0 0 \n' +  # 6
+                        'C 0 0 0 0 \n' +  # 7
+                        'C 0 0 0 0 \n' +  # 8
+                        'C 0 0 0 0 \n' +  # 9
+                        'O 0 0 0 0 \n' +  # 9-OH
+                        'O 0 0 0 0 \n' +  # 3-OMe
                         'C 0 0 0 0 \n' +  # 3-OMe
                         'O 0 0 0 0 RAD=2\n' +  # 4-O
                         'O 0 0 0 0 \n' +  # 5-OMe
                         'C 0 0 0 0 \n')}  # 5-OMe
 
     # Similarly define dictionary for bonds within each monomer -
-    # NOTE: THESE MAY NEED TO CHANGE DEPENDING ON INTERUNIT LINKAGES
+    # NOTE: THESE MAY NEED TO CHANGE DEPENDING ON INTER-UNIT LINKAGES
 
     bondBlocks = {G7: ('1 1  2  \n' +  # Aromatic ring 1->2
                          '2 2  3  \n' +  # Aromatic ring 2->3
@@ -408,8 +408,8 @@ def generate_psfgen(adj, monomers, fname="psfgen.tcl", segname="L", toppar_direc
     fout.write("segment %s {\n" % segname)
     for monomer in monomers:
         resid = monomer.identity + 1
-        resname = resnames[monomer.type]
-        fout.write("\tresidue %d %s\n" % (resid, resname))
+        res_name = resnames[monomer.type]
+        fout.write("\tresidue %d %s\n" % (resid, res_name))
     fout.write("}\n")
     # Since B-1 linkages actually involve three monomers, we signal that the previous beta-O-4/B-1 linkage required
     #     for B-1 is broken by flipping the sign.
@@ -422,9 +422,9 @@ def generate_psfgen(adj, monomers, fname="psfgen.tcl", segname="L", toppar_direc
         # Each linkage shows up as two non-zero values in the adjacency matrix. We only need one.
         if key[0] > key[1]:
             continue
-        altkey = (key[1], key[0])
+        alt_key = (key[1], key[0])
         mono1 = int(adj[key])
-        mono2 = int(adj[altkey])
+        mono2 = int(adj[alt_key])
         if mono1 == 8 and mono2 == 4:  # Beta-O-4 linkage.
             fout.write("patch BO4 %s:%d %s:%d\n" % (segname, key[0] + 1, segname, key[1] + 1))
         elif mono1 == 4 and mono2 == 8:  # Reverse beta-O-4 linkage.

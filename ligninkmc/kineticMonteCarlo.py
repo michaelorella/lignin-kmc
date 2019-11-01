@@ -28,14 +28,12 @@ import scipy.sparse as sp
 import numpy as np
 
 # Import classes in this package
-from ligninkmc.Event import Event
-from ligninkmc.Monomer import Monomer
-from ligninkmc.kmc_common import (AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q, GROW, TIME)
+from ligninkmc.event import Event
+from ligninkmc.monomer import Monomer
+from ligninkmc.kmc_common import (AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q, GROW, TIME, DIMER, MONOMER)
 
 import copy
 
-DIMER = 'dimer'
-MONOMER = 'monomer'
 AFFECTED = 'affected'
 
 

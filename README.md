@@ -1,4 +1,4 @@
-# LIGNIN-KMC
+# lignin-KMC
 The official source for kinetic Monte Carlo polymerization packages developed to understand native lignin 
 polymerization. Predict desired lignin structures from first principle energetic calculations. Using this code, you can 
 output either predicted properties from an ensemble of lignin structures, or the molfile for a single simulation. 
@@ -14,7 +14,7 @@ make quantitative predictions within this framework.
 
 # Use
 
-The following sections contain information on how to use LIGNIN-KMC. LIGNIN-KMC was developed and tested in a Windows 
+The following sections contain information on how to use lignin-KMC. lignin-KMC was developed and tested in a Windows 
 10 environment, but should function anywhere that Python is installed.
 
 ## Framework
@@ -50,7 +50,7 @@ conda create -c rdkit -n lignin_kmc rdkit=2018.03.4.0 python=3.6.6 scipy=1.1.0 n
 joblib=0.12.2 jupyter=1.0.0
 ```
 
-Once the environment has been created, you can install the LIGNIN-KMC module using a Python `import` statement. The 
+Once the environment has been created, you can install the lignin-KMC module using a Python `import` statement. The 
 necessary package to import is `ligninkmc`. To do this, start the environment you just created in conda and run Python:
 ```
 (base) ~/ conda activate lignin_kmc
@@ -62,7 +62,7 @@ Type "help", "copyright", "credits" or "license" for more information.
 >>> import ligninkmc as kmc
 ```
 
-Congratulations! LIGNIN-KMC is now installed! With this basic installation, you will have access to the functions 
+Congratulations! Lignin-KMC is now installed! With this basic installation, you will have access to the functions 
 `run`, `generateMol`, `moltosvg`, and `analyze` and the classes `Monomer` and `Event`.
 
 ## Examples
@@ -276,7 +276,7 @@ The following guidelines can help you get started within this project. Use your 
 help improve this project, and as always feel free to propose changes to the project or document in a pull request.
 
 ## Getting started
-LIGNIN-KMC is built on Python 3. If you are new to Python, refer to the fantastic 
+Lignin-KMC is built on Python 3. If you are new to Python, refer to the fantastic 
 [documentation](https://docs.python.org/3.6/).
 
 ## Issues
