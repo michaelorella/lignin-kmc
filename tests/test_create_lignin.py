@@ -8,7 +8,7 @@ from common_wrangler.common import InvalidDataError
 
 from ligninkmc import Monomer
 from ligninkmc.kineticMonteCarlo import run_kmc
-from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, DEF_E_A_KCAL_MOL)
+from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, DEF_E_A_KCAL_MOL, create_initial_monomers)
 from ligninkmc.kmc_common import TEMP, E_A_KCAL_MOL, E_A_J_PART, C5O4, OX, Q, C5C5, B5, BB, BO4, AO4, B1, MON_MON, \
     MON_DIM, DIM_DIM, DIM_MON, MONOMER, DIMER
 
@@ -109,9 +109,11 @@ class TestMonomers(unittest.TestCase):
     def testUnknownUnit(self):
         try:
             mon = Monomer(3, 2)  # unit type 3 is not currently implemented
+            self.assertFalse(mon)  # should not be reached
         except InvalidDataError as e:
             self.assertTrue("only the following" in e.args[0])
 
+# class TestRunKMC(unittest.TestCase):
     # def test_adj_matrix(self):
     #     pct_s = .5
     #     num_monos = 4
@@ -125,9 +127,23 @@ class TestMonomers(unittest.TestCase):
     #     pass
 
 
-# class TestRunKMC(unittest.TestCase):
-#     def test_adj_matrix(self):
-#         initial_monomers = [Monomer(int(s_or_g < pct_s), i) for i, s_or_g in zip(range(num_monos), monomer_draw)]
+class TestCreatInitialMonomers(unittest.TestCase):
+    def testCreat3Monomers(self):
+        initial_monomers = create_initial_monomers(0.75, 3, [0.48772, 0.15174, 0.7886])
+        # TODO: Understand Monomer better. Input to Monomer is  [(1, 0), (1, 1), (0, 2)]
+        #    the first number is the unit (1=
+        print(initial_monomers)
+
+
+class TestRunKMC(unittest.TestCase):
+    def test_adj_matrix(self):
+        initial_monomers = create_initial_monomers(0.5, 3, [0.48772, 0.15174, 0.7886])
+        print(initial_monomers)
+        self.assertTrue(len(initial_monomers) == 3)
+        self.assertTrue(initial_monomers[0].identity == 0)
+        self.assertTrue(initial_monomers[1].identity == 1)
+        # self.assertTrue(initial_monomers[2].identity == 1)
+
 #         ini_events = None
 #         ini_state = None
 #         residues = run_kmc(n_max=10, t_final=1, rates=GOOD_RXN_RATES, initial_state=ini_state,
