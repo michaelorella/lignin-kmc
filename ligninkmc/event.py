@@ -1,7 +1,7 @@
 # !/usr/bin/env python
 # coding=utf-8
 
-from ligninkmc.kmc_common import (AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q)
+from ligninkmc.kmc_common import (AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q, ADJ_MATRIX)
 
 
 class Event:
@@ -72,9 +72,9 @@ class Event:
 
     def __str__(self):
         if self.key == Q or self.key == OX:
-            msg = ('Performing ' + self.key + ' on ' + str(self.index) + str(self.bond) + '\n')
+            msg = f'Performing {self.key} on index {str(self.index[0])}'
         else:
-            msg = ('Forming ' + self.key + ' bond between ' + str(self.index) + str(self.bond) + '\n')
+            msg = f'Forming {self.key} bond between indices {str(self.index)} ({ADJ_MATRIX} update {str(self.bond)})'
         return msg
 
     def __repr__(self):
@@ -83,5 +83,15 @@ class Event:
     def __eq__(self, other):
         return self.index == other.index and self.bond == other.bond and self.key == other.key
 
+    def __lt__(self, other):
+        return self.index < other.index
+
     def __hash__(self):
-        return hash((tuple(self.index), self.key, self.bond))
+        # the original hash return would be different for every run (hash((tuple(self.index), self.key, self.bond))
+        #     see https://docs.python.org/3/reference/datamodel.html#object.__hash__
+        #     "By default, the __hash__() values of str and bytes objects are “salted” with an unpredictable random
+        #     value. Although they remain constant within an individual Python process, they are not predictable
+        #     between repeated invocations of Python."
+        # Thus, made a number to hash, which is giving predictable results
+        key_as_num = sum([ord(x) % 32 for x in self.key])
+        return hash(key_as_num * 100 + (sum(self.index) * 10 + self.rate))

@@ -25,6 +25,7 @@ res = kmc.run_kmc(tFinal = 1e9, rates=rates, initialState=state, initialEvents=e
 import scipy.sparse as sp
 import numpy as np
 import copy
+from SortedSet.sorted_set import SortedSet
 from ligninkmc.event import Event
 from ligninkmc.monomer import Monomer
 from ligninkmc.kmc_common import (AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q, GROW, TIME, DIMER, MONOMER, AFFECTED,
@@ -118,10 +119,12 @@ def update_events(monomers=None, adj=None, last_event=None, events=None, rate_ve
 
             other_ids = [x for x in monomers if x != monId]
             for other in other_ids:
+                other_mon_type = monomers[other][MONOMER]
                 # Don't allow connections that would cyclize the polymer!
                 if monomers[other][MONOMER].active == 4 and monomers[other][MONOMER].identity not in mon.connectedTo:
                     ox.add(monomers[other][MONOMER])
-                elif monomers[other][MONOMER].active == 7 and monomers[other][MONOMER].identity not in mon.connectedTo:
+                elif monomers[other][MONOMER].active == 7 and\
+                        monomers[other][MONOMER].identity not in mon.connectedTo:
                     quinone.add(monomers[other][MONOMER])
             bonding_partners = {BO4: ox, B5: ox, C5O4: ox, C5C5: ox, BB: ox, B1: ox,
                                 AO4: quinone}
@@ -394,7 +397,7 @@ def run_kmc(n_max=10, t_final=10, rates=None, initial_state=None, initial_events
     """
 
     state = copy.deepcopy(initial_state)
-    events = copy.deepcopy(initial_events)
+    events = SortedSet(copy.deepcopy(initial_events))
 
     # Current number of monomers
     n = len(state.keys())
@@ -406,10 +409,8 @@ def run_kmc(n_max=10, t_final=10, rates=None, initial_state=None, initial_events
 
     # Build the dictionary of events
     event_dict = {}
-    for event in events:
-        # TODO: understand why the r_vec values are variable
+    for event in sorted(events):
         r_vec[hash(event)] = event.rate / n
-        # r_vec: <class 'dict'>: {2687620233024681018: 752207177731.6954}
         event_dict[hash(event)] = event
 
     if dynamics:
@@ -430,7 +431,6 @@ def run_kmc(n_max=10, t_final=10, rates=None, initial_state=None, initial_events
         if random_seed:
             np.random.seed(random_seed)
         j = np.random.choice(hashes, p=all_rates / r_tot)
-        # -1193489020809632420, 1579468678413686661
         event = event_dict[j]
 
         # See how much time has passed before this event happened

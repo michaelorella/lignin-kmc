@@ -15,7 +15,7 @@ from ligninkmc.monomer import Monomer
 from ligninkmc.kineticMonteCarlo import run_kmc
 from ligninkmc.kmc_common import (E_A_KCAL_MOL, E_A_J_PART, TEMP, INI_MONOS, MAX_MONOS, SIM_TIME, AFFECTED, GROW,
                                   AO4, B1, B5, BB, BO4, C5O4, C5C5, OX, Q, MONOMER, DIMER, SG_RATIO,
-                                  ADJ_MATRIX, MONOMER_TYPES)
+                                  ADJ_MATRIX)
 
 # Defaults #
 
@@ -184,7 +184,7 @@ def create_initial_events(monomer_draw, num_monos, pct_s, rxn_rates):
 
 
 def create_initial_state(initial_events, initial_monomers, num_monos):
-    return {i: {MONOMER_TYPES: initial_monomers[i], AFFECTED: {initial_events[i]}} for i in range(num_monos)}
+    return {i: {MONOMER: initial_monomers[i], AFFECTED: {initial_events[i]}} for i in range(num_monos)}
 
 
 def main(argv=None):
