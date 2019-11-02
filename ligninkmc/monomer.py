@@ -1,5 +1,6 @@
 # !/usr/bin/env python
 # coding=utf-8
+from common_wrangler.common import InvalidDataError
 
 from ligninkmc.kmc_common import (MONOLIG_OHS)
 
@@ -59,22 +60,22 @@ class Monomer:
         # The active attribute will be the position of an active position, if 0
         # the monomer is not activated yet, -1 means it can never be activated
         self.active = 0
-        if unit == 0:
+        if unit == 0 or unit == 2:
             self.open = {4, 5, 8}
         elif unit == 1:
             self.open = {4, 8}
         else:
-            self.open = {4, 5, 8}
-
+            raise InvalidDataError(f'Encountered unit type {unit},  but only the following unit types are currently '
+                                   f'available: {MONOLIG_OHS}')
         self.connectedTo = {i}
 
     def __str__(self):
-        return f'{self.identity}: {MONOLIG_OHS[self.type]} alcohol is connected to unit {self.connectedTo} and ' \
-               f'active at position {self.active}'
+        return f'{self.identity}: {MONOLIG_OHS[self.type]} alcohol is connected to {self.connectedTo} and active at ' \
+               f'position {self.active}'
 
     def __repr__(self):
-        # representation
-        return f'{self.identity}: {MONOLIG_OHS[self.type]} alcohol \n'
+        representation = f'{self.identity}: {MONOLIG_OHS[self.type]} alcohol \n'
+        return representation
 
     def __eq__(self, other):  # Always compare monomers by identity alone. This should always be a unique identifier
         return self.identity == other.identity

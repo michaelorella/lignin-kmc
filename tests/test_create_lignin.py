@@ -3,6 +3,9 @@
 import logging
 import os
 import unittest
+
+from common_wrangler.common import InvalidDataError
+
 from ligninkmc import Monomer
 from ligninkmc.kineticMonteCarlo import run_kmc
 from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, DEF_E_A_KCAL_MOL)
@@ -95,21 +98,19 @@ class TestCalcRates(unittest.TestCase):
 
 class TestMonomers(unittest.TestCase):
     def testCreateConiferyl(self):
-        good_mon_out = '0: coniferyl alcohol is connected to unit {0} and active at position 0'
         mon = Monomer(0, 0)  # Makes a guaiacol unit monomer with ID = 0
-        self.assertTrue(mon == good_mon_out)
+        self.assertTrue(mon.open == {8, 4, 5})
 
     def testCreateSyringol(self):
-        # good_mon_out = '0: coniferyl alcohol is connected to unit {0} and active at position 0'
         mon = Monomer(1, 2)  # Makes a syringol unit monomer with ID = 2
-        # self.assertTrue(mon == good_mon_out)
-        print(mon)
+        self.assertTrue(mon.open == {4, 8})
+        self.assertTrue(mon.connectedTo == {2})
 
-    def testCreateCaffeoyl(self):
-        # good_mon_out = '0: coniferyl alcohol is connected to unit {0} and active at position 0'
-        mon = Monomer(2, 0)  # Makes a caffeoyl unit monomer with ID = 0
-        # self.assertTrue(mon == good_mon_out)
-        print(mon)
+    def testUnknownUnit(self):
+        try:
+            mon = Monomer(3, 2)  # unit type 3 is not currently implemented
+        except InvalidDataError as e:
+            self.assertTrue("only the following" in e.args[0])
 
     # def test_adj_matrix(self):
     #     pct_s = .5

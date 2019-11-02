@@ -9,7 +9,7 @@ import sys
 import numpy as np
 from configparser import ConfigParser
 from common_wrangler.common import (warning, process_cfg, MAIN_SEC, GOOD_RET, INPUT_ERROR, IO_ERROR, KB, H,
-                                    KCAL_MOL_TO_J_PART)
+                                    KCAL_MOL_TO_J_PART, InvalidDataError, INVALID_DATA)
 from ligninkmc.event import Event
 from ligninkmc.monomer import Monomer
 from ligninkmc.kineticMonteCarlo import run_kmc
@@ -213,7 +213,9 @@ def main(argv=None):
         #  To show the state, we will print the adjacency matrix that has been generated,
         #  although this is not the typical output examined.
         print(res[ADJ_MATRIX].todense())
-
+    except InvalidDataError as e:
+        warning(e)
+        return INVALID_DATA
     except IOError as e:
         warning("Problems reading file: {}".format(e))
         return IO_ERROR
