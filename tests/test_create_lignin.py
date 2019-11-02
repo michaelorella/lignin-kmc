@@ -100,11 +100,14 @@ class TestMonomers(unittest.TestCase):
     def testCreateConiferyl(self):
         mon = Monomer(0, 0)  # Makes a guaiacol unit monomer with ID = 0
         self.assertTrue(mon.open == {8, 4, 5})
+        self.assertTrue(str(mon) == '0: coniferyl alcohol is connected to {0} and active at position 0')
 
     def testCreateSyringol(self):
         mon = Monomer(1, 2)  # Makes a syringol unit monomer with ID = 2
         self.assertTrue(mon.open == {4, 8})
         self.assertTrue(mon.connectedTo == {2})
+        self.assertTrue(str(mon) == '2: sinapyl alcohol is connected to {2} and active at position 0')
+        self.assertTrue(repr(mon) == '2: sinapyl alcohol \n')
 
     def testUnknownUnit(self):
         try:
@@ -128,21 +131,22 @@ class TestMonomers(unittest.TestCase):
 
 
 class TestCreatInitialMonomers(unittest.TestCase):
-    def testCreat3Monomers(self):
+    def testCreate3Monomers(self):
         initial_monomers = create_initial_monomers(0.75, 3, [0.48772, 0.15174, 0.7886])
-        # TODO: Understand Monomer better. Input to Monomer is  [(1, 0), (1, 1), (0, 2)]
-        #    the first number is the unit (1=
-        print(initial_monomers)
-
-
-class TestRunKMC(unittest.TestCase):
-    def test_adj_matrix(self):
-        initial_monomers = create_initial_monomers(0.5, 3, [0.48772, 0.15174, 0.7886])
-        print(initial_monomers)
         self.assertTrue(len(initial_monomers) == 3)
-        self.assertTrue(initial_monomers[0].identity == 0)
-        self.assertTrue(initial_monomers[1].identity == 1)
-        # self.assertTrue(initial_monomers[2].identity == 1)
+        self.assertTrue(initial_monomers[0].type == 1)
+        self.assertTrue(initial_monomers[1].type == 1)
+        self.assertTrue(initial_monomers[2].type == 0)
+        self.assertTrue(initial_monomers[1] < initial_monomers[2])
+        self.assertFalse(initial_monomers[0] == initial_monomers[1])
+
+# class TestRunKMC(unittest.TestCase):
+#     def test_adj_matrix(self):
+#         initial_monomers = create_initial_monomers(0.5, 3, [0.48772, 0.15174, 0.7886])
+#         self.assertTrue(len(initial_monomers) == 3)
+#         self.assertTrue(initial_monomers[0].identity == 0)
+#         self.assertTrue(initial_monomers[1].identity == 1)
+#         # self.assertTrue(initial_monomers[2].identity == 1)
 
 #         ini_events = None
 #         ini_state = None

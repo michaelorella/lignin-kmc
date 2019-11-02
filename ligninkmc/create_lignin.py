@@ -175,10 +175,6 @@ def create_initial_monomers(pct_s, num_monos, monomer_draw):
     # TODO: If want more than 2 monomer options, need to change logic
     # if mon_choice < pct_s, make it an S; that is, the evaluation comes back True (=1='S');
     #     otherwise, get False = 0 = 'G'. Since only two options (True/False) only works for 2 monomers
-    mono_input = [(int(mon_choice < pct_s), i) for i, mon_choice in zip(range(num_monos), monomer_draw)]
-    # TODO: remove after done testing
-    print("Monomer input:", mono_input)
-    # TODO: Debug Monomer--getting unexpected results
     return [Monomer(int(s_or_g < pct_s), i) for i, s_or_g in zip(range(num_monos), monomer_draw)]
 
 
