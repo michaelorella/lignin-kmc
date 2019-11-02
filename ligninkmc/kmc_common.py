@@ -27,7 +27,7 @@ C5C5 = '55'
 C5O4 = '5o4'
 
 # reaction types
-Q = 'q'
+Q = 'hydration'
 OX = 'oxidation'
 GROW = 'grow'
 

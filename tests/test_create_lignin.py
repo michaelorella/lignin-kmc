@@ -3,14 +3,15 @@
 import logging
 import os
 import unittest
-
+import numpy as np
 from common_wrangler.common import InvalidDataError
-
+from ligninkmc import Event
 from ligninkmc import Monomer
 from ligninkmc.kineticMonteCarlo import run_kmc
-from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, DEF_E_A_KCAL_MOL, create_initial_monomers)
+from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, DEF_E_A_KCAL_MOL, create_initial_monomers,
+                                     create_initial_events, create_initial_state, DEF_INI_RATE)
 from ligninkmc.kmc_common import TEMP, E_A_KCAL_MOL, E_A_J_PART, C5O4, OX, Q, C5C5, B5, BB, BO4, AO4, B1, MON_MON, \
-    MON_DIM, DIM_DIM, DIM_MON, MONOMER, DIMER
+    MON_DIM, DIM_DIM, DIM_MON, MONOMER, DIMER, MONOMER_TYPES, GROW
 
 __author__ = 'hmayes'
 
@@ -91,9 +92,8 @@ class TestCalcRates(unittest.TestCase):
                         self.assertAlmostEqual(GOOD_RXN_RATES[rxn_type][substrate][substrate_type],
                                                result[rxn_type][substrate][substrate_type])
         except (TypeError, IndexError) as e:
-            print(e)
-            print("Error when looking at rxn_type: {} substrate: {}    substrate_type:    {}"
-                  "".format(rxn_type, substrate, substrate_type))
+            print(f'{e}\nError when looking at rxn_type: {rxn_type} substrate: {substrate}    '
+                  f'substrate_type:    {substrate_type}')
 
 
 class TestMonomers(unittest.TestCase):
@@ -116,21 +116,28 @@ class TestMonomers(unittest.TestCase):
         except InvalidDataError as e:
             self.assertTrue("only the following" in e.args[0])
 
-# class TestRunKMC(unittest.TestCase):
-    # def test_adj_matrix(self):
-    #     pct_s = .5
-    #     num_monos = 4
-    #     np.random.seed(10)
-    #     monomer_draw = np.random.rand(num_monos)
-    #     initial_monomers = [Monomer(int(s_or_g < pct_s), i) for i, s_or_g in zip(range(num_monos), monomer_draw)]
-    #     # #  To show the state, we will print the adjacency matrix that has been generated,
-    #     # #  although this is not the typical output examined.
-    #     # print(res[ADJ_MATRIX].to_dense())
-    #     print(initial_monomers)
-    #     pass
+    def testHash(self):
+        mon1 = Monomer(1, 5)
+        mon2 = Monomer(1, 5)
+        check_set = {mon1, mon2}
+        self.assertTrue(len(check_set) == 1)
 
 
-class TestCreatInitialMonomers(unittest.TestCase):
+class TestEvent(unittest.TestCase):
+    def testEventIDHash(self):
+        event1 = create_initial_events([0.48772], 1, 0.75, GOOD_RXN_RATES)
+        event2 = create_initial_events([0.48772], 1, 0.75, GOOD_RXN_RATES)
+        self.assertTrue(event1 == event2)
+        check_set = {event1[0], event2[0]}
+        self.assertTrue(len(check_set) == 1)
+
+    def testInitialEvents(self):
+        initial_events = create_initial_events([0.48772, 0.15174, 0.7886], 3, 0.75, GOOD_RXN_RATES)
+        self.assertTrue(initial_events[2].index == [2])
+        print(initial_events)
+
+
+class TestCreateInitialMonomers(unittest.TestCase):
     def testCreate3Monomers(self):
         initial_monomers = create_initial_monomers(0.75, 3, [0.48772, 0.15174, 0.7886])
         self.assertTrue(len(initial_monomers) == 3)
@@ -139,6 +146,38 @@ class TestCreatInitialMonomers(unittest.TestCase):
         self.assertTrue(initial_monomers[2].type == 0)
         self.assertTrue(initial_monomers[1] < initial_monomers[2])
         self.assertFalse(initial_monomers[0] == initial_monomers[1])
+
+
+class TestState(unittest.TestCase):
+    def testCreateInitialState(self):
+        num_monos = 3
+        sg_ratio = 0.75
+        monomer_draw = [0.48772, 0.15174, 0.7886]
+        initial_monomers = create_initial_monomers(sg_ratio, num_monos, monomer_draw)
+        initial_events = create_initial_events(monomer_draw, num_monos, sg_ratio, GOOD_RXN_RATES)
+        ini_state = create_initial_state(initial_events, initial_monomers, num_monos)
+        self.assertTrue(len(ini_state) == 3)
+        self.assertTrue(repr(initial_monomers[0]) == ini_state[0][MONOMER_TYPES])
+
+
+class TestRunKMC(unittest.TestCase):
+    def test_adj_matrix(self):
+        num_monos = 3
+        sg_ratio = 0.75
+        monomer_draw = [0.48772, 0.15174, 0.7886]
+        # these are tested separately
+        initial_monomers = create_initial_monomers(sg_ratio, num_monos, monomer_draw)
+        initial_events = create_initial_events(monomer_draw, num_monos, sg_ratio, GOOD_RXN_RATES)
+        ini_state = create_initial_state(initial_events, initial_monomers, num_monos)
+        initial_events = create_initial_events(monomer_draw, num_monos, 0.75, GOOD_RXN_RATES)
+        # new to test
+        events = {initial_events[i] for i in range(num_monos)}
+        events.add(Event(GROW, [], rate=DEF_INI_RATE, bond=sg_ratio))
+        np.random.seed(10)
+        result = run_kmc(n_max=10, t_final=1, rates=GOOD_RXN_RATES, initial_state=ini_state, initial_events=events,
+                         random_seed=10)
+        print(result)
+
 
 # class TestRunKMC(unittest.TestCase):
 #     def test_adj_matrix(self):

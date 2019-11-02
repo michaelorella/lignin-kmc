@@ -364,7 +364,8 @@ def do_event(event=None, state=None, adj=None):
             state[current_size] = {MONOMER: new_mon, AFFECTED: set()}
 
 
-def run_kmc(n_max=10, t_final=10, rates=None, initial_state=None, initial_events=None, dynamics=False):
+def run_kmc(n_max=10, t_final=10, rates=None, initial_state=None, initial_events=None, dynamics=False,
+            random_seed=None):
     """
     Performs the Gillespie algorithm using the specific event and update implementations described by do_event and
     update_events specifically. The initial state and events in that state are constructed and passed to the run_kmc
@@ -388,6 +389,7 @@ def run_kmc(n_max=10, t_final=10, rates=None, initial_state=None, initial_events
         and the set of events that a change to this monomer would impact
     :param initial_events: dictionary -- The dictionary mapping event hash values to those events
     :param dynamics:
+    :param random_seed: None or hashable value to aid testing
     :return: Dictionary with the simulation times, adjacency matrix, and list of monomers at the end of the simulation
     """
 
@@ -405,7 +407,9 @@ def run_kmc(n_max=10, t_final=10, rates=None, initial_state=None, initial_events
     # Build the dictionary of events
     event_dict = {}
     for event in events:
+        # TODO: understand why the r_vec values are variable
         r_vec[hash(event)] = event.rate / n
+        # r_vec: <class 'dict'>: {2687620233024681018: 752207177731.6954}
         event_dict[hash(event)] = event
 
     if dynamics:
@@ -419,10 +423,14 @@ def run_kmc(n_max=10, t_final=10, rates=None, initial_state=None, initial_events
     while t[-1] < t_final and len(event_dict) > 0:
         # Find the total rate for all of the possible events and choose which event to do
         hashes = list(r_vec.keys())
+        # <class 'list'>: [635582509440568386, 7038641671649327019, 4826763781572526596, -1046983068416491331]
         all_rates = list(r_vec.values())
         r_tot = np.sum(all_rates)
 
+        if random_seed:
+            np.random.seed(random_seed)
         j = np.random.choice(hashes, p=all_rates / r_tot)
+        # -1193489020809632420, 1579468678413686661
         event = event_dict[j]
 
         # See how much time has passed before this event happened

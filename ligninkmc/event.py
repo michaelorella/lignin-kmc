@@ -1,7 +1,7 @@
 # !/usr/bin/env python
 # coding=utf-8
 
-from ligninkmc.kmc_common import (AO4, B1, B5, BB, BO4, C5C5, C5O4)
+from ligninkmc.kmc_common import (AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q)
 
 
 class Event:
@@ -35,8 +35,8 @@ class Event:
                  B5: ((-1, 0), (), ()),
                  B1: ((0, 7), (), (7,)),
                  AO4: ((-1, 4), (), ()),
-                 'q': (0, (1,), ()),
-                 'ox': (4, (), ())
+                 Q: (0, (1,), ()),
+                 OX: (4, (), ())
                  }
 
     # Create dictionary to properly order the event indices
@@ -71,8 +71,10 @@ class Event:
         self.bond = bond
 
     def __str__(self):
-        msg = ('Forming ' + self.key + ' bond between '
-               + str(self.index) + str(self.bond) + '\n')
+        if self.key == Q or self.key == OX:
+            msg = ('Performing ' + self.key + ' on ' + str(self.index) + str(self.bond) + '\n')
+        else:
+            msg = ('Forming ' + self.key + ' bond between ' + str(self.index) + str(self.bond) + '\n')
         return msg
 
     def __repr__(self):

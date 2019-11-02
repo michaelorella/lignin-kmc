@@ -175,7 +175,16 @@ def create_initial_monomers(pct_s, num_monos, monomer_draw):
     # TODO: If want more than 2 monomer options, need to change logic
     # if mon_choice < pct_s, make it an S; that is, the evaluation comes back True (=1='S');
     #     otherwise, get False = 0 = 'G'. Since only two options (True/False) only works for 2 monomers
-    return [Monomer(int(s_or_g < pct_s), i) for i, s_or_g in zip(range(num_monos), monomer_draw)]
+    return [Monomer(int(mono_type_draw < pct_s), i) for i, mono_type_draw in zip(range(num_monos), monomer_draw)]
+
+
+def create_initial_events(monomer_draw, num_monos, pct_s, rxn_rates):
+    return [Event(OX, [i], rxn_rates[OX][int(mono_type_draw < pct_s)][MONOMER])
+            for i, mono_type_draw in zip(range(num_monos), monomer_draw)]
+
+
+def create_initial_state(initial_events, initial_monomers, num_monos):
+    return {i: {MONOMER_TYPES: initial_monomers[i], AFFECTED: {initial_events[i]}} for i in range(num_monos)}
 
 
 def main(argv=None):
@@ -203,15 +212,14 @@ def main(argv=None):
         monomer_draw = np.random.rand(num_monos)
         initial_monomers = create_initial_monomers(pct_s, num_monos, monomer_draw)
 
-        # starting event must be oxidation to create reactive species; both have a chance of being oxidized
-        starting_event = [Event(OX, [i], rxn_rates[OX][int(s_or_g < pct_s)][MONOMER])
-                          for i, s_or_g in zip(range(num_monos), monomer_draw)]
+        # initial event must be oxidation to create reactive species; all monomers a chance of being oxidized
+        initial_events = create_initial_events(monomer_draw, num_monos, pct_s, rxn_rates)
 
         # When the monomers and starting events have been initialized, they are grouped into the "state" and "events"
         # which are necessary to start the simulation. The final pieces of information needed to run_kmc the simulation
         # are the maximum number of monomers that should be studied and the final simulation time.
-        ini_state = {i: {MONOMER_TYPES: initial_monomers[i], AFFECTED: {starting_event[i]}} for i in range(num_monos)}
-        ini_events = {starting_event[i] for i in range(num_monos)}
+        ini_state = create_initial_state(initial_events, initial_monomers, num_monos)
+        ini_events = {initial_events[i] for i in range(num_monos)}
         ini_events.add(Event(GROW, [], rate=DEF_INI_RATE, bond=cfg[SG_RATIO]))
 
         # begin simulation
