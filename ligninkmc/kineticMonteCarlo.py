@@ -25,7 +25,8 @@ res = kmc.run_kmc(tFinal = 1e9, rates=rates, initialState=state, initialEvents=e
 import scipy.sparse as sp
 import numpy as np
 import copy
-from SortedSet.sorted_set import SortedSet
+from common_wrangler.common import InvalidDataError
+
 from ligninkmc.event import Event
 from ligninkmc.monomer import Monomer
 from ligninkmc.kmc_common import (AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q, GROW, TIME, DIMER, MONOMER, AFFECTED,
@@ -121,13 +122,11 @@ def update_events(monomers=None, adj=None, last_event=None, events=None, rate_ve
             for other in other_ids:
                 other_mon_type = monomers[other][MONOMER]
                 # Don't allow connections that would cyclize the polymer!
-                if monomers[other][MONOMER].active == 4 and monomers[other][MONOMER].identity not in mon.connectedTo:
-                    ox.add(monomers[other][MONOMER])
-                elif monomers[other][MONOMER].active == 7 and\
-                        monomers[other][MONOMER].identity not in mon.connectedTo:
+                if other_mon_type.active == 4 and other_mon_type.identity not in mon.connectedTo:
+                    ox.add(other_mon_type)
+                elif other_mon_type.active == 7 and other_mon_type.identity not in mon.connectedTo:
                     quinone.add(monomers[other][MONOMER])
-            bonding_partners = {BO4: ox, B5: ox, C5O4: ox, C5C5: ox, BB: ox, B1: ox,
-                                AO4: quinone}
+            bonding_partners = {BO4: ox, B5: ox, C5O4: ox, C5C5: ox, BB: ox, B1: ox, AO4: quinone}
 
             # Obtain the events that are affected by a change to the monomer that was just acted on
             events_to_be_modified = monomers[monId][AFFECTED]
@@ -147,20 +146,20 @@ def update_events(monomers=None, adj=None, last_event=None, events=None, rate_ve
             monomers[monId][AFFECTED] = set()
             cur_n, _ = adj.get_shape()
 
-            for item in new_event_list:
-                if item and item[1] == 1:  # Unimolecular reaction event
+            for rxn_event in new_event_list:
+                if rxn_event and rxn_event[1] == 1:  # Unimolecular reaction event
                     size = quick_frag_size(monomer=mon)
 
-                    rate = item[2][mon.type][size] / cur_n
+                    rate = rxn_event[2][mon.type][size] / cur_n
 
                     # Add the event to the set of events modifiable by changing the monomer, and update the set of all
                     # events at the next time step
-                    monomers[monId][AFFECTED].add(Event(item[0], [mon.identity], rate))
+                    monomers[monId][AFFECTED].add(Event(rxn_event[0], [mon.identity], rate))
 
-                elif item and item[1] == 2:  # Bimolecular reaction event
-                    bond = tuple(item[3])
+                elif rxn_event and rxn_event[1] == 2:  # Bimolecular reaction event
+                    bond = tuple(rxn_event[3])
                     alt = (bond[1], bond[0])
-                    for partner in bonding_partners[item[0]]:
+                    for partner in bonding_partners[rxn_event[0]]:
                         # Sanitize the set of events that can be effected
                         if partner not in cleaned_partners:
                             # Remove any old events from
@@ -174,9 +173,9 @@ def update_events(monomers=None, adj=None, last_event=None, events=None, rate_ve
                         size = (quick_frag_size(monomer=mon), quick_frag_size(monomer=partner))
                         if bond[0] in mon.open and bond[1] in partner.open:
                             try:
-                                rate = item[2][(mon.type, partner.type)][size] / (cur_n ** 2)
+                                rate = rxn_event[2][(mon.type, partner.type)][size] / (cur_n ** 2)
                             except KeyError:
-                                print(item[0])
+                                print(rxn_event[0])
                                 print((mon.identity, partner.identity))
                                 adj.max_print = adj.nnz
                                 print(adj)
@@ -185,36 +184,40 @@ def update_events(monomers=None, adj=None, last_event=None, events=None, rate_ve
 
                             # Add this to both the monomer and it's bonding partners list of events that need to be
                             # modified upon manipulation of either monomer
-                            monomers[monId][AFFECTED].add(Event(item[0], index, rate, bond))  # this -> other
+                            monomers[monId][AFFECTED].add(Event(rxn_event[0], index, rate, bond))  # this -> other
                             monomers[partner.identity][AFFECTED].add(
-                                Event(item[0], index, rate, bond))  # this -> other
+                                Event(rxn_event[0], index, rate, bond))  # this -> other
 
                             # Switch the order
-                            monomers[monId][AFFECTED].add(Event(item[0], back, rate, alt))  # other -> this
-                            monomers[partner.identity][AFFECTED].add(Event(item[0], back, rate, alt))  # other -> this
+                            # other -> this
+                            monomers[monId][AFFECTED].add(Event(rxn_event[0], back, rate, alt))
+                            # other -> this
+                            monomers[partner.identity][AFFECTED].add(Event(rxn_event[0], back, rate, alt))
 
                         # Add the bond from one monomer to the other in the reverse config if not symmetric
-                        if item[0] != BB and item[0] != C5C5:  # non-symmetric bond
+                        if rxn_event[0] != BB and rxn_event[0] != C5C5:  # non-symmetric bond
                             if bond[1] in mon.open and bond[0] in partner.open:
                                 # Adjust the rate using the correct monomer types
                                 try:
-                                    rate = item[2][(partner.type, mon.type)][(size[1], size[0])] / (cur_n ** 2)
+                                    rate = rxn_event[2][(partner.type, mon.type)][(size[1], size[0])] / (cur_n ** 2)
                                 except KeyError:
-                                    print(item[0])
                                     print((mon.identity, partner.identity))
                                     adj.max_print = adj.nnz
                                     print(adj)
                                     print(size)
-                                    raise
-
-                                monomers[monId][AFFECTED].add(Event(item[0], index, rate, alt))  # this -> other alt
+                                    raise InvalidDataError(f"Error on determining the rate for rxn_event type "
+                                                           f"{rxn_event[0]}, bonding index {mon.identity} to "
+                                                           f"{partner.identity}")
+                                # this -> other alt
+                                monomers[monId][AFFECTED].add(Event(rxn_event[0], index, rate, alt))
                                 monomers[partner.identity][AFFECTED].add(
-                                    Event(item[0], index, rate, alt))  # this -> other alt
+                                    Event(rxn_event[0], index, rate, alt))  # this -> other alt
 
                                 # Switch the order
-                                monomers[monId][AFFECTED].add(Event(item[0], back, rate, bond))  # other -> this alt
-                                monomers[partner.identity][AFFECTED].add(
-                                    Event(item[0], back, rate, bond))  # other -> this alt
+                                # other -> this alt
+                                monomers[monId][AFFECTED].add(Event(rxn_event[0], back, rate, bond))
+                                # other -> this alt
+                                monomers[partner.identity][AFFECTED].add(Event(rxn_event[0], back, rate, bond))
                     # END LOOP OVER PARTNERS
                 # END UNIMOLECULAR/BIMOLECULAR BRANCH
             # END LOOP OVER NEW REACTION POSSIBILITIES
@@ -397,7 +400,7 @@ def run_kmc(n_max=10, t_final=10, rates=None, initial_state=None, initial_events
     """
 
     state = copy.deepcopy(initial_state)
-    events = SortedSet(copy.deepcopy(initial_events))
+    events = copy.deepcopy(initial_events)
 
     # Current number of monomers
     n = len(state.keys())

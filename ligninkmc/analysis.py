@@ -8,7 +8,7 @@ events. Below is the use case for analyzing the results obtained from a single s
 adj = res['adjacency_matrix']
 mons = res['monomers']
 t = res['time']
-analysis = kmc.analyze( adjacency = adj , nodes = mons )
+analysis = kmc.analyze_adj_matrix( adjacency = adj , nodes = mons )
 
 {'Chain Lengths': ______ ,'Bonds': _______ ,'RCF Yields': ________ ,'RCF Bonds': _______}
 
@@ -17,7 +17,7 @@ analysis = kmc.analyze( adjacency = adj , nodes = mons )
 import scipy.sparse as sp
 import numpy as np
 from collections import Counter
-from ligninkmc.kmc_common import (AO4, B1, B1_ALT, B5, BB, BO4, C5C5, C5O4)
+from ligninkmc.kmc_common import (AO4, B1, B1_ALT, B5, BB, BO4, C5C5, C5O4, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS)
 
 
 ################################################################################
@@ -90,8 +90,8 @@ def find_fragments(adj=None):
 
 def fragment_size(frags=None):
     """
-    A rigorous way to analyze the size of fragments that have been identified using the findFragments(adj) tool. Makes
-    a dictionary of monomer identities mapped to the length of the fragment that contains them.
+    A rigorous way to analyze_adj_matrix the size of fragments that have been identified using the find_fragments(adj)
+    tool. Makes a dictionary of monomer identities mapped to the length of the fragment that contains them.
 
     Inputs:
         frags   -- set of sets -- The set of monomer identifier sets that were output from the findFragments code, or
@@ -123,49 +123,48 @@ def fragment_size(frags=None):
             sizes[node] = length
 
 
-def break_bond(adj=None, bond_type=None):
+def break_bond_type(adj=None, bond_type=None):
     """
     Function for removing all of a certain type of bond from the adjacency matrix. This is primarily used for the
     analysis at the end of the simulations when in silico RCF should occur. The update happens via conditional removal
     of the matching values in the adjacency matrix.
 
+    Example use cases:
+    > a = sp.dok_matrix((5,5))
+    > a[1,0] = 4; a[0,1] = 8; a[2,3] = 8; a[3,2] = 8;
+    > break_bond_type(a, BO4).todense()
+    [[0, 0, 0, 0, 0],
+     [0, 0, 0, 0, 0],
+     [0, 0, 0, 8, 0],
+     [0, 0, 8, 0, 0],
+     [0, 0, 0, 0, 0]]
 
-    a = sp.dok_matrix((5,5))
-    a[1,0] = 4; a[0,1] = 8; a[2,3] = 8; a[3,2] = 8;
-    breakBond(a,BO4).to_dense()
+    > a = sp.dok_matrix([[0, 4, 0, 0, 0],
+    >                    [8, 0, 1, 0, 0],
+    >                    [0, 8, 0, 0, 0],
+    >                    [0, 0, 0, 0, 0],
+    >                    [0, 0, 0, 0, 0]])
+    > break_bond_type(a, B1_ALT).todense()
 
-    [[0,0,0,0,0],
-     [0,0,0,0,0],
-     [0,0,0,8,0],
-     [0,0,8,0,0],
-     [0,0,0,0,0]]
-
-   a = sp.dok_matrix( [[0,4,0,0,0],
-                      [8,0,1,0,0],
-                      [0,8,0,0,0],
-                      [0,0,0,0,0],
-                      [0,0,0,0,0]])
-   breakBond(a, B1_ALT)
-
-    [[0,0,0,0,0],
-     [0,0,1,0,0],
-     [0,8,0,0,0],
-     [0,0,0,0,0],
-     [0,0,0,0,0]]
+    [[0, 0, 0, 0, 0],
+     [0, 0, 1, 0, 0],
+     [0, 8, 0, 0, 0],
+     [0, 0, 0, 0, 0],
+     [0, 0, 0, 0, 0]]
 
     :param adj: dock_matrix, the adjacency matrix for the lignin polymer that has been simulated, and needs
         certain bonds removed
     :param bond_type: str, the string containing the bond type that should be broken. These are the standard
-        nomenclature, except for b1alt, which removes the previous bond between the beta position and another monomer
+        nomenclature, except for B1_ALT, which removes the previous bond between the beta position and another monomer
         on the monomer that is bound through 1
     :return:
     """
     new_adj = adj.todok(1)  # Copy the matrix into a new matrix
 
-    breakage = {B1: (lambda break_row, col: (adj[(break_row, col)] == 1 and adj[(col, break_row)] == 8) or
-                                            (adj[(break_row, col)] == 8 and adj[(col, break_row)] == 1)),
-                B1_ALT: (lambda break_row, col: (adj[(row, col)] == 1 and adj[(col, row)] == 8) or
-                                          (adj[(row, col)] == 8 and adj[(col, row)] == 1)),
+    breakage = {B1: (lambda row, col: (adj[(row, col)] == 1 and adj[(col, row)] == 8) or
+                                      (adj[(row, col)] == 8 and adj[(col, row)] == 1)),
+                B1_ALT: (lambda row, col: (adj[(adj_row, col)] == 1 and adj[(col, adj_row)] == 8) or
+                                          (adj[(adj_row, col)] == 8 and adj[(col, adj_row)] == 1)),
                 B5: (lambda row, col: (adj[(row, col)] == 5 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
                                                                                           adj[(col, row)] == 5)),
                 BO4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
@@ -178,17 +177,17 @@ def break_bond(adj=None, bond_type=None):
                 C5C5: (lambda row, col: (adj[(row, col)] == 5 and adj[(col, row)] == 5))}
 
     for el in adj.keys():
-        row = el[0]
-        col = el[1]
+        adj_row = el[0]
+        adj_col = el[1]
 
-        if breakage[bond_type](row, col) and bond_type != B1_ALT:
-            new_adj[(row, col)] = 0
-            new_adj[(col, row)] = 0
-        elif breakage[bond_type](row, col):
-            if adj[(row, col)] == 1:  # The other 8 is in this row
-                break_bond_in_matrix(adj, new_adj, row)
-            else:  # The other 8 is in the other row
-                break_bond_in_matrix(adj, new_adj, col)
+        if breakage[bond_type](adj_row, adj_col) and bond_type != B1_ALT:
+            new_adj[(adj_row, adj_col)] = 0
+            new_adj[(adj_col, adj_row)] = 0
+        elif breakage[bond_type](adj_row, adj_col):
+            if adj[(adj_row, adj_col)] == 1:  # The other 8 is in this adj_row
+                break_bond_in_matrix(adj, new_adj, adj_row)
+            else:  # The other 8 is in the other adj_row
+                break_bond_in_matrix(adj, new_adj, adj_col)
     return new_adj
 
 
@@ -207,30 +206,31 @@ def count_bonds(adj=None):
     Counter for the different bonds that are present in the adjacency matrix. Primarily used for getting easy analysis
     of the properties of a simulated lignin from the resulting adjacency matrix.
 
-    a = sp.dok_matrix( [[0,8,0,0,0],
-                            [4,0,8,0,0],
-                            [0,5,0,8,0],
-                            [0,0,8,0,4],
-                            [0,0,0,8,0]] )
-    countBonds(a)
+    Use case example:
+    > a = sp.dok_matrix([[0, 8, 0, 0, 0],
+    >                    [4, 0, 8, 0, 0],
+    >                    [0, 5, 0, 8, 0],
+    >                    [0, 0, 8, 0, 4],
+    >                    [0, 0, 0, 8, 0]])
+    > count_bonds(a)
+    {BO4: 2, B1: 0, BB: 1, B5: 1, C5C5: 0, AO4: 0, C5O4: 0}
 
-    { BO4:2 , B1 : 0 , BB : 1 , B5 : 1 , C5C5 : 0 , AO4: 0 , C5O4 : 0 }
     :param adj: DOK_MATRIX   -- the adjacency matrix for the lignin polymer that has been simulated
     :return: dictionary mapping bond strings to the frequency of that specific bond
     """
-    count = {BO4: 0, B1: 0, BB: 0, B5: 0, C5C5: 0, AO4: 0, C5O4: 0}
-    bonds = {(4, 8): BO4, (8, 4): BO4, (8, 1): B1, (1, 8): B1, (8, 8): BB, (5, 5): C5C5, (8, 5): B5,
-             (5, 8): B5, (7, 4): AO4,
-             (4, 7): AO4, (5, 4): C5O4, (4, 5): C5O4}
+    bound_count_dict = {BO4: 0, B1: 0, BB: 0, B5: 0, C5C5: 0, AO4: 0, C5O4: 0}
+    bonding_dict = {(4, 8): BO4, (8, 4): BO4, (8, 1): B1, (1, 8): B1, (8, 8): BB, (5, 5): C5C5,
+                    (8, 5): B5, (5, 8): B5, (7, 4): AO4, (4, 7): AO4, (5, 4): C5O4, (4, 5): C5O4}
 
-    for el in sp.triu(adj).todok().keys():  # Don't double count by looking only at the upper triangular keys
+    # Don't double count by looking only at the upper triangular keys
+    for el in sp.triu(adj).todok().keys():
         row = el[0]
         col = el[1]
 
         bond = (adj[(row, col)], adj[(col, row)])
-        count[bonds[bond]] += 1
+        bound_count_dict[bonding_dict[bond]] += 1
 
-    return count
+    return bound_count_dict
 
 
 def count_yields(adj=None):
@@ -238,54 +238,50 @@ def count_yields(adj=None):
     Use the depth first search implemented in findFragments(adj) to locate individual fragments, and then determine the
     sizes of these individual fragments to obtain estimates of simulated oligomeric yields.
 
-    a = sp.dok_matrix( [ [0,0,0,0,0],
-                             [0,0,0,0,0],
-                             [0,0,0,0,0],
-                             [0,0,0,0,0],
-                             [0,0,0,0,0] ] )
-    countYields(a)
+    Use case examples:
+    > a = sp.dok_matrix([[0,0,0,0,0],
+    >                    [0,0,0,0,0],
+    >                    [0,0,0,0,0],
+    >                    [0,0,0,0,0],
+    >                    [0,0,0,0,0]])
+    > count_yields(a)
+    {1: 5}
 
-    { 1 : 5 }
+    > a = sp.dok_matrix([[0,4,0,0,0],
+    >                    [8,0,0,0,0],
+    >                    [0,0,0,0,0],
+    >                    [0,0,0,0,0],
+    >                    [0,0,0,0,0]])
+    > count_yields(a)
+    {2: 1, 1: 3}
 
-    a = sp.dok_matrix( [ [0,4,0,0,0],
-                             [8,0,0,0,0],
-                             [0,0,0,0,0],
-                             [0,0,0,0,0],
-                             [0,0,0,0,0] ] )
-    countYields(a)
+    > a = sp.dok_matrix([[0,4,0,0,0],
+    >                    [8,0,0,0,0],
+    >                    [0,0,0,8,0],
+    >                    [0,0,5,0,0],
+    >                    [0,0,0,0,0]])
+    > count_yields(a)
+    {2: 2, 1: 1}
 
-    { 2 : 1 , 1 : 3 }
-
-    a = sp.dok_matrix( [ [0,4,0,0,0],
-                             [8,0,0,0,0],
-                             [0,0,0,8,0],
-                             [0,0,5,0,0],
-                             [0,0,0,0,0] ] )
-    countYields(a)
-
-    { 2 : 2 , 1 : 1 }
-
-    a = sp.dok_matrix( [ [0,4,8,0,0],
-                             [8,0,0,0,0],
-                             [5,0,0,0,0],
-                             [0,0,0,0,0],
-                             [0,0,0,0,0] ] )
-    countYields(a)
-
-    { 3 : 1 , 1 : 2 }
+    > a = sp.dok_matrix([[0,4,8,0,0],
+    >                    [8,0,0,0,0],
+    >                    [5,0,0,0,0],
+    >                    [0,0,0,0,0],
+    >                    [0,0,0,0,0]])
+    > count_yields(a)
+    {3: 1, 1: 2}
 
     :param adj: DOK_MATRIX   -- the adjacency matrix for the lignin polymer that has been simulated
-    :return: A Counter dictionary mapping the length of fragments to the number of occurrences of that length
+    :return: dict mapping the length of fragments (keys) to the number of occurrences of that length (vals)
     """
-
     # Figure out what is still connected by using the determineCycles function, and look at the length of each
     # connected piece
     oligomers = find_fragments(adj=adj)
-    counts = Counter(map(len, oligomers))
-    return counts
+    olig_len_counts = Counter(map(len, oligomers))
+    return olig_len_counts
 
 
-def analyze(adjacency=None, nodes=None):
+def analyze_adj_matrix(adjacency=None):
     """
     Performs the analysis for a single simulation to extract the relevant macroscopic properties, such as both the
     simulated frequency of different oligomer sizes and the number of each different type of bond before and after in
@@ -297,19 +293,18 @@ def analyze(adjacency=None, nodes=None):
                              [0,0,0,0,0],
                              [0,0,0,0,0],
                              [0,0,0,0,0] ] )
-    analyze(a)
+    analyze_adj_matrix(a)
 
     { 'Chain Lengths' : output from count_yields(a) , 'Bonds' : output from count_bonds(a) , 'RCF Yields' : output from
     count_yields(a') where a' has bonds broken , 'RCF Bonds' : output from count_bonds(a') }
 
     :param adjacency: DOK_MATRIX   -- the adjacency matrix for the lignin polymer that has been simulated
-    :param nodes: list, list of monomer objects that have identities matching the indices of the adjacency matrix
     :return: A dictionary of keywords to the desired result - e.g. Chain Lengths, RCF Yields, Bonds, and RCF Bonds
     """
 
     # Remove any excess b1 bonds from the matrix, e.g. bonds that should be
     # broken during synthesis
-    adjacency = break_bond(adj=adjacency, bond_type=B1_ALT)
+    adjacency = break_bond_type(adj=adjacency, bond_type=B1_ALT)
 
     # Examine the initial polymers before any bonds are broken
     yields = count_yields(adj=adjacency)
@@ -317,15 +312,29 @@ def analyze(adjacency=None, nodes=None):
 
     # Simulate the RCF process at complete conversion by breaking all of the
     # alkyl C-O bonds that were formed during the reaction
-    rcf_adj = break_bond(adj=break_bond(adj=break_bond(adj=adjacency, bond_type=BO4), bond_type=AO4),
-                         bond_type=C5O4)
+    rcf_adj = break_bond_type(adj=break_bond_type(adj=break_bond_type(adj=adjacency, bond_type=BO4), bond_type=AO4),
+                              bond_type=C5O4)
 
     # Now count the bonds and yields remaining
     rcf_yields = count_yields(adj=rcf_adj)
     rcf_bonds = count_bonds(adj=rcf_adj)
 
-    return {'Chain Lengths': yields, 'Bonds': bond_distributions,
-            'RCF Yields': rcf_yields, 'RCF Bonds': rcf_bonds}
+    return {CHAIN_LEN: yields, BONDS: bond_distributions,
+            RCF_YIELDS: rcf_yields, RCF_BONDS: rcf_bonds}
+
+
+def adj_analysis_to_stdout(adj_results):
+    chain_len_results = adj_results[CHAIN_LEN]
+    print(f"Lignin KMC created {len(chain_len_results)} monomers, which formed:\n")
+    for olig_len, olig_num in chain_len_results.items():
+        if olig_len == 1:
+            print(f"    {olig_num} monomers (chain length of 1)")
+        elif olig_len == 2:
+            print(f"    {olig_num} dimers (chain length of 2)")
+        elif olig_len == 3:
+            print(f"    {olig_num} trimers (chain length of 3)")
+        else:
+            print(f"    {olig_num} oligomers of chain length {olig_len}")
 
 
 def degree(adj):

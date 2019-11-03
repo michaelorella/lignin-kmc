@@ -46,3 +46,8 @@ E_A_J_PART = 'e_a_in_j_particle'
 AFFECTED = 'affected'
 ADJ_MATRIX = 'adjacency_matrix'
 MONO_LIST = 'monomers'
+
+CHAIN_LEN = 'Chain Lengths'
+BONDS = 'Bonds'
+RCF_YIELDS = 'RCF Yields'
+RCF_BONDS = 'RCF Bonds'

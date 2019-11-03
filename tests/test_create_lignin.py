@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-
 import logging
 import os
 import unittest
 import numpy as np
+import scipy.sparse as sp
 from common_wrangler.common import InvalidDataError
 from ligninkmc import Event
 from ligninkmc import Monomer
+from ligninkmc.analysis import analyze_adj_matrix, count_bonds, count_yields, break_bond_type
 from ligninkmc.kineticMonteCarlo import run_kmc
 from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, DEF_E_A_KCAL_MOL, create_initial_monomers,
                                      create_initial_events, create_initial_state, DEF_INI_RATE)
 from ligninkmc.kmc_common import (TEMP, E_A_KCAL_MOL, E_A_J_PART, C5O4, OX, Q, C5C5, B5, BB, BO4, AO4, B1,
-                                  MON_MON, MON_DIM, DIM_DIM, DIM_MON, MONOMER, DIMER, GROW, TIME, MONO_LIST, ADJ_MATRIX)
+                                  MON_MON, MON_DIM, DIM_DIM, DIM_MON, MONOMER, DIMER, GROW, TIME, MONO_LIST,
+                                  ADJ_MATRIX, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, B1_ALT)
 
 __author__ = 'hmayes'
 
@@ -21,15 +23,17 @@ DISABLE_REMOVE = logger.isEnabledFor(logging.DEBUG)
 
 # Constants #
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
-SUB_DATA_DIR = os.path.join(DATA_DIR, 'common')
-
-# Data #
-
+SUB_DATA_DIR = os.path.join(DATA_DIR, 'run_kmc')
 
 # Output files #
-GOOD_LIST_OUT = os.path.join(SUB_DATA_DIR, "good_list.txt")
 
 # Data #
+ADJ_ZEROS = sp.dok_matrix([[0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0]])
+
 GOOD_RXN_RATES = {C5O4: {(0, 0): {MON_MON: 38335.597214837195, MON_DIM: 123.41959371554347, DIM_MON: 123.41959371554347,
                                   DIM_DIM: 3698609451.841636},
                          (1, 0): {MON_MON: 63606.84175294998, MON_DIM: 123.41959371554347, DIM_MON: 123.41959371554347,
@@ -71,6 +75,24 @@ GOOD_RXN_RATES = {C5O4: {(0, 0): {MON_MON: 38335.597214837195, MON_DIM: 123.4195
                        1: {MONOMER: 2256621533195.0864, DIMER: 151582896154.44305}},
                   Q: {0: {MONOMER: 45383.99955642849, DIMER: 45383.99955642849},
                       1: {MONOMER: 16485.40300715421, DIMER: 16485.40300715421}}}
+
+
+def create_sample_kmc_result():
+    num_monos = 3
+    sg_ratio = 0.75
+    monomer_draw = [0.48772, 0.15174, 0.7886]
+    # these are tested separately
+    initial_monomers = create_initial_monomers(sg_ratio, num_monos, monomer_draw)
+    initial_events = create_initial_events(monomer_draw, num_monos, sg_ratio, GOOD_RXN_RATES)
+    ini_state = create_initial_state(initial_events, initial_monomers, num_monos)
+    # new to test
+    events = {initial_events[i] for i in range(num_monos)}
+    events.add(Event(GROW, [], rate=DEF_INI_RATE, bond=sg_ratio))
+    # make random seed and sort events for testing reliability
+    np.random.seed(10)
+    result = run_kmc(n_max=10, t_final=1, rates=GOOD_RXN_RATES, initial_state=ini_state,
+                     initial_events=sorted(events), random_seed=10)
+    return result
 
 
 # Tests #
@@ -174,21 +196,8 @@ class TestState(unittest.TestCase):
 
 
 class TestRunKMC(unittest.TestCase):
-    def test_adj_matrix(self):
-        num_monos = 3
-        sg_ratio = 0.75
-        monomer_draw = [0.48772, 0.15174, 0.7886]
-        # these are tested separately
-        initial_monomers = create_initial_monomers(sg_ratio, num_monos, monomer_draw)
-        initial_events = create_initial_events(monomer_draw, num_monos, sg_ratio, GOOD_RXN_RATES)
-        ini_state = create_initial_state(initial_events, initial_monomers, num_monos)
-        # new to test
-        events = {initial_events[i] for i in range(num_monos)}
-        events.add(Event(GROW, [], rate=DEF_INI_RATE, bond=sg_ratio))
-        # make random seed and sort events for testing reliability
-        np.random.seed(10)
-        result = run_kmc(n_max=10, t_final=1, rates=GOOD_RXN_RATES, initial_state=ini_state,
-                         initial_events=sorted(events), random_seed=10)
+    def testSampleRunKMC(self):
+        result = create_sample_kmc_result()
         self.assertTrue(len(result[TIME]))
         self.assertAlmostEqual(result[TIME][-1], 0.009396540330667606)
         self.assertTrue(len(result[MONO_LIST]) == 10)
@@ -200,20 +209,85 @@ class TestRunKMC(unittest.TestCase):
         self.assertTrue(list(result[ADJ_MATRIX].keys()) == good_dok_keys)
         self.assertTrue(list(result[ADJ_MATRIX].values()) == good_dok_vals)
 
-# class TestRunKMC(unittest.TestCase):
-#     def test_adj_matrix(self):
-#         initial_monomers = create_initial_monomers(0.5, 3, [0.48772, 0.15174, 0.7886])
-#         self.assertTrue(len(initial_monomers) == 3)
-#         self.assertTrue(initial_monomers[0].identity == 0)
-#         self.assertTrue(initial_monomers[1].identity == 1)
-#         # self.assertTrue(initial_monomers[2].identity == 1)
 
-#         ini_events = None
-#         ini_state = None
-#         residues = run_kmc(n_max=10, t_final=1, rates=GOOD_RXN_RATES, initial_state=ini_state,
-#                            initial_events=ini_events)
-#         # #  To show the state, we will print the adjacency matrix that has been generated,
-#         # #  although this is not the typical output examined.
-#         # print(res[ADJ_MATRIX].todense())
-#         print(residues)
-#         pass
+class TestAnalyzeKMC(unittest.TestCase):
+    def testCountYieldsAllMonomers(self):
+        good_adj_zeros_dict = {1: 5}
+        adj_yields_dict = dict(count_yields(ADJ_ZEROS))
+        self.assertTrue(adj_yields_dict == good_adj_zeros_dict)
+
+    def testCountYields1(self):
+        good_adj_dict = {2: 1, 1: 3}
+        adj_1 = sp.dok_matrix([[0, 4, 0, 0, 0],
+                               [8, 0, 0, 0, 0],
+                               [0, 0, 0, 0, 0],
+                               [0, 0, 0, 0, 0],
+                               [0, 0, 0, 0, 0]])
+        adj_yields_dict = dict(count_yields(adj_1))
+        self.assertTrue(adj_yields_dict == good_adj_dict)
+
+    def testCountYields2(self):
+        good_adj_dict = {2: 2, 1: 1}
+        adj_2 = sp.dok_matrix([[0, 4, 0, 0, 0],
+                               [8, 0, 0, 0, 0],
+                               [0, 0, 0, 8, 0],
+                               [0, 0, 5, 0, 0],
+                               [0, 0, 0, 0, 0]])
+        adj_yields_dict = dict(count_yields(adj_2))
+        self.assertTrue(adj_yields_dict == good_adj_dict)
+
+    def testCountYields3(self):
+        good_adj_dict = {3: 1, 1: 2}
+        adj_3 = sp.dok_matrix([[0, 4, 8, 0, 0],
+                               [8, 0, 0, 0, 0],
+                               [5, 0, 0, 0, 0],
+                               [0, 0, 0, 0, 0],
+                               [0, 0, 0, 0, 0]])
+        adj_yields_dict = dict(count_yields(adj_3))
+        self.assertTrue(adj_yields_dict == good_adj_dict)
+
+    def testCountBonds(self):
+        good_bond_dict = {BO4: 2, B1: 0, BB: 1, B5: 1, C5C5: 0, AO4: 0, C5O4: 0}
+        adj_a = sp.dok_matrix([[0, 8, 0, 0, 0],
+                               [4, 0, 8, 0, 0],
+                               [0, 5, 0, 8, 0],
+                               [0, 0, 8, 0, 4],
+                               [0, 0, 0, 8, 0]])
+        adj_bonds = dict(count_bonds(adj_a))
+        self.assertTrue(adj_bonds == good_bond_dict)
+
+    def testBreakBO4Bonds(self):
+        good_broken_adj = np.asarray([[0, 0, 0, 0, 0],
+                                     [0, 0, 0, 0, 0],
+                                     [0, 0, 0, 8, 0],
+                                     [0, 0, 8, 0, 0],
+                                     [0, 0, 0, 0, 0]])
+        a = sp.dok_matrix((5, 5))
+        a[1, 0] = 4
+        a[0, 1] = 8
+        a[2, 3] = 8
+        a[3, 2] = 8
+        broken_adj = break_bond_type(a, BO4).toarray()
+        self.assertTrue(np.array_equal(broken_adj, good_broken_adj))
+
+    def testBreakB1_ALTBonds(self):
+        good_broken_adj = np.asarray([[0, 0, 0, 0, 0],
+                                      [0, 0, 1, 0, 0],
+                                      [0, 8, 0, 0, 0],
+                                      [0, 0, 0, 0, 0],
+                                      [0, 0, 0, 0, 0]])
+        a = sp.dok_matrix([[0, 4, 0, 0, 0],
+                           [8, 0, 1, 0, 0],
+                           [0, 8, 0, 0, 0],
+                           [0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0]])
+        broken_adj = break_bond_type(a, B1_ALT).toarray()
+        self.assertTrue(np.array_equal(broken_adj, good_broken_adj))
+
+    def testKMCResultSummary(self):
+        result = create_sample_kmc_result()
+        summary = analyze_adj_matrix(adjacency=result[ADJ_MATRIX])
+        self.assertTrue(dict(summary[CHAIN_LEN]) == {10: 1})
+        self.assertTrue(summary[BONDS] == {BO4: 3, B1: 0, BB: 0, B5: 6, C5C5: 0, AO4: 0, C5O4: 0})
+        self.assertTrue(dict(summary[RCF_YIELDS]) == {2: 2, 1: 1, 5: 1})
+        self.assertTrue(summary[RCF_BONDS] == {BO4: 0, B1: 0, BB: 0, B5: 6, C5C5: 0, AO4: 0, C5O4: 0})

@@ -1,5 +1,5 @@
 from ligninkmc.kineticMonteCarlo import run_kmc
-from ligninkmc.analysis import analyze
+from ligninkmc.analysis import analyze_adj_matrix
 from ligninkmc.event import Event
 from ligninkmc.monomer import Monomer
 
