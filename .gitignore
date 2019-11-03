@@ -6,3 +6,4 @@ dist/
 lignin-kmc.iml
 ligninkmc.egg-info/
 ligninkmc/__pycache__/
+testing.ipynb
