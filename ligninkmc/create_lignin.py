@@ -14,56 +14,14 @@ from ligninkmc.event import Event
 from ligninkmc.monomer import Monomer
 from ligninkmc.kineticMonteCarlo import run_kmc
 from ligninkmc.kmc_common import (E_A_KCAL_MOL, E_A_J_PART, TEMP, INI_MONOS, MAX_MONOS, SIM_TIME, AFFECTED, GROW,
-                                  AO4, B1, B5, BB, BO4, C5O4, C5C5, OX, Q, MONOMER, DIMER, SG_RATIO,
-                                  ADJ_MATRIX)
+                                  DEF_E_A_KCAL_MOL, OX, MONOMER, DIMER, LIGNIN_SUBUNITS, SG_RATIO,
+                                  ADJ_MATRIX, )
 
 # Defaults #
 
 DEF_TEMP = 298.15  # K
 DEF_MAX_MONOS = 10  # number of monomers
 DEF_SIM_TIME = 1  # simulation time in seconds
-# Default activation energies input in kcal/mol from Gani et al., ACS Sustainable Chem. Eng. 2019, 7, 15, 13270-13277,
-#     https://doi.org/10.1021/acssuschemeng.9b02506,
-#     as described in Orella et al., ACS Sustainable Chem. Eng. 2019, https://doi.org/10.1021/acssuschemeng.9b03534 
-DEF_E_A_KCAL_MOL = {C5O4: {(0, 0): {(MONOMER, MONOMER): 11.2, (MONOMER, DIMER): 14.6, (DIMER, MONOMER): 14.6,
-                                    (DIMER, DIMER): 4.4},
-                           (1, 0): {(MONOMER, MONOMER): 10.9, (MONOMER, DIMER): 14.6, (DIMER, MONOMER): 14.6,
-                                    (DIMER, DIMER): 4.4}},
-                    C5C5: {(0, 0): {(MONOMER, MONOMER): 12.5, (MONOMER, DIMER): 15.6, (DIMER, MONOMER): 15.6,
-                                    (DIMER, DIMER): 3.8}},
-                    B5: {(0, 0): {(MONOMER, MONOMER): 5.5, (MONOMER, DIMER): 5.8, (DIMER, MONOMER): 5.8,
-                                  (DIMER, DIMER): 5.8},
-                         (0, 1): {(MONOMER, MONOMER): 5.5, (MONOMER, DIMER): 5.8, (DIMER, MONOMER): 5.8,
-                                  (DIMER, DIMER): 5.8}},
-                    BB: {(0, 0): {(MONOMER, MONOMER): 5.2, (MONOMER, DIMER): 5.2, (DIMER, MONOMER): 5.2,
-                                  (DIMER, DIMER): 5.2},
-                         (1, 0): {(MONOMER, MONOMER): 6.5, (MONOMER, DIMER): 6.5, (DIMER, MONOMER): 6.5,
-                                  (DIMER, DIMER): 6.5},
-                         (1, 1): {(MONOMER, MONOMER): 5.2, (MONOMER, DIMER): 5.2, (DIMER, MONOMER): 5.2,
-                                  (DIMER, DIMER): 5.2}},
-                    BO4: {(0, 0): {(MONOMER, MONOMER): 6.3, (MONOMER, DIMER): 6.2, (DIMER, MONOMER): 6.2,
-                                   (DIMER, DIMER): 6.2},
-                          (1, 0): {(MONOMER, MONOMER): 9.1, (MONOMER, DIMER): 6.2,
-                                   (DIMER, MONOMER): 6.2, (DIMER, DIMER): 6.2},
-                          (0, 1): {(MONOMER, MONOMER): 8.9, (MONOMER, DIMER): 6.2,
-                                   (DIMER, MONOMER): 6.2, (DIMER, DIMER): 6.2},
-                          (1, 1): {(MONOMER, MONOMER): 9.8, (MONOMER, DIMER): 10.4,
-                                   (DIMER, MONOMER): 10.4}},
-                    AO4: {(0, 0): {(MONOMER, MONOMER): 20.7, (MONOMER, DIMER): 20.7,
-                                   (DIMER, MONOMER): 20.7, (DIMER, DIMER): 20.7},
-                          (1, 0): {(MONOMER, MONOMER): 20.7, (MONOMER, DIMER): 20.7,
-                                   (DIMER, MONOMER): 20.7, (DIMER, DIMER): 20.7},
-                          (0, 1): {(MONOMER, MONOMER): 20.7, (MONOMER, DIMER): 20.7,
-                                   (DIMER, MONOMER): 20.7, (DIMER, DIMER): 20.7},
-                          (1, 1): {(MONOMER, MONOMER): 20.7, (MONOMER, DIMER): 20.7,
-                                   (DIMER, MONOMER): 20.7, (DIMER, DIMER): 20.7}},
-                    B1: {(0, 0): {(MONOMER, DIMER): 9.6, (DIMER, MONOMER): 9.6, (DIMER, DIMER): 9.6},
-                         (1, 0): {(MONOMER, DIMER): 11.7, (DIMER, MONOMER): 11.7, (DIMER, DIMER): 11.7},
-                         (0, 1): {(MONOMER, DIMER): 10.7, (DIMER, MONOMER): 10.7, (DIMER, DIMER): 10.7},
-                         (1, 1): {(MONOMER, DIMER): 11.9, (DIMER, MONOMER): 11.9, (DIMER, DIMER): 11.9}},
-                    OX: {0: {MONOMER: 0.9, DIMER: 6.3}, 1: {MONOMER: 0.6, DIMER: 2.2}},
-                    Q: {0: {MONOMER: 11.1, DIMER: 11.1}, 1: {MONOMER: 11.7, DIMER: 11.7}}}
-DEF_E_A_KCAL_MOL[BB][(0, 1)] = DEF_E_A_KCAL_MOL[BB][(1, 0)]
 DEF_SG = 1
 DEF_INI_MONOS = 2
 DEF_INI_RATE = 1e4
@@ -114,22 +72,36 @@ def parse_cmdline(argv=None):
         argv = sys.argv[1:]
 
     # initialize the parser object:
-    parser = argparse.ArgumentParser(description='Create lignin(s).')
+    parser = argparse.ArgumentParser(description='Create lignin chain(s) as described in:\n   Orella, M., '
+                                                 'Gani, T. Z. H., Vermaas, J. V., Stone, M. L., Anderson, E. M., '
+                                                 'Beckham, G. T., Brushett, Fikile R., Roman-Leshkov, Y. (2019). '
+                                                 'Lignin-KMC: A Toolkit for Simulating Lignin Biosynthesis. ACS '
+                                                 'Sustainable Chemistry & Engineering.\n'
+                                                 'https://doi.org/10.1021/acssuschemeng.9b03534.\n\n '
+                                                 'By default, the activation energies from this reference will be '
+                                                 'used, as specified in Tables S1 and S2. Alternately, the user '
+                                                 f"may specify values, which should be specified as a dict of dict "
+                                                 f"of dicts in a configuration file using the '{E_A_KCAL_MOL}' or "
+                                                 f"'{E_A_J_PART}' parameters. The format is (bond_type: monomer(s) "
+                                                 f"involved: units involved: ea_vals), for example, {OX}: {{0: "
+                                                 f"{{{MONOMER}: 0.9, {DIMER}: 6.3}}, 1: {{{MONOMER}: 0.6, {DIMER}: "
+                                                 f"2.2}}}}, where 0: {LIGNIN_SUBUNITS[0]}, 1: {LIGNIN_SUBUNITS[1]}, "
+                                                 f"2: {LIGNIN_SUBUNITS[2]}.")
     parser.add_argument("-c", "--config", help="The location of the configuration file in ini format. This file "
                                                "can be used to overwrite default values such as for energies.",
                         default=None, type=read_cfg)
-    parser.add_argument("-i", "--initial_num_monomers", help="The initial number of monomers to be included in the "
-                                                             "simulation. The default is {}.".format(DEF_INI_MONOS),
+    parser.add_argument("-i", "--initial_num_monomers", help=f"The initial number of monomers to be included in the "
+                                                             f"simulation. The default is {DEF_INI_MONOS}.",
                         default=DEF_INI_MONOS)
-    parser.add_argument("-l", "--length_simulation", help="The length of simulation (simulation time) in seconds. The"
-                                                          "default is {} s.".format(DEF_SIM_TIME), default=DEF_SIM_TIME)
-    parser.add_argument("-m", "--max_num_monomers", help="The maximum number of monomers to be studied. The default "
-                                                         "value is {}.".format(DEF_MAX_MONOS), default=DEF_MAX_MONOS)
-    parser.add_argument("-sg", "--sg_ratio", help="The S:G (guaiacol:syringyl) ratio. "
-                                                  "The default is {}.".format(DEF_SG), default=DEF_SG)
-    parser.add_argument("-t", "--temp", help="The temperature (in K) at which lignin biosynthesis should be modeled. "
-                                             "The default is {} K.".format(DEF_TEMP), default=DEF_TEMP)
-    parser.add_argument("-r", "--random_seed", help="Random seed to be used (e.g. for testing mode).", default=None)
+    parser.add_argument("-l", "--length_simulation", help=f"The length of simulation (simulation time) in seconds. The "
+                                                          f"default is {DEF_SIM_TIME} s.", default=DEF_SIM_TIME)
+    parser.add_argument("-m", "--max_num_monomers", help=f"The maximum number of monomers to be studied. The default "
+                                                         f"value is {DEF_MAX_MONOS}.", default=DEF_MAX_MONOS)
+    parser.add_argument("-sg", "--sg_ratio", help=f"The S:G (guaiacol:syringyl) ratio. "
+                                                  f"The default is {DEF_SG}.", default=DEF_SG)
+    parser.add_argument("-t", "--temp", help=f"The temperature (in K) at which lignin biosynthesis should be modeled. "
+                                             f"The default is {DEF_TEMP} K.", default=DEF_TEMP)
+    parser.add_argument("-r", "--random_seed", help="Random seed value to be used for testing.", default=None)
 
     args = None
     try:

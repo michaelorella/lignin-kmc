@@ -7,17 +7,17 @@ import scipy.sparse as sp
 from rdkit.Chem import MolFromMolBlock
 from rdkit.Chem.AllChem import Compute2DCoords
 from rdkit.Chem.Draw import MolToFile
-from common_wrangler.common import InvalidDataError, capture_stdout
+from common_wrangler.common import InvalidDataError, capture_stdout, silent_remove
 from ligninkmc import Event
 from ligninkmc import Monomer
 from ligninkmc.analysis import analyze_adj_matrix, count_bonds, count_yields, break_bond_type, adj_analysis_to_stdout
 from ligninkmc.kineticMonteCarlo import run_kmc
-from ligninkmc.visualization import generate_mol, mol_to_svg
-from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, DEF_E_A_KCAL_MOL, create_initial_monomers,
+from ligninkmc.visualization import generate_mol
+from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, create_initial_monomers,
                                      create_initial_events, create_initial_state, DEF_INI_RATE)
 from ligninkmc.kmc_common import (TEMP, E_A_KCAL_MOL, E_A_J_PART, C5O4, OX, Q, C5C5, B5, BB, BO4, AO4, B1,
                                   MON_MON, MON_DIM, DIM_DIM, DIM_MON, MONOMER, DIMER, GROW, TIME, MONO_LIST,
-                                  ADJ_MATRIX, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, B1_ALT)
+                                  ADJ_MATRIX, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_A_KCAL_MOL)
 
 __author__ = 'hmayes'
 
@@ -30,6 +30,7 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'run_kmc')
 
 # Output files #
+PNG_10MER = os.path.join(SUB_DATA_DIR, 'test_10mer.png')
 
 # Data #
 ADJ_ZEROS = sp.dok_matrix([[0, 0, 0, 0, 0],
@@ -62,7 +63,9 @@ GOOD_RXN_RATES = {C5O4: {(0, 0): {MON_MON: 38335.597214837195, MON_DIM: 123.4195
                                  DIM_DIM: 177267402.79460046},
                         (0, 1): {MON_MON: 1860006.627196039, MON_DIM: 177267402.79460046, DIM_MON: 177267402.79460046,
                                  DIM_DIM: 177267402.79460046},
-                        (1, 1): {MON_MON: 407201.805441432, MON_DIM: 147913.05159423634, DIM_MON: 147913.05159423634}},
+                        (1, 1): {MON_MON: 407201.805441432, MON_DIM: 147913.05159423634, DIM_MON: 147913.05159423634},
+                        (2, 2): {(MONOMER, MONOMER): 11762.469290177061, (MONOMER, DIMER): 11762.469290177061,
+                                 (DIMER, MONOMER): 11762.469290177061, (DIMER, DIMER): 11762.469290177061}},
                   AO4: {(0, 0): {MON_MON: 0.004169189173972648, MON_DIM: 0.004169189173972648,
                                  DIM_MON: 0.004169189173972648, DIM_DIM: 0.004169189173972648},
                         (1, 0): {MON_MON: 0.004169189173972648, MON_DIM: 0.004169189173972648,
@@ -76,9 +79,18 @@ GOOD_RXN_RATES = {C5O4: {(0, 0): {MON_MON: 38335.597214837195, MON_DIM: 123.4195
                        (0, 1): {MON_DIM: 89146.62342075957, DIM_MON: 89146.62342075957, DIM_DIM: 89146.62342075957},
                        (1, 1): {MON_DIM: 11762.469290177061, DIM_MON: 11762.469290177061, DIM_DIM: 11762.469290177061}},
                   OX: {0: {MONOMER: 1360057059567.5383, DIMER: 149736731.43118873},
-                       1: {MONOMER: 2256621533195.0864, DIMER: 151582896154.44305}},
+                       1: {MONOMER: 2256621533195.0864, DIMER: 151582896154.44305},
+                       2: {MONOMER: 1360057059567.5383, DIMER: 1360057059567.5383}},
                   Q: {0: {MONOMER: 45383.99955642849, DIMER: 45383.99955642849},
-                      1: {MONOMER: 16485.40300715421, DIMER: 16485.40300715421}}}
+                      1: {MONOMER: 16485.40300715421, DIMER: 16485.40300715421},
+                      2: {MONOMER: 1360057059567.5383, DIMER: 1360057059567.5383}}}
+{'55': {(0, 0): {(MONOMER, MONOMER): 4272.630189120858, (MONOMER, DIMER): 22.82331807203557, (DIMER, MONOMER): 22.82331807203557, (DIMER, DIMER): 10182201166.021704}, (2, 2): {(MONOMER, MONOMER): 105537.16680378099, (MONOMER, DIMER): 105537.16680378099, (DIMER, MONOMER): 105537.16680378099, (DIMER, DIMER): 105537.16680378099}},
+ 'b5': {(0, 0): {(MONOMER, MONOMER): 577740233.3818815, (MONOMER, DIMER): 348201801.4313151, (DIMER, MONOMER): 348201801.4313151, (DIMER, DIMER): 348201801.4313151}, (0, 1): {(MONOMER, MONOMER): 577740233.3818815, (MONOMER, DIMER): 348201801.4313151, (DIMER, MONOMER): 348201801.4313151, (DIMER, DIMER): 348201801.4313151}, (2, 2): {(MONOMER, MONOMER): 251507997491.63364, (MONOMER, DIMER): 348201801.4313151, (DIMER, MONOMER): 348201801.4313151, (DIMER, DIMER): 348201801.4313151}},
+ 'bb': {(0, 0): {(MONOMER, MONOMER): 958592907.6073179, (MONOMER, DIMER): 958592907.6073179, (DIMER, MONOMER): 958592907.6073179, (DIMER, DIMER): 958592907.6073179}, (1, 0): {(MONOMER, MONOMER): 106838377.21810664, (MONOMER, DIMER): 106838377.21810664, (DIMER, MONOMER): 106838377.21810664, (DIMER, DIMER): 106838377.21810664}, (1, 1): {(MONOMER, MONOMER): 958592907.6073179, (MONOMER, DIMER): 958592907.6073179, (DIMER, MONOMER): 958592907.6073179, (DIMER, DIMER): 958592907.6073179}, (2, 2): {(MONOMER, MONOMER): 32781102.221982773, (MONOMER, DIMER): 32781102.221982773, (DIMER, MONOMER): 32781102.221982773, (DIMER, DIMER): 32781102.221982773}, (0, 1): {(MONOMER, MONOMER): 106838377.21810664, (MONOMER, DIMER): 106838377.21810664, (DIMER, MONOMER): 106838377.21810664, (DIMER, DIMER): 106838377.21810664}},
+ 'bo4': {(0, 0): {(MONOMER, MONOMER): 149736731.43118873, (MONOMER, DIMER): 177267402.79460046, (DIMER, MONOMER): 177267402.79460046, (DIMER, DIMER): 177267402.79460046}, (1, 0): {(MONOMER, MONOMER): 1327129.8749824178, (MONOMER, DIMER): 177267402.79460046, (DIMER, MONOMER): 177267402.79460046, (DIMER, DIMER): 177267402.79460046}, (0, 1): {(MONOMER, MONOMER): 1860006.627196039, (MONOMER, DIMER): 177267402.79460046, (DIMER, MONOMER): 177267402.79460046, (DIMER, DIMER): 177267402.79460046}, (1, 1): {(MONOMER, MONOMER): 407201.805441432, (MONOMER, DIMER): 147913.05159423634, (DIMER, MONOMER): 147913.05159423634}, (2, 2): {(MONOMER, MONOMER): 1590507825.8720958, (MONOMER, DIMER): 692396712512.5765, (DIMER, MONOMER): 692396712512.5765, (DIMER, DIMER): 692396712512.5765}},
+ 'ao4': {(0, 0): {(MONOMER, MONOMER): 0.004169189173972648, (MONOMER, DIMER): 0.004169189173972648, (DIMER, MONOMER): 0.004169189173972648, (DIMER, DIMER): 0.004169189173972648}, (1, 0): {(MONOMER, MONOMER): 0.004169189173972648, (MONOMER, DIMER): 0.004169189173972648, (DIMER, MONOMER): 0.004169189173972648, (DIMER, DIMER): 0.004169189173972648}, (0, 1): {(MONOMER, MONOMER): 0.004169189173972648, (MONOMER, DIMER): 0.004169189173972648, (DIMER, MONOMER): 0.004169189173972648, (DIMER, DIMER): 0.004169189173972648}, (1, 1): {(MONOMER, MONOMER): 0.004169189173972648, (MONOMER, DIMER): 0.004169189173972648, (DIMER, MONOMER): 0.004169189173972648, (DIMER, DIMER): 0.004169189173972648}, (2, 2): {(MONOMER, MONOMER): 0.004169189173972648, (MONOMER, DIMER): 0.004169189173972648, (DIMER, MONOMER): 0.004169189173972648, (DIMER, DIMER): 0.004169189173972648}},
+ 'b1': {(0, 0): {(MONOMER, DIMER): 570703.7954648494, (DIMER, MONOMER): 570703.7954648494, (DIMER, DIMER): 570703.7954648494}, (1, 0): {(MONOMER, DIMER): 16485.40300715421, (DIMER, MONOMER): 16485.40300715421, (DIMER, DIMER): 16485.40300715421}, (0, 1): {(MONOMER, DIMER): 89146.62342075957, (DIMER, MONOMER): 89146.62342075957, (DIMER, DIMER): 89146.62342075957}, (1, 1): {(MONOMER, DIMER): 11762.469290177061, (DIMER, MONOMER): 11762.469290177061, (DIMER, DIMER): 11762.469290177061}, (2, 2): {(MONOMER, DIMER): 570703.7954648494, (DIMER, MONOMER): 570703.7954648494, (DIMER, DIMER): 570703.7954648494}},
+'hydration': {0: {MONOMER: 45383.99955642849, DIMER: 45383.99955642849}, 1: {MONOMER: 16485.40300715421, DIMER: 16485.40300715421}, 2: {MONOMER: 45383.99955642849, DIMER: 45383.99955642849}}}
 
 
 def create_sample_kmc_result():
@@ -99,6 +111,20 @@ def create_sample_kmc_result():
     return result
 
 
+def create_sample_kmc_result_c_lignin():
+    num_monos = 2
+    initial_monomers = [Monomer( 2, i) for i in range(num_monos)]
+    initial_events = [Event(OX, [i], GOOD_RXN_RATES[OX][2][MONOMER]) for i in range(num_monos)]
+    # ini_state = create_initial_state(initial_events, initial_monomers, num_monos)
+    # # new to test
+    # events = {initial_events[i] for i in range(num_monos)}
+    # events.add(Event(GROW, [], rate=DEF_INI_RATE, bond=sg_ratio))
+    # # make random seed and sort events for testing reliability
+    # np.random.seed(10)
+    # result = run_kmc(n_max=10, t_final=1, rates=GOOD_RXN_RATES, initial_state=ini_state,
+    #                  initial_events=sorted(events), random_seed=10)
+    # return result
+
 # Tests #
 
 class TestCalcRates(unittest.TestCase):
@@ -107,7 +133,7 @@ class TestCalcRates(unittest.TestCase):
     """
     def test_calc_rates_from_kcal_mol(self):
         config = {TEMP: DEF_TEMP, E_A_KCAL_MOL: DEF_E_A_KCAL_MOL, E_A_J_PART: None}
-        result = calc_rates(config)
+        rxn_rates = calc_rates(config)
         rxn_type, substrate, substrate_type = None, None, None  # to make IDE happy
         # nested loops instead of dealing with almost equal dicts
         try:
@@ -116,7 +142,7 @@ class TestCalcRates(unittest.TestCase):
                     for substrate_type in GOOD_RXN_RATES[rxn_type][substrate]:
                         # print(GOOD_RXN_RATES[rxn_type][substrate][substrate_type])
                         self.assertAlmostEqual(GOOD_RXN_RATES[rxn_type][substrate][substrate_type],
-                                               result[rxn_type][substrate][substrate_type])
+                                               rxn_rates[rxn_type][substrate][substrate_type])
         except (TypeError, IndexError) as e:
             print(f'{e}\nError when looking at rxn_type: {rxn_type} substrate: {substrate}    '
                   f'substrate_type:    {substrate_type}')
@@ -314,15 +340,15 @@ class TestAnalyzeKMC(unittest.TestCase):
             self.assertTrue(good_rcf_bond_summary in output)
 
     def testKMCVisual(self):
-        result = create_sample_kmc_result()
-        nodes = result[MONO_LIST]
-        adj = result[ADJ_MATRIX]
-        block = generate_mol(adj, nodes)
-        mol = MolFromMolBlock(block)
-        Compute2DCoords(mol)
-        # mol_svg = mol_to_svg(mol, mol_size=(950, 400))
-        f_name = "testSvg.svg"
-        MolToFile(mol, f_name)
-        f_name = "testSvg.png"
-        MolToFile(mol, f_name)
-        # mol_svg.save(f_name)
+        try:
+            silent_remove(PNG_10MER)
+            result = create_sample_kmc_result()
+            nodes = result[MONO_LIST]
+            adj = result[ADJ_MATRIX]
+            block = generate_mol(adj, nodes)
+            mol = MolFromMolBlock(block)
+            Compute2DCoords(mol)
+            MolToFile(mol, PNG_10MER, size=(1300, 300))
+            self.assertTrue(os.path.isfile(PNG_10MER))
+        finally:
+            silent_remove(PNG_10MER, disable=DISABLE_REMOVE)

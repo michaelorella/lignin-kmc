@@ -201,10 +201,7 @@ def update_events(monomers=None, adj=None, last_event=None, events=None, rate_ve
                                 try:
                                     rate = rxn_event[2][(partner.type, mon.type)][(size[1], size[0])] / (cur_n ** 2)
                                 except KeyError:
-                                    print((mon.identity, partner.identity))
-                                    adj.max_print = adj.nnz
-                                    print(adj)
-                                    print(size)
+                                    # adj.max_print = adj.nnz
                                     raise InvalidDataError(f"Error on determining the rate for rxn_event type "
                                                            f"{rxn_event[0]}, bonding index {mon.identity} to "
                                                            f"{partner.identity}")
