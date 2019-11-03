@@ -4,9 +4,6 @@
 import re
 import networkx as nx
 import scipy.sparse as sp
-from rdkit import Chem
-from rdkit.Chem import rdDepictor
-from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit.Chem.Draw.MolDrawing import DrawingOptions
 from ligninkmc.kmc_common import (G, S, C, S4, G4, G7, ATOMS, BONDS)
 from common_wrangler.common import (InvalidDataError)
@@ -15,6 +12,7 @@ DrawingOptions.bondLineWidth = 1.2
 S7 = 'S7'
 
 
+# noinspection PyTypeChecker
 def generate_mol(adj, node_list):
     # define dictionary for atoms within each monomer
     atom_blocks = {G: ('C 0 0 0 0 \n' +  # 1
@@ -258,7 +256,7 @@ def generate_mol(adj, node_list):
     hydrate = {(4, 8): True, (5, 8): False, (8, 8): False, (5, 5): False, (1, 8): True, (4, 7): False, (4, 5): False}
     beta = {(4, 8): 1, (8, 4): 0, (5, 8): 1, (8, 5): 0, (1, 8): 1, (8, 1): 0}
     make_alpha_ring = {(4, 8): False, (5, 8): True, (8, 8): True, (5, 5): False, (1, 8): False, (4, 7): False,
-                      (4, 5): False}
+                       (4, 5): False}
 
     # Start by looping through the adjacency matrix, one bond at a time (corresponds to a pair iterator)
     paired_adj = zip(*[iter(dict(adj))] * 2)
@@ -278,7 +276,7 @@ def generate_mol(adj, node_list):
                 mons[1] = mon
 
         # Now just extract the bond types
-        bond = [adj[p] for p in pair]
+        bond = [int(adj[p]) for p in pair]
 
         # Get the indices of the atoms being bound -> Count from where the monomer starts, and add however many is
         #     needed to reach the desired position for that specific monomer type and bonding site
@@ -293,32 +291,33 @@ def generate_mol(adj, node_list):
         bonds.append(bond_string)
 
         # Check if the alkene needs to be modified to a single bond
-        if break_alkene[tuple(sorted(bond))]:
-            for index in range(2):
-                if adj[pair[index]] == 8 and mons[index].active != 7:  # Monomer index is bound through beta
+        bond_tuple = tuple(sorted(bond))
+        if break_alkene[bond_tuple]:
+            for i in range(2):
+                if adj[pair[i]] == 8 and mons[i].active != 7:  # Monomer index is bound through beta
                     # Find the bond index corresponding to alkene bond
-                    alkeneBondIndex = monomer_start_idx_bond[monomer_indices[index]] + alpha_beta_alkene_location - removed[
-                        BONDS]
+                    alkene_bond_index = monomer_start_idx_bond[monomer_indices[i]
+                                                               ] + alpha_beta_alkene_location - removed[BONDS]
 
                     # Get all of the required bond information (index,order,monIdx1,monIdx2)
-                    bond_vals = re.split(' +', bonds[alkeneBondIndex])[2:]
+                    bond_vals = re.split(' +', bonds[alkene_bond_index])[2:]
                     try:
-                        assert (int(bond_vals[0]) == alkeneBondIndex + removed[BONDS])
+                        assert (int(bond_vals[0]) == alkene_bond_index + removed[BONDS])
                     except AssertionError:
-                        print(f'Expected index: {bond_vals[0]} Index obtained: {alkeneBondIndex}')
+                        print(f'Expected index: {bond_vals[0]} Index obtained: {alkene_bond_index}')
 
                     # Decrease the bond order by 1
-                    bonds[alkeneBondIndex] = f'M  V30 {bond_vals[0]} 1 {bond_vals[2]} {bond_vals[3]} \n'
+                    bonds[alkene_bond_index] = f'M  V30 {bond_vals[0]} 1 {bond_vals[2]} {bond_vals[3]} \n'
 
         # Check if we need to add water to the alpha position
-
-        if hydrate[tuple(sorted(bond))] and 7 not in adj[monomer_indices[beta[tuple(bond)]]].values() and mons[
-            beta[tuple(bond)]].active != 7:
+        if hydrate[bond_tuple] and 7 not in adj[monomer_indices[beta[tuple(bond)]]].values() and \
+                mons[beta[tuple(bond)]].active != 7:
             if mons[int(not beta[tuple(bond)])].type != 2:
-                # We should actually only be hydrating BO4 bonds when the alpha position is unoccupied (handled by second clause above)
+                # We should actually only be hydrating BO4 bonds when the alpha position is unoccupied (handled by
+                # second clause above)
 
                 # Find the location of the alpha position
-                alpha_index = monomer_start_idx_atom[monomer_indices[beta[tuple(bond)]]] + site_positions[7][
+                alpha_idx = monomer_start_idx_atom[monomer_indices[beta[tuple(bond)]]] + site_positions[7][
                     mons[beta[tuple(bond)]].type]
 
                 # Add the alpha hydroxyl O atom
@@ -326,30 +325,30 @@ def generate_mol(adj, node_list):
                 atom_line_num += 1
 
                 # Make the bond
-                bonds.append(f'M  V30 {bond_line_num} 1 {alpha_index} {atom_line_num - 1} \n')
+                bonds.append(f'M  V30 {bond_line_num} 1 {alpha_idx} {atom_line_num - 1} \n')
                 bond_line_num += 1
             else:
                 # Make the benzodioxane linkage
-                alpha_index = monomer_start_idx_atom[monomer_indices[beta[tuple(bond)]]] + site_positions[7][
+                alpha_idx = monomer_start_idx_atom[monomer_indices[beta[tuple(bond)]]] + site_positions[7][
                     mons[beta[tuple(bond)]].type]
                 hydroxy_index = monomer_start_idx_atom[monomer_indices[int(not beta[tuple(bond)])]] + (
                         site_positions[4][mons[beta[tuple(bond)]].type] - 1)  # subtract 1 to move from 4-OH to 3-OH
 
                 # Make the bond
-                bonds.append(f'M  V30 {bond_line_num} 1 {alpha_index} {hydroxy_index} \n')
+                bonds.append(f'M  V30 {bond_line_num} 1 {alpha_idx} {hydroxy_index} \n')
                 bond_line_num += 1
 
         # Check if there will be a ring involving the alpha position
-        if make_alpha_ring[tuple(sorted(bond))]:
+        if make_alpha_ring[bond_tuple]:
             other_site = {(5, 8): 4, (8, 8): 10}
-            for index in range(2):
-                if adj[pair[index]] == 8:  # This index is bound through beta (will get alpha connection)
+            for i in range(2):
+                if adj[pair[i]] == 8:  # This index is bound through beta (will get alpha connection)
                     # Find the location of the alpha position and the position that cyclizes with alpha
-                    alpha_index = monomer_start_idx_atom[monomer_indices[index]] + site_positions[7][mons[index].type]
-                    otherIndex = monomer_start_idx_atom[monomer_indices[int(not index)]] + \
-                                 site_positions[other_site[tuple(sorted(bond))]][mons[int(not index)].type]
+                    alpha_idx = monomer_start_idx_atom[monomer_indices[i]] + site_positions[7][mons[i].type]
+                    other_idx = monomer_start_idx_atom[monomer_indices[int(not i)]
+                                                       ] + site_positions[other_site[bond_tuple]][mons[int(not i)].type]
 
-                    bonds.append(f'M  V30 {bond_line_num} 1 {alpha_index} {otherIndex} \n')
+                    bonds.append(f'M  V30 {bond_line_num} 1 {alpha_idx} {other_idx} \n')
                     bond_line_num += 1
 
         # All kinds of fun things need to happen for the B1 bond --
@@ -358,24 +357,24 @@ def generate_mol(adj, node_list):
         if sorted(bond) == [1, 8]:
             index_for_one = int(not beta[tuple(bond)])
             # Convert the alpha alcohol on one's tail to an aldehyde
-            alpha_index = monomer_start_idx_atom[monomer_indices[index_for_one]
-                                                 ] + site_positions[alpha][mons[index_for_one].type]
+            alpha_idx = monomer_start_idx_atom[monomer_indices[index_for_one]
+                                               ] + site_positions[alpha][mons[index_for_one].type]
 
             # Temporarily join the bonds so that we can find the string
             temp = ''.join(bonds)
-            matches = re.findall(f'M {2}V30 [0-9]+ 1 {alpha_index} [0-9]+', temp)
+            matches = re.findall(f'M {2}V30 [0-9]+ 1 {alpha_idx} [0-9]+', temp)
 
             # Find the bond connecting the alpha to the alcohol
             others = []
             for possibility in matches:
                 bound_atoms = re.split(' +', possibility)[4:]
-                others.extend([int(x) for x in bound_atoms if int(x) != alpha_index])
+                others.extend([int(x) for x in bound_atoms if int(x) != alpha_idx])
 
             # The oxygen atom should have the greatest index of the atoms bound to the alpha position because it
             #     was added last
             oxygen_atom_index = max(others)
-            bonds = re.sub(f'1 {alpha_index} {oxygen_atom_index}',
-                           f'2 {alpha_index} {oxygen_atom_index}', temp).splitlines(keepends=True)
+            bonds = re.sub(f'1 {alpha_idx} {oxygen_atom_index}',
+                           f'2 {alpha_idx} {oxygen_atom_index}', temp).splitlines(keepends=True)
 
             # Find where the index for the bond is and remove it from the array
             alpha_ring_bond_index = monomer_start_idx_bond[monomer_indices[index_for_one]
@@ -476,26 +475,6 @@ def generate_psfgen(adj, monomers, fname="psfgen.tcl", segname="L", toppar_direc
             raise ValueError
     fout.write("regenerate angles dihedrals\nwritepsf %s.psf" % segname)
     fout.close()
-
-
-def mol_to_svg(mol, mol_size=(450, 150), kekulize=True):
-    mc = Chem.Mol(mol.ToBinary())
-    if kekulize:
-        try:
-            Chem.Kekulize(mc)
-        except KeyError:
-            mc = Chem.Mol(mol.ToBinary())
-    if not mc.GetNumConformers():
-        rdDepictor.Compute2DCoords(mc)
-    drawer = rdMolDraw2D.MolDraw2DSVG(mol_size[0], mol_size[1])
-
-    # opts = drawer.drawOptions()
-    # for i in range(mc.GetNumAtoms()):
-    #    opts.atomLabels[i] = mc.GetAtomWithIdx(i).GetSymbol()+str(i+1)
-    drawer.DrawMolecule(mc)
-    drawer.FinishDrawing()
-    svg = drawer.GetDrawingText()
-    return svg.replace('svg:', '')
 
 
 def generate_graph_representation(adj, node_list):
