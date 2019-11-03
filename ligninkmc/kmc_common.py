@@ -48,6 +48,7 @@ ADJ_MATRIX = 'adjacency_matrix'
 MONO_LIST = 'monomers'
 
 CHAIN_LEN = 'Chain Lengths'
+ATOMS = 'Atoms'
 BONDS = 'Bonds'
 RCF_YIELDS = 'RCF Yields'
 RCF_BONDS = 'RCF Bonds'
