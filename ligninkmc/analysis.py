@@ -177,31 +177,32 @@ def break_bond_type(adj=None, bond_type=None):
                 BB: (lambda row, col: (adj[(row, col)] == 8 and adj[(col, row)] == 8)),
                 C5C5: (lambda row, col: (adj[(row, col)] == 5 and adj[(col, row)] == 5))}
 
-    for el in adj.keys():
-        adj_row = el[0]
-        adj_col = el[1]
+    for adj_bond_loc in adj.keys():
+        adj_row = adj_bond_loc[0]
+        adj_col = adj_bond_loc[1]
 
         if breakage[bond_type](adj_row, adj_col) and bond_type != B1_ALT:
             new_adj[(adj_row, adj_col)] = 0
             new_adj[(adj_col, adj_row)] = 0
         elif breakage[bond_type](adj_row, adj_col):
-            if adj[(adj_row, adj_col)] == 1: #The other 8 is in this row
-                data = adj.tocoo().getrow(adj_row).data
-                cols = adj.tocoo().getrow(adj_row).indices
-                for i,idx in enumerate(cols):
-                    if data[i] == 8:
-                        break
-                new_adj[(adj_row, idx)] = 0
-                new_adj[(idx, adj_row)] = 0
-            else: #The other 8 is in the other row
-                data = adj.tocoo().getrow(adj_col).data
-                cols = adj.tocoo().getrow(adj_col).indices
-                for i,idx in enumerate(cols):
-                    if data[i] == 8:
-                        break
-                new_adj[(adj_col, idx)] = 0
-                new_adj[(idx, adj_col)] = 0
+            if adj[(adj_row, adj_col)] == 1:
+                # The other 8 is in this row
+                remove_prev_bond(adj, adj_row, new_adj)
+            else:
+                # The other 8 is in the other row
+                remove_prev_bond(adj, adj_col, new_adj)
     return new_adj
+
+
+def remove_prev_bond(adj, search_loc, new_adj):
+    idx = 0  # make IDE happy
+    data = adj.tocoo().getrow(search_loc).data
+    cols = adj.tocoo().getrow(search_loc).indices
+    for i, idx in enumerate(cols):
+        if data[i] == 8:
+            break
+    new_adj[(search_loc, idx)] = 0
+    new_adj[(idx, search_loc)] = 0
 
 
 def count_bonds(adj=None):
