@@ -274,7 +274,7 @@ def connected_size(mon=None):
         return connected_size(mon=mon.parent)
 
 
-def do_event(event=None, state=None, adj=None):
+def do_event(event=None, state=None, adj=None, sg_ratio=None):
     """
     The second key component of the lignin implementation of the Monte Carlo algorithm, this method actually executes
     the chosen event on the current state and modifies it to reflect the updates.
@@ -282,6 +282,7 @@ def do_event(event=None, state=None, adj=None):
     :param event: The event object that should be executed on the current state
     :param state: dict, The dictionary of dictionaries that contains the state information for each monomer
     :param adj: dok_matrix, The adjacency matrix in the current state
+    :param sg_ratio: float needed if there are S and G and only S and G
     :return: N/A - mutates the list of monomers and adjacency matrix instead
     """
 
@@ -360,15 +361,14 @@ def do_event(event=None, state=None, adj=None):
             if monomers and monomers[-1].type == 2:
                 mon_type = 2
             else:
-                sg = event.bond
-                pct = sg / (1 + sg)
+                pct = sg_ratio / (1 + sg_ratio)
                 mon_type = int(np.random.rand() < pct)
             new_mon = Monomer(mon_type, current_size)
             state[current_size] = {MONOMER: new_mon, AFFECTED: set()}
 
 
 def run_kmc(n_max=10, t_final=10, rates=None, initial_state=None, initial_events=None, dynamics=False,
-            random_seed=None):
+            random_seed=None, sg_ratio=None):
     """
     Performs the Gillespie algorithm using the specific event and update implementations described by do_event and
     update_events specifically. The initial state and events in that state are constructed and passed to the run_kmc
@@ -393,6 +393,7 @@ def run_kmc(n_max=10, t_final=10, rates=None, initial_state=None, initial_events
     :param initial_events: dictionary -- The dictionary mapping event hash values to those events
     :param dynamics:
     :param random_seed: None or hashable value to aid testing
+    :param sg_ratio: needed if there is S and G and nothing else
     :return: Dictionary with the simulation times, adjacency matrix, and list of monomers at the end of the simulation
     """
 
@@ -439,7 +440,7 @@ def run_kmc(n_max=10, t_final=10, rates=None, initial_state=None, initial_events
         t.extend(t[-1] + dt)
 
         # Do the event and update the state
-        do_event(event, state, adj)
+        do_event(event, state, adj, sg_ratio)
 
         if dynamics:
             adj_list.append(adj.copy())

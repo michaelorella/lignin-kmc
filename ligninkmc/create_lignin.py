@@ -195,11 +195,11 @@ def main(argv=None):
         ini_events.add(Event(GROW, [], rate=DEF_INI_RATE, bond=cfg[SG_RATIO]))
 
         # begin simulation
-        res = run_kmc(n_max=cfg[MAX_MONOS], t_final=cfg[SIM_TIME], rates=rxn_rates, initial_state=ini_state,
-                      initial_events=ini_events)
+        result = run_kmc(n_max=cfg[MAX_MONOS], t_final=cfg[SIM_TIME], rates=rxn_rates, initial_state=ini_state,
+                         initial_events=ini_events, sg_ratio=cfg[SG_RATIO])
         #  To show the state, we will print the adjacency matrix that has been generated,
         #  although this is not the typical output examined.
-        print(res[ADJ_MATRIX].todense())
+        print(result[ADJ_MATRIX].toarray())
     except InvalidDataError as e:
         warning(e)
         return INVALID_DATA

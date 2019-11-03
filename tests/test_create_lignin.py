@@ -107,11 +107,11 @@ def create_sample_kmc_result():
     ini_state = create_initial_state(initial_events, initial_monomers, num_monos)
     # new to test
     events = {initial_events[i] for i in range(num_monos)}
-    events.add(Event(GROW, [], rate=DEF_INI_RATE, bond=sg_ratio))
+    events.add(Event(GROW, [], rate=DEF_INI_RATE))
     # make random seed and sort events for testing reliability
     np.random.seed(10)
     result = run_kmc(n_max=10, t_final=1, rates=GOOD_RXN_RATES, initial_state=ini_state,
-                     initial_events=sorted(events), random_seed=10)
+                     initial_events=sorted(events), random_seed=10, sg_ratio=sg_ratio)
     return result
 
 
@@ -120,16 +120,14 @@ def create_sample_kmc_result_c_lignin():
     initial_monomers = [Monomer(2, i) for i in range(num_monos)]
     # noinspection PyTypeChecker
     initial_events = [Event(OX, [i], GOOD_RXN_RATES[OX][2][MONOMER]) for i in range(num_monos)]
-    print(initial_monomers, initial_events)
-    # ini_state = create_initial_state(initial_events, initial_monomers, num_monos)
-    # # new to test
-    # events = {initial_events[i] for i in range(num_monos)}
-    # events.add(Event(GROW, [], rate=DEF_INI_RATE, bond=sg_ratio))
-    # # make random seed and sort events for testing reliability
-    # np.random.seed(10)
-    # result = run_kmc(n_max=10, t_final=1, rates=GOOD_RXN_RATES, initial_state=ini_state,
-    #                  initial_events=sorted(events), random_seed=10)
-    # return result
+    ini_state = create_initial_state(initial_events, initial_monomers, num_monos)
+    events = {initial_events[i] for i in range(num_monos)}
+    events.add(Event(GROW, [], rate=DEF_INI_RATE))
+    # make random seed and sort events for testing reliability
+    np.random.seed(10)
+    result = run_kmc(n_max=10, t_final=2, rates=GOOD_RXN_RATES, initial_state=ini_state,
+                     initial_events=sorted(events), random_seed=10)
+    return result
 
 
 # Tests #
@@ -246,6 +244,21 @@ class TestRunKMC(unittest.TestCase):
         good_dok_vals = [8.0, 5.0, 8.0, 4.0, 4.0, 8.0, 5.0, 8.0, 4.0, 8.0, 8.0, 5.0, 5.0, 8.0, 5.0, 8.0, 5.0, 8.0]
         self.assertTrue(list(result[ADJ_MATRIX].keys()) == good_dok_keys)
         self.assertTrue(list(result[ADJ_MATRIX].values()) == good_dok_vals)
+
+    def testSampleRunKMCCLignin(self):
+        # TODO: Finish test
+        result = create_sample_kmc_result_c_lignin()
+        print(result)
+        # self.assertTrue(len(result[TIME]))
+        # self.assertAlmostEqual(result[TIME][-1], 0.009396540330667606)
+        # self.assertTrue(len(result[MONO_LIST]) == 10)
+        # self.assertTrue(str(result[MONO_LIST][-1]) == '9: coniferyl alcohol is connected to '
+        #                                               '{0, 1, 2, 3, 4, 5, 6, 7, 8, 9} and active at position 4')
+        # good_dok_keys = [(0, 2), (2, 0), (1, 0), (0, 1), (1, 3), (3, 1), (3, 4), (4, 3), (4, 5),
+        #                  (5, 4), (6, 5), (5, 6), (6, 7), (7, 6), (7, 8), (8, 7), (8, 9), (9, 8)]
+        # good_dok_vals = [8.0, 5.0, 8.0, 4.0, 4.0, 8.0, 5.0, 8.0, 4.0, 8.0, 8.0, 5.0, 5.0, 8.0, 5.0, 8.0, 5.0, 8.0]
+        # self.assertTrue(list(result[ADJ_MATRIX].keys()) == good_dok_keys)
+        # self.assertTrue(list(result[ADJ_MATRIX].values()) == good_dok_vals)
 
 
 class TestAnalyzeKMC(unittest.TestCase):
