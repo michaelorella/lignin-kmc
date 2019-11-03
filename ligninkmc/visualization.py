@@ -11,6 +11,7 @@ import networkx as nx
 import re
 
 DrawingOptions.bondLineWidth = 1.2
+S7 = 'S7'
 
 
 def generate_mol(adj, node_list):
@@ -87,74 +88,74 @@ def generate_mol(adj, node_list):
     # Similarly define dictionary for bonds within each monomer -
     # NOTE: THESE MAY NEED TO CHANGE DEPENDING ON INTER-UNIT LINKAGES
 
-    bondBlocks = {G7: ('1 1  2  \n' +  # Aromatic ring 1->2
-                         '2 2  3  \n' +  # Aromatic ring 2->3
-                         '1 3  4  \n' +  # Aromatic ring 3->4
-                         '1 4  5  \n' +  # Aromatic ring 4->5
-                         '2 5  6  \n' +  # Aromatic ring 5->6
-                         '1 6  1  \n' +  # Aromatic ring 6->1
-                         '2 1  7  \n' +  # Quinone methide propyl tail 1->A
-                         '1 7  8  \n' +  # Propyl tail A->B
+    bond_blocks = {G7: ('1 1  2  \n' +  # Aromatic ring 1->2
+                        '2 2  3  \n' +  # Aromatic ring 2->3
+                        '1 3  4  \n' +  # Aromatic ring 3->4
+                        '1 4  5  \n' +  # Aromatic ring 4->5
+                        '2 5  6  \n' +  # Aromatic ring 5->6
+                        '1 6  1  \n' +  # Aromatic ring 6->1
+                        '2 1  7  \n' +  # Quinone methide propyl tail 1->A
+                        '1 7  8  \n' +  # Propyl tail A->B
+                        '1 8  9  \n' +  # Propyl tail B->G
+                        '1 9  10 \n' +  # Gamma hydroxyl G->OH
+                        '1 3  11 \n' +  # 3 methoxy 3->O
+                        '1 11 12 \n' +  # 3 methoxy O->12
+                        '2 4  13 \n'),  # 4 ketone 4->O
+                   G: ('2 1  2  \n' +  # Aromatic ring 1->2
+                       '1 2  3  \n' +  # Aromatic ring 2->3
+                       '2 3  4  \n' +  # Aromatic ring 3->4
+                       '1 4  5  \n' +  # Aromatic ring 4->5
+                       '2 5  6  \n' +  # Aromatic ring 5->6
+                       '1 6  1  \n' +  # Aromatic ring 6->1
+                       '1 1  7  \n' +  # Ring - propyl tail 1->A
+                       '2 7  8  \n' +  # Alkene propyl tail A->B
                        '1 8  9  \n' +  # Propyl tail B->G
                        '1 9  10 \n' +  # Gamma hydroxyl G->OH
                        '1 3  11 \n' +  # 3 methoxy 3->O
                        '1 11 12 \n' +  # 3 methoxy O->12
-                       '2 4  13 \n'),  # 4 ketone 4->O
-                  G: ('2 1  2  \n' +  # Aromatic ring 1->2
-                        '1 2  3  \n' +  # Aromatic ring 2->3
-                        '2 3  4  \n' +  # Aromatic ring 3->4
+                       '1 4  13 \n'),  # 4 hydroxyl 4->OH
+                   S7: ('1 1  2  \n' +  # Aromatic ring 1->2
+                        '2 2  3  \n' +  # Aromatic ring 2->3
+                        '1 3  4  \n' +  # Aromatic ring 3->4
                         '1 4  5  \n' +  # Aromatic ring 4->5
                         '2 5  6  \n' +  # Aromatic ring 5->6
                         '1 6  1  \n' +  # Aromatic ring 6->1
-                        '1 1  7  \n' +  # Ring - propyl tail 1->A
-                        '2 7  8  \n' +  # Alkene propyl tail A->B
+                        '2 1  7  \n' +  # Quinone methide 1->A
+                        '1 7  8  \n' +  # Propyl tail A->B
                         '1 8  9  \n' +  # Propyl tail B->G
                         '1 9  10 \n' +  # Gamma hydroxyl G->OH
                         '1 3  11 \n' +  # 3 methoxy 3->O
                         '1 11 12 \n' +  # 3 methoxy O->12
-                        '1 4  13 \n'),  # 4 hydroxyl 4->OH
-                  'S7': ('1 1  2  \n' +  # Aromatic ring 1->2
-                         '2 2  3  \n' +  # Aromatic ring 2->3
-                         '1 3  4  \n' +  # Aromatic ring 3->4
-                         '1 4  5  \n' +  # Aromatic ring 4->5
-                         '2 5  6  \n' +  # Aromatic ring 5->6
-                         '1 6  1  \n' +  # Aromatic ring 6->1
-                         '2 1  7  \n' +  # Quinone methide 1->A
-                         '1 7  8  \n' +  # Propyl tail A->B
-                         '1 8  9  \n' +  # Propyl tail B->G
-                         '1 9  10 \n' +  # Gamma hydroxyl G->OH
-                         '1 3  11 \n' +  # 3 methoxy 3->O
-                         '1 11 12 \n' +  # 3 methoxy O->12
-                         '2 4  13 \n' +  # 4 ketone 4->O
-                         '1 5  14 \n' +  # 5 methoxy 5->O
-                         '1 14 15 \n'),  # 5 methoxy O->15
-                  S: ('2 1  2  \n' +  # Aromatic ring 1->2
-                        '1 2  3  \n' +  # Aromatic ring 2->3
-                        '2 3  4  \n' +  # Aromatic ring 3->4
-                        '1 4  5  \n' +  # Aromatic ring 4->5
-                        '2 5  6  \n' +  # Aromatic ring 5->6
-                        '1 6  1  \n' +  # Aromatic ring 6->1
-                        '1 1  7  \n' +  # Ring - propyl tail 1->A
-                        '2 7  8  \n' +  # Alkene propyl tail A->B
-                        '1 8  9  \n' +  # Propyl tail B->G
-                        '1 9  10 \n' +  # Gamma hydroxyl G->OH
-                        '1 3  11 \n' +  # 3 methoxy 3->O
-                        '1 11 12 \n' +  # 3 methoxy O->12
-                        '1 4  13 \n' +  # 4 hydroxyl 4->OH
+                        '2 4  13 \n' +  # 4 ketone 4->O
                         '1 5  14 \n' +  # 5 methoxy 5->O
                         '1 14 15 \n'),  # 5 methoxy O->15
-                  C: ('2 1  2  \n' +  # Aromatic ring 1->2
-                        '1 2  3  \n' +  # Aromatic ring 2->3
-                        '2 3  4  \n' +  # Aromatic ring 3->4
-                        '1 4  5  \n' +  # Aromatic ring 4->5
-                        '2 5  6  \n' +  # Aromatic ring 5->6
-                        '1 6  1  \n' +  # Aromatic ring 6->1
-                        '1 1  7  \n' +  # Ring - propyl tail 1->A
-                        '2 7  8  \n' +  # Alkene propyl tail A->B
-                        '1 8  9  \n' +  # Propyl tail B->G
-                        '1 9  10 \n' +  # Gamma hydroxyl G->OH
-                        '1 3  11 \n' +  # 3 hydroxyl 3->O
-                        '1 4  12 \n')}  # 4 hydroxyl 4->OH
+                   S: ('2 1  2  \n' +  # Aromatic ring 1->2
+                       '1 2  3  \n' +  # Aromatic ring 2->3
+                       '2 3  4  \n' +  # Aromatic ring 3->4
+                       '1 4  5  \n' +  # Aromatic ring 4->5
+                       '2 5  6  \n' +  # Aromatic ring 5->6
+                       '1 6  1  \n' +  # Aromatic ring 6->1
+                       '1 1  7  \n' +  # Ring - propyl tail 1->A
+                       '2 7  8  \n' +  # Alkene propyl tail A->B
+                       '1 8  9  \n' +  # Propyl tail B->G
+                       '1 9  10 \n' +  # Gamma hydroxyl G->OH
+                       '1 3  11 \n' +  # 3 methoxy 3->O
+                       '1 11 12 \n' +  # 3 methoxy O->12
+                       '1 4  13 \n' +  # 4 hydroxyl 4->OH
+                       '1 5  14 \n' +  # 5 methoxy 5->O
+                       '1 14 15 \n'),  # 5 methoxy O->15
+                   C: ('2 1  2  \n' +  # Aromatic ring 1->2
+                       '1 2  3  \n' +  # Aromatic ring 2->3
+                       '2 3  4  \n' +  # Aromatic ring 3->4
+                       '1 4  5  \n' +  # Aromatic ring 4->5
+                       '2 5  6  \n' +  # Aromatic ring 5->6
+                       '1 6  1  \n' +  # Aromatic ring 6->1
+                       '1 1  7  \n' +  # Ring - propyl tail 1->A
+                       '2 7  8  \n' +  # Alkene propyl tail A->B
+                       '1 8  9  \n' +  # Propyl tail B->G
+                       '1 9  10 \n' +  # Gamma hydroxyl G->OH
+                       '1 3  11 \n' +  # 3 hydroxyl 3->O
+                       '1 4  12 \n')}  # 4 hydroxyl 4->OH
 
     mol_str = '\n\n\n  0  0  0  0  0  0  0  0  0  0999 V3000\nM  V30 BEGIN CTAB\n'  # Header information
     mol_atom_blocks = 'M  V30 BEGIN ATOM\n'
@@ -181,29 +182,31 @@ def generate_mol(adj, node_list):
 
     # Build the individual monomers before they are linked by anything
     for i, mon in enumerate(node_list):
-        if mon.type == 0:
+        if mon.type == 0 or mon.type == 1:
             if mon.active == 0 or mon.active == -1:
-                atom_block = atom_blocks[G]
-                bond_block = bondBlocks[G]
+                if mon.type == 0:
+                    atom_block = atom_blocks[G]
+                    bond_block = bond_blocks[G]
+                else:
+                    atom_block = atom_blocks[S]
+                    bond_block = bond_blocks[S]
             elif mon.active == 4:
-                atom_block = atom_blocks[G4]
-                bond_block = bondBlocks[G]
+                if mon.type == 0:
+                    atom_block = atom_blocks[G4]
+                    bond_block = bond_blocks[G]
+                else:
+                    atom_block = atom_blocks[S4]
+                    bond_block = bond_blocks[S]
             elif mon.active == 7:
-                atom_block = atom_blocks[G]
-                bond_block = bondBlocks[G7]
-        elif mon.type == 1:
-            if mon.active == 0 or mon.active == -1:
-                atom_block = atom_blocks[S]
-                bond_block = bondBlocks[S]
-            elif mon.active == 4:
-                atom_block = atom_blocks[S4]
-                bond_block = bondBlocks[S]
-            elif mon.active == 7:
-                atom_block = atom_blocks[S]
-                bond_block = bondBlocks['S7']
+                if mon.type == 0:
+                    atom_block = atom_blocks[G]
+                    bond_block = bond_blocks[G7]
+                else:
+                    atom_block = atom_blocks[S]
+                    bond_block = bond_blocks[S7]
         elif mon.type == 2:
             atom_block = atom_blocks[C]
-            bond_block = bondBlocks[C]
+            bond_block = bond_blocks[C]
         else:
             raise ValueError("Expected types for monomer to be 0, 1, or 2, but encountered type '{}'".format(mon.type))
 
@@ -314,7 +317,7 @@ def generate_mol(adj, node_list):
                 # We should actually only be hydrating BO4 bonds when the alpha position is unoccupied (handled by second clause above)
 
                 # Find the location of the alpha position
-                alphaIndex = monomer_start_idx_atom[monomer_indices[beta[tuple(bond)]]] + site_positions[7][
+                alpha_index = monomer_start_idx_atom[monomer_indices[beta[tuple(bond)]]] + site_positions[7][
                     mons[beta[tuple(bond)]].type]
 
                 # Add the alpha hydroxyl O atom
@@ -322,59 +325,62 @@ def generate_mol(adj, node_list):
                 atom_line_num += 1
 
                 # Make the bond
-                bonds.append(f'M  V30 {bond_line_num} 1 {alphaIndex} {atom_line_num - 1} \n')
+                bonds.append(f'M  V30 {bond_line_num} 1 {alpha_index} {atom_line_num - 1} \n')
                 bond_line_num += 1
             else:
                 # Make the benzodioxane linkage
-                alphaIndex = monomer_start_idx_atom[monomer_indices[beta[tuple(bond)]]] + site_positions[7][
+                alpha_index = monomer_start_idx_atom[monomer_indices[beta[tuple(bond)]]] + site_positions[7][
                     mons[beta[tuple(bond)]].type]
-                hydroxyIndex = monomer_start_idx_atom[monomer_indices[int(not beta[tuple(bond)])]] + (
+                hydroxy_index = monomer_start_idx_atom[monomer_indices[int(not beta[tuple(bond)])]] + (
                         site_positions[4][mons[beta[tuple(bond)]].type] - 1)  # subtract 1 to move from 4-OH to 3-OH
 
                 # Make the bond
-                bonds.append(f'M  V30 {bond_line_num} 1 {alphaIndex} {hydroxyIndex} \n')
+                bonds.append(f'M  V30 {bond_line_num} 1 {alpha_index} {hydroxy_index} \n')
                 bond_line_num += 1
 
         # Check if there will be a ring involving the alpha position
         if make_alpha_ring[tuple(sorted(bond))]:
-            otherSite = {(5, 8): 4, (8, 8): 10}
+            other_site = {(5, 8): 4, (8, 8): 10}
             for index in range(2):
                 if adj[pair[index]] == 8:  # This index is bound through beta (will get alpha connection)
                     # Find the location of the alpha position and the position that cyclizes with alpha
-                    alphaIndex = monomer_start_idx_atom[monomer_indices[index]] + site_positions[7][mons[index].type]
+                    alpha_index = monomer_start_idx_atom[monomer_indices[index]] + site_positions[7][mons[index].type]
                     otherIndex = monomer_start_idx_atom[monomer_indices[int(not index)]] + \
-                                 site_positions[otherSite[tuple(sorted(bond))]][mons[int(not index)].type]
+                                 site_positions[other_site[tuple(sorted(bond))]][mons[int(not index)].type]
 
-                    bonds.append(f'M  V30 {bond_line_num} 1 {alphaIndex} {otherIndex} \n')
+                    bonds.append(f'M  V30 {bond_line_num} 1 {alpha_index} {otherIndex} \n')
                     bond_line_num += 1
 
         # All kinds of fun things need to happen for the B1 bond --
         # 1 ) Disconnect the original 1 -> A bond that existed from the not beta monomer
         # 2 ) Convert the new primary alcohol to an aldehyde
         if sorted(bond) == [1, 8]:
-            indexForOne = int(not beta[tuple(bond)])
+            index_for_one = int(not beta[tuple(bond)])
             # Convert the alpha alcohol on one's tail to an aldehyde
-            alphaIndex = monomer_start_idx_atom[monomer_indices[indexForOne]] + site_positions[alpha][mons[indexForOne].type]
+            alpha_index = monomer_start_idx_atom[monomer_indices[index_for_one]
+                                                 ] + site_positions[alpha][mons[index_for_one].type]
 
             # Temporarily join the bonds so that we can find the string
             temp = ''.join(bonds)
-            matches = re.findall(f'M {2}V30 [0-9]+ 1 {alphaIndex} [0-9]+', temp)
+            matches = re.findall(f'M {2}V30 [0-9]+ 1 {alpha_index} [0-9]+', temp)
 
             # Find the bond connecting the alpha to the alcohol
             others = []
             for possibility in matches:
                 boundAtoms = re.split(' +', possibility)[4:]
-                others.extend([int(x) for x in boundAtoms if int(x) != alphaIndex])
+                others.extend([int(x) for x in boundAtoms if int(x) != alpha_index])
 
-            # The oxygen atom should have the greatest index of the atoms bound to the alpha position because it was added last
-            oxygenAtomIndex = max(others)
-            bonds = re.sub(f'1 {alphaIndex} {oxygenAtomIndex}', f'2 {alphaIndex} {oxygenAtomIndex}', temp).splitlines(
-                keepends=True)
+            # The oxygen atom should have the greatest index of the atoms bound to the alpha position because it
+            #     was added last
+            oxygen_atom_index = max(others)
+            bonds = re.sub(f'1 {alpha_index} {oxygen_atom_index}',
+                           f'2 {alpha_index} {oxygen_atom_index}', temp).splitlines(keepends=True)
 
             # Find where the index for the bond is and remove it from the array
-            alphaRingBondIndex = monomer_start_idx_bond[monomer_indices[indexForOne]] + alpha_ring_location - removed[
+            alpha_ring_bond_index = monomer_start_idx_bond[monomer_indices[index_for_one]
+                                                           ] + alpha_ring_location - removed[
                 'bonds']
-            del (bonds[alphaRingBondIndex])
+            del (bonds[alpha_ring_bond_index])
             removed['bonds'] += 1
 
     mol_bond_blocks = ''.join(bonds)
