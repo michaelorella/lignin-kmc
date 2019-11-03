@@ -4,11 +4,15 @@ import os
 import unittest
 import numpy as np
 import scipy.sparse as sp
-from common_wrangler.common import InvalidDataError
+from rdkit.Chem import MolFromMolBlock
+from rdkit.Chem.AllChem import Compute2DCoords
+from rdkit.Chem.Draw import MolToFile
+from common_wrangler.common import InvalidDataError, capture_stdout
 from ligninkmc import Event
 from ligninkmc import Monomer
-from ligninkmc.analysis import analyze_adj_matrix, count_bonds, count_yields, break_bond_type
+from ligninkmc.analysis import analyze_adj_matrix, count_bonds, count_yields, break_bond_type, adj_analysis_to_stdout
 from ligninkmc.kineticMonteCarlo import run_kmc
+from ligninkmc.visualization import generate_mol, mol_to_svg
 from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, DEF_E_A_KCAL_MOL, create_initial_monomers,
                                      create_initial_events, create_initial_state, DEF_INI_RATE)
 from ligninkmc.kmc_common import (TEMP, E_A_KCAL_MOL, E_A_J_PART, C5O4, OX, Q, C5C5, B5, BB, BO4, AO4, B1,
@@ -291,3 +295,34 @@ class TestAnalyzeKMC(unittest.TestCase):
         self.assertTrue(summary[BONDS] == {BO4: 3, B1: 0, BB: 0, B5: 6, C5C5: 0, AO4: 0, C5O4: 0})
         self.assertTrue(dict(summary[RCF_YIELDS]) == {2: 2, 1: 1, 5: 1})
         self.assertTrue(summary[RCF_BONDS] == {BO4: 0, B1: 0, BB: 0, B5: 6, C5C5: 0, AO4: 0, C5O4: 0})
+
+    def testKMCResultSummaryDescription(self):
+        result = create_sample_kmc_result()
+        summary = analyze_adj_matrix(adjacency=result[ADJ_MATRIX])
+        adj_analysis_to_stdout(summary)
+        good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n       1 oligomer(s) of chain length 10"
+        good_bond_summary = "These were created with the following bond types and number:\n    BO4:    3     " \
+                            "B1:    0     BB:    0     B5:    6     55:    0    AO4:    0    5O4:    0"
+        good_rcf_olig_summary = "Breaking BO4 bonds to simulate RCF results in:\n       2 dimers (chain length of 2)" \
+                                "\n       1 monomers (chain length of 1)\n       1 oligomer(s) of chain length 5"
+        good_rcf_bond_summary = "with following remaining bond types and number:\n    BO4:    0     " \
+                                "B1:    0     BB:    0     B5:    6     55:    0    AO4:    0    5O4:    0"
+        with capture_stdout(adj_analysis_to_stdout, summary) as output:
+            self.assertTrue(good_chain_summary in output)
+            self.assertTrue(good_bond_summary in output)
+            self.assertTrue(good_rcf_olig_summary in output)
+            self.assertTrue(good_rcf_bond_summary in output)
+
+    def testKMCVisual(self):
+        result = create_sample_kmc_result()
+        nodes = result[MONO_LIST]
+        adj = result[ADJ_MATRIX]
+        block = generate_mol(adj, nodes)
+        mol = MolFromMolBlock(block)
+        Compute2DCoords(mol)
+        # mol_svg = mol_to_svg(mol, mol_size=(950, 400))
+        f_name = "testSvg.svg"
+        MolToFile(mol, f_name)
+        f_name = "testSvg.png"
+        MolToFile(mol, f_name)
+        # mol_svg.save(f_name)

@@ -328,17 +328,46 @@ def analyze_adj_matrix(adjacency=None):
 
 
 def adj_analysis_to_stdout(adj_results):
-    chain_len_results = adj_results[CHAIN_LEN]
-    print(f"Lignin KMC created {len(chain_len_results)} monomers, which formed:\n")
+    """
+    Describe the meaning of the summary dictionary
+    :param adj_results: a dictionary from analyze_adj_matrix
+    :return: n/a: prints to stdout
+    """
+    # starting with CHAIN_LEN
+    chain_len_results = dict(adj_results[CHAIN_LEN])
+    olig_len_array = np.asarray(list(chain_len_results.keys()))
+    olig_num_array = np.asarray(list(chain_len_results.values()))
+    num_monos_created = np.dot(olig_num_array, olig_len_array)
+    print(f"Lignin KMC created {num_monos_created} monomers, which formed:")
+    print_olig_distribution(chain_len_results)
+
+    lignin_bonds = adj_results[BONDS]
+    print(f"These were created with the following bond types and number:")
+    print_bond_type_num(lignin_bonds)
+
+    print("\nBreaking BO4 bonds to simulate RCF results in:")
+    print_olig_distribution(dict(adj_results[RCF_YIELDS]))
+    print(f"with following remaining bond types and number:")
+    print_bond_type_num(adj_results[RCF_BONDS])
+
+
+def print_bond_type_num(lignin_bonds):
+    bond_summary = ""
+    for bond_type, bond_num in lignin_bonds.items():
+        bond_summary += f"   {bond_type.upper():>4}: {bond_num:4}"
+    print(bond_summary)
+
+
+def print_olig_distribution(chain_len_results):
     for olig_len, olig_num in chain_len_results.items():
         if olig_len == 1:
-            print(f"    {olig_num} monomers (chain length of 1)")
+            print(f"{olig_num:>8} monomers (chain length of 1)")
         elif olig_len == 2:
-            print(f"    {olig_num} dimers (chain length of 2)")
+            print(f"{olig_num:>8} dimers (chain length of 2)")
         elif olig_len == 3:
-            print(f"    {olig_num} trimers (chain length of 3)")
+            print(f"{olig_num:>8} trimers (chain length of 3)")
         else:
-            print(f"    {olig_num} oligomers of chain length {olig_len}")
+            print(f"{olig_num:>8} oligomer(s) of chain length {olig_len}")
 
 
 def degree(adj):
