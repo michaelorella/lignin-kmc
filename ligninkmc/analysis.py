@@ -159,12 +159,13 @@ def break_bond_type(adj=None, bond_type=None):
         on the monomer that is bound through 1
     :return:
     """
-    new_adj = adj.todok(1)  # Copy the matrix into a new matrix
+    # Copy the matrix into a new matrix
+    new_adj = adj.todok(copy=True)
 
-    breakage = {B1: (lambda row, col: (adj[(row, col)] == 1 and adj[(col, row)] == 8) or
-                                      (adj[(row, col)] == 8 and adj[(col, row)] == 1)),
-                B1_ALT: (lambda row, col: (adj[(adj_row, col)] == 1 and adj[(col, adj_row)] == 8) or
-                                          (adj[(adj_row, col)] == 8 and adj[(col, adj_row)] == 1)),
+    breakage = {B1: (lambda row, col: (adj[(row, col)] == 1 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
+                                                                                          adj[(col, row)] == 1)),
+                B1_ALT: (lambda row, col: (adj[(row, col)] == 1 and adj[(col, row)] == 8) or
+                                          (adj[(row, col)] == 8 and adj[(col, row)] == 1)),
                 B5: (lambda row, col: (adj[(row, col)] == 5 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
                                                                                           adj[(col, row)] == 5)),
                 BO4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
@@ -184,21 +185,23 @@ def break_bond_type(adj=None, bond_type=None):
             new_adj[(adj_row, adj_col)] = 0
             new_adj[(adj_col, adj_row)] = 0
         elif breakage[bond_type](adj_row, adj_col):
-            if adj[(adj_row, adj_col)] == 1:  # The other 8 is in this adj_row
-                break_bond_in_matrix(adj, new_adj, adj_row)
-            else:  # The other 8 is in the other adj_row
-                break_bond_in_matrix(adj, new_adj, adj_col)
+            if adj[(adj_row, adj_col)] == 1: #The other 8 is in this row
+                data = adj.tocoo().getrow(adj_row).data
+                cols = adj.tocoo().getrow(adj_row).indices
+                for i,idx in enumerate(cols):
+                    if data[i] == 8:
+                        break
+                new_adj[(adj_row, idx)] = 0
+                new_adj[(idx, adj_row)] = 0
+            else: #The other 8 is in the other row
+                data = adj.tocoo().getrow(adj_col).data
+                cols = adj.tocoo().getrow(adj_col).indices
+                for i,idx in enumerate(cols):
+                    if data[i] == 8:
+                        break
+                new_adj[(adj_col, idx)] = 0
+                new_adj[(idx, adj_col)] = 0
     return new_adj
-
-
-def break_bond_in_matrix(adj, new_adj, row):
-    data = adj.tocoo().getrow(row).data
-    cols = adj.tocoo().getrow(row).indices
-    for i, idx in enumerate(cols):
-        if data[i] == 8:
-            break
-        new_adj[(row, idx)] = 0
-        new_adj[(idx, row)] = 0
 
 
 def count_bonds(adj=None):
