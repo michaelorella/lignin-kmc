@@ -16,7 +16,7 @@ analysis = kmc.analyze_adj_matrix( adjacency = adj , nodes = mons )
 
 import scipy.sparse as sp
 import numpy as np
-from collections import Counter
+from collections import Counter, OrderedDict
 from ligninkmc.kmc_common import (AO4, B1, B1_ALT, B5, BB, BO4, C5C5, C5O4, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS)
 
 
@@ -323,8 +323,22 @@ def analyze_adj_matrix(adjacency=None):
     rcf_yields = count_yields(adj=rcf_adj)
     rcf_bonds = count_bonds(adj=rcf_adj)
 
-    return {CHAIN_LEN: yields, BONDS: bond_distributions,
-            RCF_YIELDS: rcf_yields, RCF_BONDS: rcf_bonds}
+    # sort results for reliably repeatable (and more readable) output
+    sorted_yields = OrderedDict()
+    for i in sorted(dict(yields).keys()):
+        sorted_yields[i] = yields[i]
+    sorted_bond_dist = OrderedDict()
+    for i in sorted(bond_distributions.keys()):
+        sorted_bond_dist[i] = bond_distributions[i]
+    sorted_rcf_yield = OrderedDict()
+    for i in sorted(dict(rcf_yields).keys()):
+        sorted_rcf_yield[i] = rcf_yields[i]
+    sorted_rcf_bonds = OrderedDict()
+    for i in sorted(rcf_bonds.keys()):
+        sorted_rcf_bonds[i] = rcf_bonds[i]
+
+    return {CHAIN_LEN: sorted_yields, BONDS: sorted_bond_dist,
+            RCF_YIELDS: sorted_rcf_yield, RCF_BONDS: sorted_rcf_bonds}
 
 
 def adj_analysis_to_stdout(adj_results):
@@ -333,16 +347,18 @@ def adj_analysis_to_stdout(adj_results):
     :param adj_results: a dictionary from analyze_adj_matrix
     :return: n/a: prints to stdout
     """
-    # starting with CHAIN_LEN
-    chain_len_results = dict(adj_results[CHAIN_LEN])
+    # rename for readability and processing
+    chain_len_results = adj_results[CHAIN_LEN]
     olig_len_array = np.asarray(list(chain_len_results.keys()))
     olig_num_array = np.asarray(list(chain_len_results.values()))
     num_monos_created = np.dot(olig_num_array, olig_len_array)
+
+    # now print to stdout
     print(f"Lignin KMC created {num_monos_created} monomers, which formed:")
     print_olig_distribution(chain_len_results)
 
     lignin_bonds = adj_results[BONDS]
-    print(f"These were created with the following bond types and number:")
+    print(f"composed of the following bond types and number:")
     print_bond_type_num(lignin_bonds)
 
     print("\nBreaking BO4 bonds to simulate RCF results in:")
@@ -361,11 +377,11 @@ def print_bond_type_num(lignin_bonds):
 def print_olig_distribution(chain_len_results):
     for olig_len, olig_num in chain_len_results.items():
         if olig_len == 1:
-            print(f"{olig_num:>8} monomers (chain length of 1)")
+            print(f"{olig_num:>8} monomer(s) (chain length 1)")
         elif olig_len == 2:
-            print(f"{olig_num:>8} dimers (chain length of 2)")
+            print(f"{olig_num:>8} dimer(s) (chain length 2)")
         elif olig_len == 3:
-            print(f"{olig_num:>8} trimers (chain length of 3)")
+            print(f"{olig_num:>8} trimer(s) (chain length 3)")
         else:
             print(f"{olig_num:>8} oligomer(s) of chain length {olig_len}")
 

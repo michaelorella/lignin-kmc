@@ -1,12 +1,13 @@
 # !/usr/bin/env python
 # coding=utf-8
 
+import os
 import re
 import networkx as nx
 import scipy.sparse as sp
 from rdkit.Chem.Draw.MolDrawing import DrawingOptions
 from ligninkmc.kmc_common import (G, S, C, S4, G4, G7, ATOMS, BONDS)
-from common_wrangler.common import (InvalidDataError)
+from common_wrangler.common import (InvalidDataError, create_out_fname)
 
 DrawingOptions.bondLineWidth = 1.2
 S7 = 'S7'
@@ -161,8 +162,8 @@ def generate_mol(adj, node_list):
     mol_bond_blocks = 'M  V30 BEGIN BOND\n'
     atom_line_num = 1
     bond_line_num = 1
-    monomer_start_idx_bond = []
-    monomer_start_idx_atom = []
+    mono_start_idx_bond = []
+    mono_start_idx_atom = []
     removed = {BONDS: 0, ATOMS: 0}
 
     site_positions = {1: {x: 0 for x in [0, 1, 2]},
@@ -213,8 +214,8 @@ def generate_mol(adj, node_list):
         lines = atom_block.splitlines(keepends=True)
 
         # Figure out what atom and bond number this monomer is starting at
-        monomer_start_idx_bond.append(bond_line_num)
-        monomer_start_idx_atom.append(atom_line_num)
+        mono_start_idx_bond.append(bond_line_num)
+        mono_start_idx_atom.append(atom_line_num)
 
         # Loop through the lines of the atom block and add the necessary prefixes to the lines, using a continuing
         #     atom index
@@ -228,7 +229,7 @@ def generate_mol(adj, node_list):
 
         # Recall where this monomer started
         # So that we can add the defined bond indices to this start index to get the bond defs
-        start_index = monomer_start_idx_atom[-1] - 1
+        start_index = mono_start_idx_atom[-1] - 1
 
         # Loop through the lines of the bond block and add necessary prefixes to the lines, then modify as needed after
         for line in lines:
@@ -264,23 +265,23 @@ def generate_mol(adj, node_list):
     for pair in paired_adj:
         # Find the types of bonds and indices associated with each of the elements in the adjacency matrix
         # Indices are extracted as tuples (row,col) and we just want the row for each
-        monomer_indices = [x[0] for x in pair]
+        mono_indices = [x[0] for x in pair]
 
         # Get the monomers corresponding to the indices in this bond
         mons = [None, None]
 
         for mon in node_list:
-            if mon.identity == monomer_indices[0]:
+            if mon.identity == mono_indices[0]:
                 mons[0] = mon
-            elif mon.identity == monomer_indices[1]:
+            elif mon.identity == mono_indices[1]:
                 mons[1] = mon
 
-        # Now just extract the bond types
-        bond = [int(adj[p]) for p in pair]
+        # Now just extract the bond types (the value from the adj matrix)
+        bond_loc = [int(adj[p]) for p in pair]
 
         # Get the indices of the atoms being bound -> Count from where the monomer starts, and add however many is
         #     needed to reach the desired position for that specific monomer type and bonding site
-        atom_indices = [monomer_start_idx_atom[monomer_indices[i]] + site_positions[bond[i]][mons[i].type]
+        atom_indices = [mono_start_idx_atom[mono_indices[i]] + site_positions[bond_loc[i]][mons[i].type]
                         for i in range(2)]
 
         # Make the string to add to the molfile
@@ -291,34 +292,34 @@ def generate_mol(adj, node_list):
         bonds.append(bond_string)
 
         # Check if the alkene needs to be modified to a single bond
-        bond_tuple = tuple(sorted(bond))
-        if break_alkene[bond_tuple]:
+        bond_loc_tuple = tuple(sorted(bond_loc))
+        if break_alkene[bond_loc_tuple]:
             for i in range(2):
                 if adj[pair[i]] == 8 and mons[i].active != 7:  # Monomer index is bound through beta
                     # Find the bond index corresponding to alkene bond
-                    alkene_bond_index = monomer_start_idx_bond[monomer_indices[i]
-                                                               ] + alpha_beta_alkene_location - removed[BONDS]
+                    alkene_bond_index = mono_start_idx_bond[mono_indices[i]
+                                                            ] + alpha_beta_alkene_location - removed[BONDS]
 
                     # Get all of the required bond information (index,order,monIdx1,monIdx2)
                     bond_vals = re.split(' +', bonds[alkene_bond_index])[2:]
                     try:
                         assert (int(bond_vals[0]) == alkene_bond_index + removed[BONDS])
                     except AssertionError:
-                        print(f'Expected index: {bond_vals[0]} Index obtained: {alkene_bond_index}')
+                        print(f'Expected index: {bond_vals[0]}, Index obtained: {alkene_bond_index}')
 
                     # Decrease the bond order by 1
                     bonds[alkene_bond_index] = f'M  V30 {bond_vals[0]} 1 {bond_vals[2]} {bond_vals[3]} \n'
 
         # Check if we need to add water to the alpha position
-        if hydrate[bond_tuple] and 7 not in adj[monomer_indices[beta[tuple(bond)]]].values() and \
-                mons[beta[tuple(bond)]].active != 7:
-            if mons[int(not beta[tuple(bond)])].type != 2:
+        if hydrate[bond_loc_tuple] and 7 not in adj[mono_indices[beta[tuple(bond_loc)]]].values() and \
+                mons[beta[tuple(bond_loc)]].active != 7:
+            if mons[int(not beta[tuple(bond_loc)])].type != 2:
                 # We should actually only be hydrating BO4 bonds when the alpha position is unoccupied (handled by
                 # second clause above)
 
                 # Find the location of the alpha position
-                alpha_idx = monomer_start_idx_atom[monomer_indices[beta[tuple(bond)]]] + site_positions[7][
-                    mons[beta[tuple(bond)]].type]
+                alpha_idx = mono_start_idx_atom[mono_indices[beta[tuple(bond_loc)]]] + site_positions[7][
+                    mons[beta[tuple(bond_loc)]].type]
 
                 # Add the alpha hydroxyl O atom
                 atoms.append(f'M  V30 {atom_line_num} O 0 0 0 0 \n')
@@ -329,24 +330,25 @@ def generate_mol(adj, node_list):
                 bond_line_num += 1
             else:
                 # Make the benzodioxane linkage
-                alpha_idx = monomer_start_idx_atom[monomer_indices[beta[tuple(bond)]]] + site_positions[7][
-                    mons[beta[tuple(bond)]].type]
-                hydroxy_index = monomer_start_idx_atom[monomer_indices[int(not beta[tuple(bond)])]] + (
-                        site_positions[4][mons[beta[tuple(bond)]].type] - 1)  # subtract 1 to move from 4-OH to 3-OH
+                alpha_idx = mono_start_idx_atom[mono_indices[beta[tuple(bond_loc)]]] + site_positions[7][
+                    mons[beta[tuple(bond_loc)]].type]
+                hydroxy_index = mono_start_idx_atom[mono_indices[int(not beta[tuple(bond_loc)])]] + (
+                        site_positions[4][mons[beta[tuple(bond_loc)]].type] - 1)  # subtract 1 to move from 4-OH to 3-OH
 
                 # Make the bond
                 bonds.append(f'M  V30 {bond_line_num} 1 {alpha_idx} {hydroxy_index} \n')
                 bond_line_num += 1
 
         # Check if there will be a ring involving the alpha position
-        if make_alpha_ring[bond_tuple]:
+        if make_alpha_ring[bond_loc_tuple]:
             other_site = {(5, 8): 4, (8, 8): 10}
             for i in range(2):
                 if adj[pair[i]] == 8:  # This index is bound through beta (will get alpha connection)
                     # Find the location of the alpha position and the position that cyclizes with alpha
-                    alpha_idx = monomer_start_idx_atom[monomer_indices[i]] + site_positions[7][mons[i].type]
-                    other_idx = monomer_start_idx_atom[monomer_indices[int(not i)]
-                                                       ] + site_positions[other_site[bond_tuple]][mons[int(not i)].type]
+                    alpha_idx = mono_start_idx_atom[mono_indices[i]] + site_positions[7][mons[i].type]
+                    other_idx = mono_start_idx_atom[mono_indices[int(not i)]
+                                                    ] + site_positions[other_site[bond_loc_tuple]
+                                                                       ][mons[int(not i)].type]
 
                     bonds.append(f'M  V30 {bond_line_num} 1 {alpha_idx} {other_idx} \n')
                     bond_line_num += 1
@@ -354,11 +356,11 @@ def generate_mol(adj, node_list):
         # All kinds of fun things need to happen for the B1 bond --
         # 1 ) Disconnect the original 1 -> A bond that existed from the not beta monomer
         # 2 ) Convert the new primary alcohol to an aldehyde
-        if sorted(bond) == [1, 8]:
-            index_for_one = int(not beta[tuple(bond)])
+        if sorted(bond_loc) == [1, 8]:
+            index_for_one = int(not beta[tuple(bond_loc)])
             # Convert the alpha alcohol on one's tail to an aldehyde
-            alpha_idx = monomer_start_idx_atom[monomer_indices[index_for_one]
-                                               ] + site_positions[alpha][mons[index_for_one].type]
+            alpha_idx = mono_start_idx_atom[mono_indices[index_for_one]
+                                            ] + site_positions[alpha][mons[index_for_one].type]
 
             # Temporarily join the bonds so that we can find the string
             temp = ''.join(bonds)
@@ -377,9 +379,8 @@ def generate_mol(adj, node_list):
                            f'2 {alpha_idx} {oxygen_atom_index}', temp).splitlines(keepends=True)
 
             # Find where the index for the bond is and remove it from the array
-            alpha_ring_bond_index = monomer_start_idx_bond[monomer_indices[index_for_one]
-                                                           ] + alpha_ring_location - removed[
-                                        BONDS]
+            alpha_ring_bond_index = mono_start_idx_bond[mono_indices[index_for_one]
+                                                        ] + alpha_ring_location - removed[BONDS]
             del (bonds[alpha_ring_bond_index])
             removed[BONDS] += 1
 
@@ -394,87 +395,107 @@ def generate_mol(adj, node_list):
     return mol_str
 
 
-def generate_psfgen(adj, monomers, fname="psfgen.tcl", segname="L", toppar_directory="toppar/"):
+def write_patch(open_file, patch_name, segname, resid1, resid2=None):
+    """
+    Simple script to consistently format patch output for tcl script
+    :param open_file: {TextIOWrapper}
+    :param patch_name: str
+    :param segname: str
+    :param resid1: int
+    :param resid2: int
+    :return: what to write to file
+    """
+    if resid2:
+        open_file.write(f"patch {patch_name} {segname}:{resid1} {segname}:{resid2}\n")
+    else:
+        open_file.write(f"patch {patch_name} {segname}:{resid1}\n")
+
+
+def gen_psfgen(orig_adj, monomers, fname="psfgen.tcl", segname="L", toppar_dir="toppar/"):
     """
     This takes a computed adjacency matrix and monomer list and writes out a script to generate a psf file of the
     associated structure, suitable for feeding into the LigninBuilder plugin of VMD
     (https://github.com/jvermaas/LigninBuilder).
 
-    :param adj: Adjacency matrix generated by the kinetic Monte Carlo process
+    :param orig_adj: Adjacency matrix generated by the kinetic Monte Carlo process
     :param monomers: Monomer list from the kinetic Monte Carlo process
     :param fname: desired output filename
     :param segname: desired output segment name for the generated lignin
-    :param toppar_directory: location where the topology files top_lignin.top and top_all36_cgenff.rtf are expected
+    :param toppar_dir: location where the topology files top_lignin.top and top_all36_cgenff.rtf are expected
     :return:
     """
-    adj = adj.copy()
-    resnames = {0: G, 1: S, 2: C}
-    fout = open(fname, "w")
-    fout.write("package require psfgen\ntopology %stop_all36_cgenff.rtf\ntopology %stop_lignin.top\n" % (
-        toppar_directory, toppar_directory))
-    fout.write("segment %s {\n" % segname)
-    for monomer in monomers:
-        resid = monomer.identity + 1
-        res_name = resnames[monomer.type]
-        fout.write("\tresidue %d %s\n" % (resid, res_name))
-    fout.write("}\n")
-    # Since B-1 linkages actually involve three monomers, we signal that the previous beta-O-4/B-1 linkage required
-    #     for B-1 is broken by flipping the sign.
-    for row in (adj == 1).nonzero()[0]:
-        col = (adj.getrow(row) == 8).nonzero()[1]
-        if len(col):
-            col = col[0]
-            adj[(row, col)] *= -1
-    for key in adj.keys():
-        # Each linkage shows up as two non-zero values in the adjacency matrix. We only need one.
-        if key[0] > key[1]:
-            continue
-        alt_key = (key[1], key[0])
-        mono1 = int(adj[key])
-        mono2 = int(adj[alt_key])
-        if mono1 == 8 and mono2 == 4:  # Beta-O-4 linkage.
-            fout.write("patch BO4 %s:%d %s:%d\n" % (segname, key[0] + 1, segname, key[1] + 1))
-        elif mono1 == 4 and mono2 == 8:  # Reverse beta-O-4 linkage.
-            fout.write("patch BO4 %s:%d %s:%d\n" % (segname, key[1] + 1, segname, key[0] + 1))
-        elif mono1 == 8 and mono2 == 5 and monomers[key[1]].type == 0:  # B5G linkage.
-            fout.write("patch B5G %s:%d %s:%d\n" % (segname, key[0] + 1, segname, key[1] + 1))
-        elif mono1 == 5 and mono2 == 8 and monomers[key[0]].type == 0:  # Reverse B5G linkage.
-            fout.write("patch B5G %s:%d %s:%d\n" % (segname, key[1] + 1, segname, key[0] + 1))
-        elif mono1 == 8 and mono2 == 5 and monomers[key[1]].type == 2:  # B5C linkage.
-            fout.write("patch B5C %s:%d %s:%d\n" % (segname, key[0] + 1, segname, key[1] + 1))
-        elif mono1 == 5 and mono2 == 8 and monomers[key[0]].type == 2:  # Reverse B5C linkage.
-            fout.write("patch B5C %s:%d %s:%d\n" % (segname, key[1] + 1, segname, key[0] + 1))
-        elif mono1 == 5 and mono2 == 5:  # 55 linkage
-            fout.write("patch 55 %s:%d %s:%d\n" % (segname, key[0] + 1, segname, key[1] + 1))
-        elif mono1 == 7 and mono2 == 4:  # alpha-O-4 linkage.
-            fout.write("patch AO4 %s:%d %s:%d\n" % (segname, key[0] + 1, segname, key[1] + 1))
-        elif mono1 == 4 and mono2 == 7:  # Reverse alpha-O-4 linkage.
-            fout.write("patch AO4 %s:%d %s:%d\n" % (segname, key[1] + 1, segname, key[0] + 1))
-        elif mono1 == 4 and mono2 == 5:  # 4O5 linkage.
-            fout.write("patch 4O5 %s:%d %s:%d\n" % (segname, key[0] + 1, segname, key[1] + 1))
-        elif mono1 == 5 and mono2 == 4:  # Reverse 4O5 linkage.
-            fout.write("patch 4O5 %s:%d %s:%d\n" % (segname, key[1] + 1, segname, key[0] + 1))
-        elif mono1 == 8 and mono2 == 1:  # Beta-1 linkage.
-            fout.write("patch B1 %s:%d %s:%d\n" % (segname, key[0] + 1, segname, key[1] + 1))
-        elif mono1 == 1 and mono2 == 8:  # Reverse beta-1 linkage.
-            fout.write("patch B1 %s:%d %s:%d\n" % (segname, key[1] + 1, segname, key[0] + 1))
-        elif mono1 == -8 and mono2 == 4:  # Beta-1 linkage remnant
-            fout.write("patch O4AL %s:%d\n" % (segname, key[1] + 1))
-        elif mono2 == -8 and mono1 == 4:  # Reverse beta-1 remnant.
-            fout.write("patch O4AL %s:%d\n" % (segname, key[0] + 1))
-        elif mono1 == -8 and mono2 == 1:  # Beta-1 linkage remnant (C1 variant)
-            fout.write("patch C1AL %s:%d\n" % (segname, key[1] + 1))
-        elif mono2 == -8 and mono1 == 1:  # Reverse beta-1 remnant. (C1 variant)
-            fout.write("patch C1AL %s:%d\n" % (segname, key[0] + 1))
-        elif mono1 == 8 and mono2 == 8:  # beta-beta linkage.
-            fout.write("patch BB %s:%d %s:%d\n" % (segname, key[0] + 1, segname, key[1] + 1))
-        else:
-            print("This should never have happened! Abort!")
-            print(key, mono1, mono2)
-            print(monomers[key[0]].type, monomers[key[1]].type)
-            raise ValueError
-    fout.write("regenerate angles dihedrals\nwritepsf %s.psf" % segname)
-    fout.close()
+    adj = orig_adj.copy()
+    resnames = {0: 'G', 1: 'S', 2: 'C'}
+    f_out = create_out_fname(fname, base_dir=toppar_dir)
+    with open(f_out, "w") as f:
+        f.write(f"package require psfgen\n"
+                f"topology {os.path.relpath(os.path.join(toppar_dir, 'top_all36_cgenff.rtf'))}\n" 
+                f"topology {os.path.relpath(os.path.join(toppar_dir, 'top_lignin.top'))}\n"
+                f"segment {segname} {{\n")
+        for monomer in monomers:
+            resid = monomer.identity + 1
+            res_name = resnames[monomer.type]
+            f.write(f"    residue {resid} {res_name}\n")
+        f.write(f"}}\n")
+        # Since B-1 linkages actually involve three monomers, we signal that the previous beta-O-4/B-1 linkage required
+        #     for B-1 is broken by flipping the sign.
+        for row in (adj == 1).nonzero()[0]:
+            col = (adj.getrow(row) == 8).nonzero()[1]
+            if len(col):
+                col = col[0]
+                adj[(row, col)] *= -1
+        for bond_matrix_tuple in adj.keys():
+            # The adjacency matrix keys are always a tuple (of 2, row & col); sometimes they are equal to each other
+            #    (e.g. oxidation)
+            if bond_matrix_tuple[0] > bond_matrix_tuple[1]:
+                continue
+            psf_patch_resid1 = bond_matrix_tuple[0] + 1
+            psf_patch_resid2 = bond_matrix_tuple[1] + 1
+            flipped_bond_matrix_tuple = (bond_matrix_tuple[1], bond_matrix_tuple[0])
+            bond_loc1 = int(adj[bond_matrix_tuple])
+            bond_loc2 = int(adj[flipped_bond_matrix_tuple])
+            if bond_loc1 == 8 and bond_loc2 == 4:  # Beta-O-4 linkage
+                write_patch(f, "BO4", segname, psf_patch_resid1, psf_patch_resid2)
+            elif bond_loc1 == 4 and bond_loc2 == 8:  # Reverse beta-O-4 linkage.
+                write_patch(f, "BO4", segname, psf_patch_resid2, psf_patch_resid1)
+            elif bond_loc1 == 8 and bond_loc2 == 5 and monomers[bond_matrix_tuple[1]].type == 0:  # B5G linkage
+                write_patch(f, "B5G", segname, psf_patch_resid1, psf_patch_resid2)
+            elif bond_loc1 == 5 and bond_loc2 == 8 and monomers[bond_matrix_tuple[0]].type == 0:  # Reverse B5G linkage
+                write_patch(f, "B5G", segname, psf_patch_resid2, psf_patch_resid1)
+            elif bond_loc1 == 8 and bond_loc2 == 5 and monomers[bond_matrix_tuple[1]].type == 2:  # B5C linkage
+                write_patch(f, "B5C", segname, psf_patch_resid1, psf_patch_resid2)
+            elif bond_loc1 == 5 and bond_loc2 == 8 and monomers[bond_matrix_tuple[0]].type == 2:  # Reverse B5C linkage
+                write_patch(f, "B5C", segname, psf_patch_resid2, psf_patch_resid1)
+            elif bond_loc1 == 5 and bond_loc2 == 5:  # 55 linkage
+                write_patch(f, "B5C", segname, psf_patch_resid2, psf_patch_resid1)
+            elif bond_loc1 == 7 and bond_loc2 == 4:  # alpha-O-4 linkage
+                write_patch(f, "AO4", segname, psf_patch_resid1, psf_patch_resid2)
+            elif bond_loc1 == 4 and bond_loc2 == 7:  # Reverse alpha-O-4 linkage
+                write_patch(f, "AO4", segname, psf_patch_resid2, psf_patch_resid1)
+            elif bond_loc1 == 4 and bond_loc2 == 5:  # 4O5 linkage
+                write_patch(f, "4O4", segname, psf_patch_resid1, psf_patch_resid2)
+            elif bond_loc1 == 5 and bond_loc2 == 4:  # Reverse 4O5 linkage
+                write_patch(f, "4O4", segname, psf_patch_resid2, psf_patch_resid1)
+            elif bond_loc1 == 8 and bond_loc2 == 1:  # Beta-1 linkage
+                write_patch(f, "B1", segname, psf_patch_resid1, psf_patch_resid2)
+            elif bond_loc1 == 1 and bond_loc2 == 8:  # Reverse beta-1 linkage
+                write_patch(f, "B1", segname, psf_patch_resid2, psf_patch_resid1)
+            elif bond_loc1 == -8 and bond_loc2 == 4:  # Beta-1 linkage remnant
+                write_patch(f, "O4AL", segname, psf_patch_resid2)
+            elif bond_loc2 == -8 and bond_loc1 == 4:  # Reverse beta-1 remnant
+                write_patch(f, "O4AL", segname, psf_patch_resid1)
+            elif bond_loc1 == -8 and bond_loc2 == 1:  # Beta-1 linkage remnant (C1 variant)
+                write_patch(f, "C1AL", segname, psf_patch_resid2)
+            elif bond_loc2 == -8 and bond_loc1 == 1:  # Reverse beta-1 remnant (C1 variant)
+                write_patch(f, "C1AL", segname, psf_patch_resid1)
+            elif bond_loc1 == 8 and bond_loc2 == 8:  # beta-beta linkage
+                write_patch(f, "BB", segname, psf_patch_resid1, psf_patch_resid2)
+            else:
+                raise InvalidDataError(f"Encountered unexpected linkage: adj_matrix loc: {bond_matrix_tuple}, "
+                                       f"bond locations: {bond_loc1} and {bond_loc2}, monomer types: "
+                                       f"{monomers[bond_matrix_tuple[0]].type} and "
+                                       f"{monomers[bond_matrix_tuple[1]].type}")
+        f.write(f"regenerate angles dihedrals\nwritepsf {segname}.psf")
 
 
 def generate_graph_representation(adj, node_list):
@@ -520,43 +541,43 @@ def generate_graph_representation(adj, node_list):
             adj[(row, col)] *= -1
     for key in sp.tril(adj).todok().keys():
         alt_key = (key[1], key[0])
-        mono1 = int(adj[key])
-        mono2 = int(adj[alt_key])
-        if mono1 == 8 and mono2 == 4:  # Beta-O-4 linkage.
+        bond_loc1 = int(adj[key])
+        bond_loc2 = int(adj[alt_key])
+        if bond_loc1 == 8 and bond_loc2 == 4:  # Beta-O-4 linkage
             dir_graph.add_edge(key[1], key[0], length=0)
-        elif mono1 == 4 and mono2 == 8:  # Reverse beta-O-4 linkage.
+        elif bond_loc1 == 4 and bond_loc2 == 8:  # Reverse beta-O-4 linkage
             dir_graph.add_edge(key[0], key[1], length=0)
-        elif mono1 == 8 and mono2 == 5:  # B5 linkage.
+        elif bond_loc1 == 8 and bond_loc2 == 5:  # B5 linkage
             dir_graph.add_edge(key[1], key[0], length=1)
-        elif mono1 == 5 and mono2 == 8:  # Reverse B5 linkage.
+        elif bond_loc1 == 5 and bond_loc2 == 8:  # Reverse B5 linkage
             dir_graph.add_edge(key[0], key[1], length=1)
-        elif mono1 == 5 and mono2 == 5:  # 55 linkage
+        elif bond_loc1 == 5 and bond_loc2 == 5:  # 55 linkage
             dir_graph.add_edge(key[1], key[0], length=2)
             dir_graph.add_edge(key[0], key[1], length=2)
-        elif mono1 == 7 and mono2 == 4:  # alpha-O-4 linkage.
+        elif bond_loc1 == 7 and bond_loc2 == 4:  # alpha-O-4 linkage
             dir_graph.add_edge(key[1], key[0], length=3)
-        elif mono1 == 4 and mono2 == 7:  # Reverse alpha-O-4 linkage.
+        elif bond_loc1 == 4 and bond_loc2 == 7:  # Reverse alpha-O-4 linkage
             dir_graph.add_edge(key[0], key[1], length=3)
-        elif mono1 == 4 and mono2 == 5:  # 4O5 linkage.
+        elif bond_loc1 == 4 and bond_loc2 == 5:  # 4O5 linkage
             dir_graph.add_edge(key[0], key[1], length=4)
-        elif mono1 == 5 and mono2 == 4:  # Reverse 4O5 linkage.
+        elif bond_loc1 == 5 and bond_loc2 == 4:  # Reverse 4O5 linkage
             dir_graph.add_edge(key[1], key[0], length=4)
-        elif mono1 == 8 and mono2 == 1:  # Beta-1 linkage.
+        elif bond_loc1 == 8 and bond_loc2 == 1:  # Beta-1 linkage
             dir_graph.add_edge(key[1], key[0], length=5)
-        elif mono1 == 1 and mono2 == 8:  # Reverse beta-1 linkage.
+        elif bond_loc1 == 1 and bond_loc2 == 8:  # Reverse beta-1 linkage
             dir_graph.add_edge(key[0], key[1], length=5)
-        elif mono1 == -8 and mono2 == 4:  # Beta-1 linkage remnant
+        elif bond_loc1 == -8 and bond_loc2 == 4:  # Beta-1 linkage remnant
             dir_graph.add_edge(key[1], key[1], length=6)
-        elif mono2 == -8 and mono1 == 4:  # Reverse beta-1 remnant.
+        elif bond_loc2 == -8 and bond_loc1 == 4:  # Reverse beta-1 remnant
             dir_graph.add_edge(key[0], key[0], length=6)
-        elif mono1 == -8 and mono2 == 1:  # Beta-1 linkage remnant (C1 variant)
+        elif bond_loc1 == -8 and bond_loc2 == 1:  # Beta-1 linkage remnant (C1 variant)
             dir_graph.add_edge(key[1], key[1], length=7)
-        elif mono2 == -8 and mono1 == 1:  # Reverse beta-1 remnant. (C1 variant)
+        elif bond_loc2 == -8 and bond_loc1 == 1:  # Reverse beta-1 remnant. (C1 variant)
             dir_graph.add_edge(key[0], key[0], length=7)
-        elif mono1 == 8 and mono2 == 8:  # beta-beta linkage.
+        elif bond_loc1 == 8 and bond_loc2 == 8:  # beta-beta linkage
             dir_graph.add_edge(key[0], key[1], length=8)
             dir_graph.add_edge(key[1], key[0], length=8)
         else:
-            raise InvalidDataError(f"Error when generating graph representation, on key: {key}, mono1: {mono1}, "
-                                   f"mono2: {mono2}")
+            raise InvalidDataError(f"Error when generating graph representation, on key: {key}, "
+                                   f"bond_loc1: {bond_loc1}, bond_loc2: {bond_loc2}")
     return dir_graph

@@ -7,12 +7,12 @@ import scipy.sparse as sp
 from rdkit.Chem import MolFromMolBlock
 from rdkit.Chem.AllChem import Compute2DCoords
 from rdkit.Chem.Draw import MolToFile
-from common_wrangler.common import InvalidDataError, capture_stdout, silent_remove
+from common_wrangler.common import InvalidDataError, capture_stdout, silent_remove, diff_lines
 from ligninkmc import Event
 from ligninkmc import Monomer
 from ligninkmc.analysis import analyze_adj_matrix, count_bonds, count_yields, break_bond_type, adj_analysis_to_stdout
 from ligninkmc.kineticMonteCarlo import run_kmc
-from ligninkmc.visualization import generate_mol
+from ligninkmc.visualization import generate_mol, gen_psfgen
 from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, create_initial_monomers,
                                      create_initial_events, create_initial_state, DEF_INI_RATE)
 from ligninkmc.kmc_common import (TEMP, E_A_KCAL_MOL, E_A_J_PART, C5O4, OX, Q, C5C5, B5, BB, BO4, AO4, B1,
@@ -31,13 +31,23 @@ SUB_DATA_DIR = os.path.join(DATA_DIR, 'run_kmc')
 
 # Output files #
 PNG_10MER = os.path.join(SUB_DATA_DIR, 'test_10mer.png')
+TCL_FNAME = "psfgen.tcl"
+TCL_FILE_LOC = os.path.join(SUB_DATA_DIR, TCL_FNAME)
+GOOD_TCL_OUT = os.path.join(SUB_DATA_DIR, "good_psfgen.tcl")
+GOOD_TCL_C_LIGNIN_OUT = os.path.join(SUB_DATA_DIR, "good_psfgen_c_lignin.tcl")
+GOOD_TCL_SHORT_SIM_OUT = os.path.join(SUB_DATA_DIR, "good_psfgen_short_sim.tcl")
 
 # Data #
+SHORT_TIME = 0.0001
 ADJ_ZEROS = sp.dok_matrix([[0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 0]])
+
+MONO_DRAW_3 = [0.48772, 0.15174, 0.7886]
+MONO_DRAW_20 = [0.48772, 0.15174, 0.7886, 0.48772, 0.15174, 0.7886, 0.48772, 0.15174, 0.7886, 0.48772, 0.15174, 0.7886,
+                0.48772, 0.15174, 0.7886, 0.48772, 0.15174, 0.7886, 0.48772, 0.15174]
 
 GOOD_RXN_RATES = {C5O4: {(0, 0): {MON_MON: 38335.597214837195, MON_DIM: 123.41959371554347, DIM_MON: 123.41959371554347,
                                   DIM_DIM: 3698609451.841636},
@@ -97,20 +107,24 @@ GOOD_RXN_RATES = {C5O4: {(0, 0): {MON_MON: 38335.597214837195, MON_DIM: 123.4195
                       2: {MONOMER: 45383.99955642849, DIMER: 45383.99955642849}}}
 
 
-def create_sample_kmc_result():
-    num_monos = 3
+def create_sample_kmc_result(final_time=1., num_initial_monos=3, max_monos=10):
+    if num_initial_monos == 3:
+        monomer_draw = MONO_DRAW_3
+    else:
+        np.random.seed(10)
+        monomer_draw = np.random.rand(num_initial_monos)
+
     sg_ratio = 0.75
-    monomer_draw = [0.48772, 0.15174, 0.7886]
     # these are tested separately
-    initial_monomers = create_initial_monomers(sg_ratio, num_monos, monomer_draw)
-    initial_events = create_initial_events(monomer_draw, num_monos, sg_ratio, GOOD_RXN_RATES)
-    ini_state = create_initial_state(initial_events, initial_monomers, num_monos)
+    initial_monomers = create_initial_monomers(sg_ratio, num_initial_monos, monomer_draw)
+    initial_events = create_initial_events(monomer_draw, num_initial_monos, sg_ratio, GOOD_RXN_RATES)
+    ini_state = create_initial_state(initial_events, initial_monomers, num_initial_monos)
     # new to test
-    events = {initial_events[i] for i in range(num_monos)}
+    events = {initial_events[i] for i in range(num_initial_monos)}
     events.add(Event(GROW, [], rate=DEF_INI_RATE))
     # make random seed and sort events for testing reliability
     np.random.seed(10)
-    result = run_kmc(n_max=10, t_final=1, rates=GOOD_RXN_RATES, initial_state=ini_state,
+    result = run_kmc(n_max=max_monos, t_final=final_time, rates=GOOD_RXN_RATES, initial_state=ini_state,
                      initial_events=sorted(events), random_seed=10, sg_ratio=sg_ratio)
     return result
 
@@ -277,7 +291,7 @@ class TestAnalyzeKMC(unittest.TestCase):
         self.assertTrue(adj_yields_dict == good_adj_dict)
 
     def testCountYields2(self):
-        good_adj_dict = {2: 2, 1: 1}
+        good_adj_dict = {1: 1, 2: 2}
         adj_2 = sp.dok_matrix([[0, 4, 0, 0, 0],
                                [8, 0, 0, 0, 0],
                                [0, 0, 0, 8, 0],
@@ -337,9 +351,9 @@ class TestAnalyzeKMC(unittest.TestCase):
     def testKMCResultSummary(self):
         result = create_sample_kmc_result()
         summary = analyze_adj_matrix(adjacency=result[ADJ_MATRIX])
-        self.assertTrue(dict(summary[CHAIN_LEN]) == {10: 1})
+        self.assertTrue(summary[CHAIN_LEN] == {10: 1})
         self.assertTrue(summary[BONDS] == {BO4: 3, B1: 0, BB: 0, B5: 6, C5C5: 0, AO4: 0, C5O4: 0})
-        self.assertTrue(dict(summary[RCF_YIELDS]) == {2: 2, 1: 1, 5: 1})
+        self.assertTrue(summary[RCF_YIELDS] == {2: 2, 1: 1, 5: 1})
         self.assertTrue(summary[RCF_BONDS] == {BO4: 0, B1: 0, BB: 0, B5: 6, C5C5: 0, AO4: 0, C5O4: 0})
 
     def testKMCResultSummaryDescription(self):
@@ -347,19 +361,57 @@ class TestAnalyzeKMC(unittest.TestCase):
         summary = analyze_adj_matrix(adjacency=result[ADJ_MATRIX])
         adj_analysis_to_stdout(summary)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n       1 oligomer(s) of chain length 10"
-        good_bond_summary = "These were created with the following bond types and number:\n    BO4:    3     " \
-                            "B1:    0     BB:    0     B5:    6     55:    0    AO4:    0    5O4:    0"
-        good_rcf_olig_summary = "Breaking BO4 bonds to simulate RCF results in:\n       2 dimers (chain length of 2)" \
-                                "\n       1 monomers (chain length of 1)\n       1 oligomer(s) of chain length 5"
-        good_rcf_bond_summary = "with following remaining bond types and number:\n    BO4:    0     " \
-                                "B1:    0     BB:    0     B5:    6     55:    0    AO4:    0    5O4:    0"
+        good_bond_summary = "composed of the following bond types and number:\n     55:    0    5O4:    0    " \
+                            "AO4:    0     B1:    0     B5:    6     BB:    0    BO4:    3"
+        good_rcf_olig_summary = "Breaking BO4 bonds to simulate RCF results in:\n       1 monomer(s) (chain length " \
+                                "1)\n       2 dimer(s) (chain length 2)\n       1 oligomer(s) of chain length 5"
+        good_rcf_bond_summary = "with following remaining bond types and number:\n     55:    0    5O4:    0    " \
+                                "AO4:    0     B1:    0     B5:    6     BB:    0    BO4:    0"
         with capture_stdout(adj_analysis_to_stdout, summary) as output:
             self.assertTrue(good_chain_summary in output)
             self.assertTrue(good_bond_summary in output)
             self.assertTrue(good_rcf_olig_summary in output)
             self.assertTrue(good_rcf_bond_summary in output)
 
-    def testKMCVisual(self):
+    def testKMCShortSimResultSummaryDescription(self):
+        result = create_sample_kmc_result(final_time=SHORT_TIME)
+        summary = analyze_adj_matrix(adjacency=result[ADJ_MATRIX])
+        adj_analysis_to_stdout(summary)
+        good_chain_summary = "Lignin KMC created 3 monomers, which formed:\n       1 trimer(s) (chain length 3)"
+        good_bond_summary = "composed of the following bond types and number:\n     55:    0    5O4:    0    " \
+                            "AO4:    0     B1:    0     B5:    1     BB:    0    BO4:    1"
+        good_rcf_olig_summary = "Breaking BO4 bonds to simulate RCF results in:\n       1 monomer(s) (chain " \
+                                "length 1)\n       1 dimer(s) (chain length 2)"
+        good_rcf_bond_summary = "with following remaining bond types and number:\n     55:    0    5O4:    0    " \
+                                "AO4:    0     B1:    0     B5:    1     BB:    0    BO4:    0"
+        with capture_stdout(adj_analysis_to_stdout, summary) as output:
+            self.assertTrue(good_chain_summary in output)
+            self.assertTrue(good_bond_summary in output)
+            self.assertTrue(good_rcf_olig_summary in output)
+            self.assertTrue(good_rcf_bond_summary in output)
+
+    def testKMCShortSimManyMonosResultSummaryDescription(self):
+        result = create_sample_kmc_result(final_time=SHORT_TIME, num_initial_monos=20, max_monos=40)
+        summary = analyze_adj_matrix(adjacency=result[ADJ_MATRIX])
+        adj_analysis_to_stdout(summary)
+        good_chain_summary = "Lignin KMC created 20 monomers, which formed:\n       6 monomer(s) (chain length 1)\n" \
+                             "       1 dimer(s) (chain length 2)\n       1 trimer(s) (chain length 3)\n"\
+                             "       1 oligomer(s) of chain length 4\n       1 oligomer(s) of chain length 5"
+        good_bond_summary = "composed of the following bond types and number:\n     55:    0    5O4:    1    " \
+                            "AO4:    0     B1:    0     B5:    1     BB:    4    BO4:    4"
+        good_rcf_olig_summary = "Breaking BO4 bonds to simulate RCF results in:\n      10 monomer(s) (chain length 1)" \
+                                "\n       5 dimer(s) (chain length 2)"
+        good_rcf_bond_summary = "with following remaining bond types and number:\n     55:    0    5O4:    0    " \
+                                "AO4:    0     B1:    0     B5:    1     BB:    4    BO4:    0"
+        with capture_stdout(adj_analysis_to_stdout, summary) as output:
+            self.assertTrue(good_chain_summary in output)
+            self.assertTrue(good_bond_summary in output)
+            self.assertTrue(good_rcf_olig_summary in output)
+            self.assertTrue(good_rcf_bond_summary in output)
+
+
+class TestVisualization(unittest.TestCase):
+    def testMakePNG(self):
         try:
             silent_remove(PNG_10MER)
             result = create_sample_kmc_result()
@@ -372,3 +424,34 @@ class TestAnalyzeKMC(unittest.TestCase):
             self.assertTrue(os.path.isfile(PNG_10MER))
         finally:
             silent_remove(PNG_10MER, disable=DISABLE_REMOVE)
+
+    # def testMakePSFGENShortTime(self):
+    #     try:
+    #         silent_remove(TCL_FILE_LOC)
+    #         result = create_sample_kmc_result(final_time=SHORT_TIME)
+    #         gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", toppar_dir=SUB_DATA_DIR)
+    #         # self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_OUT))
+    #     finally:
+    #         # silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
+    #         pass
+
+    def testMakePSFGEN(self):
+        try:
+            silent_remove(TCL_FILE_LOC)
+            result = create_sample_kmc_result()
+            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", toppar_dir=SUB_DATA_DIR)
+            self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_OUT))
+        finally:
+            silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
+            pass
+
+    def testMakePSFGENCLignin(self):
+        # Only added one line to coverage... oh well!
+        try:
+            silent_remove(TCL_FILE_LOC)
+            result = create_sample_kmc_result_c_lignin()
+            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", toppar_dir=SUB_DATA_DIR)
+            self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_C_LIGNIN_OUT))
+        finally:
+            silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
+            pass
