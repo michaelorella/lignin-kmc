@@ -125,7 +125,7 @@ def create_sample_kmc_result_c_lignin():
     events.add(Event(GROW, [], rate=DEF_INI_RATE))
     # make random seed and sort events for testing reliability
     np.random.seed(10)
-    result = run_kmc(n_max=10, t_final=2, rates=GOOD_RXN_RATES, initial_state=ini_state,
+    result = run_kmc(n_max=12, t_final=2, rates=GOOD_RXN_RATES, initial_state=ini_state,
                      initial_events=sorted(events), random_seed=10)
     return result
 
@@ -234,7 +234,7 @@ class TestState(unittest.TestCase):
 class TestRunKMC(unittest.TestCase):
     def testSampleRunKMC(self):
         result = create_sample_kmc_result()
-        self.assertTrue(len(result[TIME]))
+        self.assertTrue(len(result[TIME]) == 39)
         self.assertAlmostEqual(result[TIME][-1], 0.009396540330667606)
         self.assertTrue(len(result[MONO_LIST]) == 10)
         self.assertTrue(str(result[MONO_LIST][-1]) == '9: coniferyl alcohol is connected to '
@@ -246,19 +246,18 @@ class TestRunKMC(unittest.TestCase):
         self.assertTrue(list(result[ADJ_MATRIX].values()) == good_dok_vals)
 
     def testSampleRunKMCCLignin(self):
-        # TODO: Finish test
         result = create_sample_kmc_result_c_lignin()
-        print(result)
-        # self.assertTrue(len(result[TIME]))
-        # self.assertAlmostEqual(result[TIME][-1], 0.009396540330667606)
-        # self.assertTrue(len(result[MONO_LIST]) == 10)
-        # self.assertTrue(str(result[MONO_LIST][-1]) == '9: coniferyl alcohol is connected to '
-        #                                               '{0, 1, 2, 3, 4, 5, 6, 7, 8, 9} and active at position 4')
-        # good_dok_keys = [(0, 2), (2, 0), (1, 0), (0, 1), (1, 3), (3, 1), (3, 4), (4, 3), (4, 5),
-        #                  (5, 4), (6, 5), (5, 6), (6, 7), (7, 6), (7, 8), (8, 7), (8, 9), (9, 8)]
-        # good_dok_vals = [8.0, 5.0, 8.0, 4.0, 4.0, 8.0, 5.0, 8.0, 4.0, 8.0, 8.0, 5.0, 5.0, 8.0, 5.0, 8.0, 5.0, 8.0]
-        # self.assertTrue(list(result[ADJ_MATRIX].keys()) == good_dok_keys)
-        # self.assertTrue(list(result[ADJ_MATRIX].values()) == good_dok_vals)
+        self.assertTrue(len(result[TIME]) == 45)
+        self.assertAlmostEqual(result[TIME][-1], 0.0077502342942733305)
+        self.assertTrue(len(result[MONO_LIST]) == 12)
+        self.assertTrue(str(result[MONO_LIST][-1]) == '11: caffeoyl alcohol is connected to '
+                                                      '{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11} and active at position 4')
+        good_dok_keys = [(1, 0), (0, 1), (0, 2), (2, 0), (2, 3), (3, 2), (3, 4), (4, 3), (4, 5), (5, 4), (5, 6), (6, 5),
+                         (7, 6), (6, 7), (7, 8), (8, 7), (8, 9), (9, 8), (9, 10), (10, 9), (10, 11), (11, 10)]
+        good_dok_vals = [5.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 8.0, 8.0, 4.0, 4.0, 8.0, 4.0, 8.0,
+                         4.0, 8.0, 4.0, 8.0]
+        self.assertTrue(list(result[ADJ_MATRIX].keys()) == good_dok_keys)
+        self.assertTrue(list(result[ADJ_MATRIX].values()) == good_dok_vals)
 
 
 class TestAnalyzeKMC(unittest.TestCase):
