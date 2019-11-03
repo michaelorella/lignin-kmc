@@ -394,6 +394,5 @@ def branching_coefficient(adj):
     :param adj: DOK_MATRIX   -- the adjacency matrix for the lignin polymer that has been simulated
     :return: The branching coefficient that corresponds to the adjacency matrix
     """
-
     degrees = degree(adj)
     return np.sum(degrees >= 3) / len(degrees)

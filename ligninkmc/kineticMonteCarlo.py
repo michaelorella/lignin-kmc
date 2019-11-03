@@ -175,12 +175,9 @@ def update_events(monomers=None, adj=None, last_event=None, events=None, rate_ve
                             try:
                                 rate = rxn_event[2][(mon.type, partner.type)][size] / (cur_n ** 2)
                             except KeyError:
-                                print(rxn_event[0])
-                                print((mon.identity, partner.identity))
-                                adj.max_print = adj.nnz
-                                print(adj)
-                                print(size)
-                                raise
+                                raise InvalidDataError(f"Error while attempting to update events: "
+                                                       f"event {rxn_event[0]} between indices {mon.identity} and "
+                                                       f"{partner.identity} ")
 
                             # Add this to both the monomer and it's bonding partners list of events that need to be
                             # modified upon manipulation of either monomer
@@ -349,7 +346,7 @@ def do_event(event=None, state=None, adj=None, sg_ratio=None):
             # Make the monomer appear oxidized
             mon.active = 4
         else:
-            print('Unexpected event')
+            raise InvalidDataError(f'Unexpected event: {event.key} for index {indices[0]}')
     else:
         if event.key == GROW:
             current_size, _ = adj.get_shape()
