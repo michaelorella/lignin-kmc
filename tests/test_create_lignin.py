@@ -81,58 +81,20 @@ class TestCreateLigninNormalUse(unittest.TestCase):
             self.assertTrue(good_rcf_bond_summary in output)
 
     def testSmallConfig(self):
-        test_input = ["-c", SMALL_INI, "-r", "10"]
+        test_input = ["-c", SMALL_INI, "-r", "11"]
         # main(test_input)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n" \
                              "       1 oligomer(s) of chain length 10"
         good_bond_summary = "composed of the following bond types and number:\n     " \
-                            "55:    0    5O4:    0    AO4:    0     B1:    0     B5:    4     BB:    1    BO4:    4"
+                            "55:    0    5O4:    0    AO4:    0     B1:    0     B5:    2     BB:    1    BO4:    6"
         good_rcf_chain_summary = "Breaking BO4 bonds to simulate RCF results in:\n" \
-                                 "       6 monomer(s) (chain length 1)\n" \
-                                 "       2 dimer(s) (chain length 2)"
+                                 "       4 monomer(s) (chain length 1)\n" \
+                                 "       3 dimer(s) (chain length 2)"
         good_rcf_bond_summary = "with following remaining bond types and number:\n     " \
-                                "55:    0    5O4:    0    AO4:    0     B1:    1     B5:    1     BB:    1" \
+                                "55:    0    5O4:    0    AO4:    0     B1:    0     B5:    2     BB:    1" \
                                 "    BO4:    0"
         with capture_stdout(main, test_input) as output:
             self.assertTrue(good_chain_summary in output)
             self.assertTrue(good_bond_summary in output)
             self.assertTrue(good_rcf_chain_summary in output)
             self.assertTrue(good_rcf_bond_summary in output)
-
-"""
-Lignin KMC created 10 monomers, which formed:
-       1 oligomer(s) of chain length 10
-composed of the following bond types and number:
-     55:    0    5O4:    0    AO4:    0     B1:    0     B5:    4     BB:    1    BO4:    4
-
-Breaking BO4 bonds to simulate RCF results in:
-       2 monomer(s) (chain length 1)
-       1 dimer(s) (chain length 2)
-       2 trimer(s) (chain length 3)
-with following remaining bond types and number:
-     55:    0    5O4:    0    AO4:    0     B1:    0     B5:    4     BB:    1    BO4:    0
-
-
-Lignin KMC created 10 monomers, which formed:
-       1 oligomer(s) of chain length 10
-composed of the following bond types and number:
-     55:    0    5O4:    0    AO4:    0     B1:    0     B5:    3     BB:    1    BO4:    5
-
-Breaking BO4 bonds to simulate RCF results in:
-       4 monomer(s) (chain length 1)
-       2 trimer(s) (chain length 3)
-with following remaining bond types and number:
-     55:    0    5O4:    0    AO4:    0     B1:    0     B5:    3     BB:    1    BO4:    0
-
-Lignin KMC created 10 monomers, which formed:
-       1 oligomer(s) of chain length 10
-composed of the following bond types and number:
-     55:    0    5O4:    0    AO4:    0     B1:    0     B5:    2     BB:    0    BO4:    7
-
-Breaking BO4 bonds to simulate RCF results in:
-       6 monomer(s) (chain length 1)
-       2 dimer(s) (chain length 2)
-with following remaining bond types and number:
-     55:    0    5O4:    0    AO4:    0     B1:    0     B5:    2     BB:    0    BO4:    0
-
-"""

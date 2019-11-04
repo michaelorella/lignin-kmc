@@ -106,8 +106,9 @@ def parse_cmdline(argv=None):
         args = parser.parse_args(argv)
         if args.config is None:
             args.config = {INI_MONOS: args.initial_num_monomers, SIM_TIME: args.length_simulation,
-                           MAX_MONOS: args.max_num_monomers, SG_RATIO: args.sg_ratio, TEMP: args.temperature_in_K,
-                           RANDOM_SEED: args.random_seed, E_A_KCAL_MOL: DEF_E_A_KCAL_MOL, E_A_J_PART: None}
+                           MAX_MONOS: args.max_num_monomers, SG_RATIO: args.sg_ratio,
+                           TEMP: args.temperature_in_k, RANDOM_SEED: args.random_seed,
+                           E_A_KCAL_MOL: DEF_E_A_KCAL_MOL, E_A_J_PART: None}
         else:
             arg_def_dict = {args.initial_num_monomers: {DEF_VAL: DEF_INI_MONOS, CONFIG_KEY: INI_MONOS},
                             args.length_simulation: {DEF_VAL: DEF_SIM_TIME, CONFIG_KEY: SIM_TIME},
@@ -119,8 +120,7 @@ def parse_cmdline(argv=None):
                 config_key = arg_dict[CONFIG_KEY]
                 def_val = arg_dict[DEF_VAL]
                 if arg_val != def_val:
-                    # TODO: hi Buddy! This doesn't work!
-                    args.config[config_key] == arg_val
+                    args.config[config_key] = arg_val
 
     except (KeyError, IOError, SystemExit) as e:
         if hasattr(e, 'code') and e.code == 0:
@@ -218,9 +218,6 @@ def main(argv=None):
     except InvalidDataError as e:
         warning(e)
         return INVALID_DATA
-    except IOError as e:
-        warning("Problems reading file: {}".format(e))
-        return IO_ERROR
     except KeyError as e:
         warning(e)
         return IO_ERROR
