@@ -1,15 +1,27 @@
-from rdkit import Chem
-from rdkit.Chem import AllChem
-from rdkit.Chem import Draw
-from rdkit.Chem import rdDepictor
-from rdkit.Chem.Draw import rdMolDraw2D
-from rdkit.Chem.Draw import IPythonConsole
-from rdkit.Chem.Draw.MolDrawing import MolDrawing, DrawingOptions
-import networkx as nx
+import sys
+try:
+    from rdkit import Chem
+    from rdkit.Chem import AllChem
+    from rdkit.Chem import Draw
+    from rdkit.Chem import rdDepictor
+    from rdkit.Chem.Draw import rdMolDraw2D
+    from rdkit.Chem.Draw import IPythonConsole
+    from rdkit.Chem.Draw.MolDrawing import MolDrawing, DrawingOptions
+    DrawingOptions.bondLineWidth = 1.2
+    hasRDKit = True
+except ImportError:
+    hasRDKit = False
+try:
+    import networkx as nx
+    #This function depends on the sparse matrix library.
+    import scipy.sparse as sp
+    hasNetworkX = True
+except ImportError:
+    hasNetworkX = False
 import itertools
 import re
 
-DrawingOptions.bondLineWidth = 1.2
+
 
 def generateMol(adj,nodeList): 
     #define dictionary for atoms within each monomer
@@ -437,102 +449,113 @@ def generatePsfgen(adj, monomers, fname="psfgen.tcl", segname="L", toppardirecto
             raise ValueError
     fout.write("regenerate angles dihedrals\nwritepsf %s.psf" % segname)
     fout.close()
-def moltosvg(mol,molSize=(450,150),kekulize=True):
-    mc = Chem.Mol(mol.ToBinary())
-    if kekulize:
-        try:
-            Chem.Kekulize(mc)
-        except:
-            mc = Chem.Mol(mol.ToBinary())
-    if not mc.GetNumConformers():
-        rdDepictor.Compute2DCoords(mc)
-    drawer = rdMolDraw2D.MolDraw2DSVG(molSize[0],molSize[1])
+if hasRDKit:
+    def moltosvg(mol,molSize=(450,150),kekulize=True):
+        '''
+        Using the RDKit library, draws a representation of the generated molecule.
+        '''
+        mc = Chem.Mol(mol.ToBinary())
+        if kekulize:
+            try:
+                Chem.Kekulize(mc)
+            except:
+                mc = Chem.Mol(mol.ToBinary())
+        if not mc.GetNumConformers():
+            rdDepictor.Compute2DCoords(mc)
+        drawer = rdMolDraw2D.MolDraw2DSVG(molSize[0],molSize[1])
 
-    opts = drawer.drawOptions()
-    #for i in range(mc.GetNumAtoms()):
-    #    opts.atomLabels[i] = mc.GetAtomWithIdx(i).GetSymbol()+str(i+1)
-    drawer.DrawMolecule(mc)
-    drawer.FinishDrawing()
-    svg = drawer.GetDrawingText()
-    return svg.replace('svg:','')
+        opts = drawer.drawOptions()
+        #for i in range(mc.GetNumAtoms()):
+        #    opts.atomLabels[i] = mc.GetAtomWithIdx(i).GetSymbol()+str(i+1)
+        drawer.DrawMolecule(mc)
+        drawer.FinishDrawing()
+        svg = drawer.GetDrawingText()
+        return svg.replace('svg:','')
+else:
+    def moltosvg(mol,molSize=(450,150),kekulize=True):
+        '''
+        This would normally generate a representation of the molecule, but RDKit is not installed.
+        '''
+        print("RDKit not available!")
+        return None
+if hasNetworkX:
+    def generateGraphRepresentation(adj,nodeList):
+        '''
+        Creates a directed graph in NetworkX for a simplified representation of the lignin topology.
+        In general, the graph edges point *from* interactions at C4 *to* their respective linkage sites.
+        In exceptional cases (5-5, B-B linkages), both edges are created.
 
-def generateGraphRepresentation(adj,nodeList):
-    '''
-    Creates a directed graph in NetworkX for a simplified representation of the lignin topology.
-    In general, the graph edges point *from* interactions at C4 *to* their respective linkage sites.
-    In exceptional cases (5-5, B-B linkages), both edges are created.
+        Nodes express their monomer identity in the "t" field, and the edges are keyed according to linkage in the
+        "l" field.
 
-    Nodes express their monomer identity in the "t" field, and the edges are keyed according to linkage in the
-    "l" field.
-
-    An example script using matplotlib to draw the representation:
-    
-    import matplotlib.pyplot as plt
-    import networkx as nx
-    G = generateGraphRepresentation(l['adjacency_matrix'], l['monomers'])
-    pos = nx.nx_agraph.graphviz_layout(G)
-    nodes = G.nodes()
-    nodecolors = [G.node[n]['t'] for n in nodes]
-    edges = G.edges()
-    edgecolors = [G[u][v]['l'] for u,v in edges]
-    edgemap = plt.get_cmap('Set1')
-    nodemap = plt.get_cmap('tab10')
-    nx.draw_networkx(G, pos=pos, edges=edges, node_color=nodecolors, edge_color=edgecolors,
-            cmap=nodemap, vmin=0, vmax=2, edge_cmap=edgemap, edge_vmin=0, edge_vmax=8)
-    plt.savefig("test.png")
-    '''
-    G = nx.DiGraph() #Directional graph so we can easily see a bit of structure within the graph.
-    for i , mon in enumerate(nodeList):
-        G.add_node(i, t=mon.type)
-    adj = adj.copy()
-    #Since B-1 linkages actually involve three monomers, we signal that the beta-O-4 linkage required for B-1 is broken by flipping the sign.
-    for row in (adj == 1).nonzero()[0]:
-        col = (adj.getrow(row) == 8).nonzero()[1]
-        if len(col):
-            col = col[0]
-            adj[(row,col)] *= -1
-    for key in sp.tril(adj).todok().keys():
-        altkey = (key[1], key[0])
-        mono1 = int(adj[key])
-        mono2 = int(adj[altkey])
-        if mono1 == 8 and mono2 == 4: #Beta-O-4 linkage.
-            G.add_edge(key[1], key[0], l=0)
-        elif mono1 == 4 and mono2 == 8: #Reverse beta-O-4 linkage.
-            G.add_edge(key[0], key[1], l=0)
-        elif mono1 == 8 and mono2 == 5: #B5 linkage.
-            G.add_edge(key[1], key[0], l=1)
-        elif mono1 == 5 and mono2 == 8: #Reverse B5 linkage.
-            G.add_edge(key[0], key[1], l=1)
-        elif mono1 == 5 and mono2 == 5: #55 linkage
-            G.add_edge(key[1], key[0], l=2)
-            G.add_edge(key[0], key[1], l=2)
-        elif mono1 == 7 and mono2 == 4: #alpha-O-4 linkage.
-            G.add_edge(key[1], key[0], l=3)
-        elif mono1 == 4 and mono2 == 7: #Reverse alpha-O-4 linkage.
-            G.add_edge(key[0], key[1], l=3)
-        elif mono1 == 4 and mono2 == 5: #4O5 linkage.
-            G.add_edge(key[0], key[1], l=4)
-        elif mono1 == 5 and mono2 == 4: #Reverse 4O5 linkage.
-            G.add_edge(key[1], key[0], l=4)
-        elif mono1 == 8 and mono2 == 1: #Beta-1 linkage.
-            G.add_edge(key[1], key[0], l=5)
-        elif mono1 == 1 and mono2 == 8: #Reverse beta-1 linkage.
-            G.add_edge(key[0], key[1], l=5)
-        elif mono1 == -8 and mono2 == 4: #Beta-1 linkage remnant
-            G.add_edge(key[1], key[1], l=6)
-        elif mono2 == -8 and mono1 == 4: #Reverse beta-1 remnant.
-            G.add_edge(key[0], key[0], l=6)
-        elif mono1 == -8 and mono2 == 1: #Beta-1 linkage remnant (C1 variant)
-            G.add_edge(key[1], key[1], l=7)
-        elif mono2 == -8 and mono1 == 1: #Reverse beta-1 remnant. (C1 variant)
-            G.add_edge(key[0], key[0], l=7)
-        elif mono1 == 8 and mono2 == 8: # beta-beta linkage.
-            G.add_edge(key[0], key[1], l=8)
-            G.add_edge(key[1], key[0], l=8)
-        else:
-            print("This should never have happened! Abort!")
-            print(key, mono1, mono2)
-            print(monomers[key[0]].type, monomers[key[1]].type)
-            raise ValueError
-    return G
+        An example script using matplotlib to draw the representation:
+        
+        import matplotlib.pyplot as plt
+        import networkx as nx
+        G = generateGraphRepresentation(l['adjacency_matrix'], l['monomers'])
+        pos = nx.nx_agraph.graphviz_layout(G)
+        nodes = G.nodes()
+        nodecolors = [G.node[n]['t'] for n in nodes]
+        edges = G.edges()
+        edgecolors = [G[u][v]['l'] for u,v in edges]
+        edgemap = plt.get_cmap('Set1')
+        nodemap = plt.get_cmap('tab10')
+        nx.draw_networkx(G, pos=pos, edges=edges, node_color=nodecolors, edge_color=edgecolors,
+                cmap=nodemap, vmin=0, vmax=2, edge_cmap=edgemap, edge_vmin=0, edge_vmax=8)
+        plt.savefig("test.png")
+        '''
+        G = nx.DiGraph() #Directional graph so we can easily see a bit of structure within the graph.
+        for i , mon in enumerate(nodeList):
+            G.add_node(i, t=mon.type)
+        adj = adj.copy()
+        #Since B-1 linkages actually involve three monomers, we signal that the beta-O-4 linkage required for B-1 is broken by flipping the sign.
+        for row in (adj == 1).nonzero()[0]:
+            col = (adj.getrow(row) == 8).nonzero()[1]
+            if len(col):
+                col = col[0]
+                adj[(row,col)] *= -1
+        for key in sp.tril(adj).todok().keys():
+            altkey = (key[1], key[0])
+            mono1 = int(adj[key])
+            mono2 = int(adj[altkey])
+            if mono1 == 8 and mono2 == 4: #Beta-O-4 linkage.
+                G.add_edge(key[1], key[0], l=0)
+            elif mono1 == 4 and mono2 == 8: #Reverse beta-O-4 linkage.
+                G.add_edge(key[0], key[1], l=0)
+            elif mono1 == 8 and mono2 == 5: #B5 linkage.
+                G.add_edge(key[1], key[0], l=1)
+            elif mono1 == 5 and mono2 == 8: #Reverse B5 linkage.
+                G.add_edge(key[0], key[1], l=1)
+            elif mono1 == 5 and mono2 == 5: #55 linkage
+                G.add_edge(key[1], key[0], l=2)
+                G.add_edge(key[0], key[1], l=2)
+            elif mono1 == 7 and mono2 == 4: #alpha-O-4 linkage.
+                G.add_edge(key[1], key[0], l=3)
+            elif mono1 == 4 and mono2 == 7: #Reverse alpha-O-4 linkage.
+                G.add_edge(key[0], key[1], l=3)
+            elif mono1 == 4 and mono2 == 5: #4O5 linkage.
+                G.add_edge(key[0], key[1], l=4)
+            elif mono1 == 5 and mono2 == 4: #Reverse 4O5 linkage.
+                G.add_edge(key[1], key[0], l=4)
+            elif mono1 == 8 and mono2 == 1: #Beta-1 linkage.
+                G.add_edge(key[1], key[0], l=5)
+            elif mono1 == 1 and mono2 == 8: #Reverse beta-1 linkage.
+                G.add_edge(key[0], key[1], l=5)
+            elif mono1 == -8 and mono2 == 4: #Beta-1 linkage remnant
+                G.add_edge(key[1], key[1], l=6)
+            elif mono2 == -8 and mono1 == 4: #Reverse beta-1 remnant.
+                G.add_edge(key[0], key[0], l=6)
+            elif mono1 == -8 and mono2 == 1: #Beta-1 linkage remnant (C1 variant)
+                G.add_edge(key[1], key[1], l=7)
+            elif mono2 == -8 and mono1 == 1: #Reverse beta-1 remnant. (C1 variant)
+                G.add_edge(key[0], key[0], l=7)
+            elif mono1 == 8 and mono2 == 8: # beta-beta linkage.
+                G.add_edge(key[0], key[1], l=8)
+                G.add_edge(key[1], key[0], l=8)
+            else:
+                print("This should never have happened! Abort!")
+                print(key, mono1, mono2)
+                print(monomers[key[0]].type, monomers[key[1]].type)
+                raise ValueError
+        return G
 
