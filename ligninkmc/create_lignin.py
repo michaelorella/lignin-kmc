@@ -67,22 +67,24 @@ def parse_cmdline(argv=None):
         argv = sys.argv[1:]
 
     # initialize the parser object:
-    parser = argparse.ArgumentParser(description='Create lignin chain(s) as described in:\n   Orella, M., '
+    parser = argparse.ArgumentParser(description='Create lignin chain(s) as described in:\n  Orella, M., '
                                                  'Gani, T. Z. H., Vermaas, J. V., Stone, M. L., Anderson, E. M., '
-                                                 'Beckham, G. T., \n   Brushett, Fikile R., Roman-Leshkov, Y. (2019). '
-                                                 'Lignin-KMC: A Toolkit for Simulating Lignin Biosynthesis. \n   '
+                                                 'Beckham, G. T., \n  Brushett, Fikile R., Roman-Leshkov, Y. (2019). '
+                                                 'Lignin-KMC: A Toolkit for Simulating Lignin Biosynthesis.\n  '
                                                  'ACS Sustainable Chemistry & Engineering. '
-                                                 'https://doi.org/10.1021/acssuschemeng.9b03534.\n\n '
-                                                 '   By default, the activation energies from this reference will be '
-                                                 'used, as specified in Tables S1 and S2.\n    Alternately, the user '
+                                                 'https://doi.org/10.1021/acssuschemeng.9b03534.\n\n  '
+                                                 'By default, the activation energies from this reference will be '
+                                                 'used, as specified in Tables S1 and S2.\n  Alternately, the user '
                                                  f"may specify values, which should be specified as a dict of dict "
-                                                 f"of dicts in a \n    specified configuration file (specified with "
-                                                 f"'-c') using the '{E_A_KCAL_MOL}' or '{E_A_J_PART}' parameters.\n "
-                                                 f"   The format is (bond_type: monomer(s) involved: units involved: "
-                                                 f"ea_vals), for example:\n        {OX}: {{0: "
-                                                 f"{{{MONOMER}: 0.9, {DIMER}: 6.3}}, 1: {{{MONOMER}: 0.6, {DIMER}: "
-                                                 f"2.2}}}}\n    where 0: {LIGNIN_SUBUNITS[0]}, 1: {LIGNIN_SUBUNITS[1]},"
-                                                 f" 2: {LIGNIN_SUBUNITS[2]}.",
+                                                 f"of dicts in a \n  specified configuration file (specified with '-c')"
+                                                 f" using the '{E_A_KCAL_MOL}' or '{E_A_J_PART}'\n  parameters with "
+                                                 f"corresponding units (kcal/mol or joules/particle, respectively).\n"
+                                                 f"  The format is (bond_type: monomer(s) involved: units involved: "
+                                                 f"ea_vals), for example:\n      "
+                                                 f"ea_dict = {{{OX}: {{0: {{{MONOMER}: 0.9, {DIMER}: 6.3}}, "
+                                                 f"1: ""{{{MONOMER}: 0.6, {DIMER}: " f"2.2}}}}, ...}}\n  "
+                                                 f"where 0: {LIGNIN_SUBUNITS[0]}, 1: {LIGNIN_SUBUNITS[1]}, "
+                                                 f"2: {LIGNIN_SUBUNITS[2]}.",
                                      formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-c", "--config", help="The location of the configuration file in ini format. This file "
                                                "can be used to overwrite default \nvalues such as for energies.",

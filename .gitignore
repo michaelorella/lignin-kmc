@@ -3,10 +3,11 @@ tests/test_data/run_kmc/psfgen.tcl
 __pycache__
 .idea/
 .ipynb_checkpoints/
-Example-hm.ipynb
-Example_again.ipynb
-testing.ipynb
+notebooks/Example-hm.ipynb
+notebooks/Example_again.ipynb
+notebooks/testing.ipynb
 dist/
 lignin-kmc.iml
 ligninkmc.egg-info/
 ligninkmc/__pycache__/
+/.eggs/
