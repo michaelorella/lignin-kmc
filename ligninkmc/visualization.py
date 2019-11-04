@@ -208,7 +208,7 @@ def generate_mol(adj, node_list):
             atom_block = atom_blocks[C]
             bond_block = bond_blocks[C]
         else:
-            raise ValueError("Expected types for monomer to be 0, 1, or 2, but encountered type '{}'".format(mon.type))
+            raise ValueError("Expected monomer types are {LIGNIN_SUBUNITS} but encountered type '{mon.type}'")
 
         # Extract each of the individual atoms from this monomer to add to the aggregate file
         lines = atom_block.splitlines(keepends=True)
