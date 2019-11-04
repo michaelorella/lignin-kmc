@@ -17,7 +17,8 @@ from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, create_initial_monome
                                      create_initial_events, create_initial_state, DEF_INI_RATE)
 from ligninkmc.kmc_common import (TEMP, E_A_KCAL_MOL, E_A_J_PART, C5O4, OX, Q, C5C5, B5, BB, BO4, AO4, B1,
                                   MON_MON, MON_DIM, DIM_DIM, DIM_MON, MONOMER, DIMER, GROW, TIME, MONO_LIST,
-                                  ADJ_MATRIX, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_A_KCAL_MOL)
+                                  ADJ_MATRIX, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_A_KCAL_MOL,
+                                  )
 
 __author__ = 'hmayes'
 
@@ -363,14 +364,14 @@ class TestAnalyzeKMC(unittest.TestCase):
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n       1 oligomer(s) of chain length 10"
         good_bond_summary = "composed of the following bond types and number:\n     55:    0    5O4:    0    " \
                             "AO4:    0     B1:    0     B5:    6     BB:    0    BO4:    3"
-        good_rcf_olig_summary = "Breaking BO4 bonds to simulate RCF results in:\n       1 monomer(s) (chain length " \
-                                "1)\n       2 dimer(s) (chain length 2)\n       1 oligomer(s) of chain length 5"
+        good_rcf_chain_summary = "Breaking BO4 bonds to simulate RCF results in:\n       1 monomer(s) (chain length " \
+                                 "1)\n       2 dimer(s) (chain length 2)\n       1 oligomer(s) of chain length 5"
         good_rcf_bond_summary = "with following remaining bond types and number:\n     55:    0    5O4:    0    " \
                                 "AO4:    0     B1:    0     B5:    6     BB:    0    BO4:    0"
         with capture_stdout(adj_analysis_to_stdout, summary) as output:
             self.assertTrue(good_chain_summary in output)
             self.assertTrue(good_bond_summary in output)
-            self.assertTrue(good_rcf_olig_summary in output)
+            self.assertTrue(good_rcf_chain_summary in output)
             self.assertTrue(good_rcf_bond_summary in output)
 
     def testKMCShortSimResultSummaryDescription(self):
@@ -424,16 +425,6 @@ class TestVisualization(unittest.TestCase):
             self.assertTrue(os.path.isfile(PNG_10MER))
         finally:
             silent_remove(PNG_10MER, disable=DISABLE_REMOVE)
-
-    # def testMakePSFGENShortTime(self):
-    #     try:
-    #         silent_remove(TCL_FILE_LOC)
-    #         result = create_sample_kmc_result(final_time=SHORT_TIME)
-    #         gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", toppar_dir=SUB_DATA_DIR)
-    #         # self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_OUT))
-    #     finally:
-    #         # silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
-    #         pass
 
     def testMakePSFGEN(self):
         try:

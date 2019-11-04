@@ -10,12 +10,14 @@ import numpy as np
 from configparser import ConfigParser
 from common_wrangler.common import (warning, process_cfg, MAIN_SEC, GOOD_RET, INPUT_ERROR, IO_ERROR, KB, H,
                                     KCAL_MOL_TO_J_PART, InvalidDataError, INVALID_DATA)
+
+from ligninkmc.analysis import adj_analysis_to_stdout, analyze_adj_matrix
 from ligninkmc.event import Event
 from ligninkmc.monomer import Monomer
 from ligninkmc.kineticMonteCarlo import run_kmc
 from ligninkmc.kmc_common import (E_A_KCAL_MOL, E_A_J_PART, TEMP, INI_MONOS, MAX_MONOS, SIM_TIME, AFFECTED, GROW,
                                   DEF_E_A_KCAL_MOL, OX, MONOMER, DIMER, LIGNIN_SUBUNITS, SG_RATIO,
-                                  ADJ_MATRIX, )
+                                  ADJ_MATRIX, RANDOM_SEED)
 
 # Defaults #
 
@@ -25,11 +27,13 @@ DEF_SIM_TIME = 1  # simulation time in seconds
 DEF_SG = 1
 DEF_INI_MONOS = 2
 DEF_INI_RATE = 1e4
+DEF_RANDOM_SEED = None
 
-# Keys needed for simulation
-
+DEF_VAL = 'default_value'
+CONFIG_KEY = 'config_key'
 DEF_CFG_VALS = {TEMP: DEF_TEMP, E_A_KCAL_MOL: DEF_E_A_KCAL_MOL, E_A_J_PART: None, SG_RATIO: DEF_SG,
                 MAX_MONOS: DEF_MAX_MONOS, SIM_TIME: DEF_SIM_TIME, INI_MONOS: DEF_INI_MONOS,
+                RANDOM_SEED: DEF_RANDOM_SEED,
                 }
 REQ_KEYS = {}
 
@@ -47,18 +51,9 @@ def read_cfg(f_loc, cfg_proc=process_cfg):
     good_files = config.read(f_loc)
 
     if not good_files:
-        return DEF_CFG_VALS
+        raise IOError(f"Could not find specified configuration file: {f_loc}")
 
     main_proc = cfg_proc(dict(config.items(MAIN_SEC)), DEF_CFG_VALS, REQ_KEYS)
-    # TODO: overwrite main_proc vals if specified on command line
-    # # if these values are not changed with the  is set on the command line, overwrite from config file or default
-    # if args.temp != DEF_TEMP:
-    #     # noinspection PyStatementEffect
-    #     args.config[TEMP] == args.temp
-    #     if args.temp != DEF_TEMP:
-    #         pass
-    # # noinspection PyStatementEffect
-    # args.config[TEMP] == args.temp
 
     return main_proc
 
@@ -74,21 +69,23 @@ def parse_cmdline(argv=None):
     # initialize the parser object:
     parser = argparse.ArgumentParser(description='Create lignin chain(s) as described in:\n   Orella, M., '
                                                  'Gani, T. Z. H., Vermaas, J. V., Stone, M. L., Anderson, E. M., '
-                                                 'Beckham, G. T., Brushett, Fikile R., Roman-Leshkov, Y. (2019). '
-                                                 'Lignin-KMC: A Toolkit for Simulating Lignin Biosynthesis. ACS '
-                                                 'Sustainable Chemistry & Engineering.\n'
+                                                 'Beckham, G. T., \n   Brushett, Fikile R., Roman-Leshkov, Y. (2019). '
+                                                 'Lignin-KMC: A Toolkit for Simulating Lignin Biosynthesis. \n   '
+                                                 'ACS Sustainable Chemistry & Engineering. '
                                                  'https://doi.org/10.1021/acssuschemeng.9b03534.\n\n '
-                                                 'By default, the activation energies from this reference will be '
-                                                 'used, as specified in Tables S1 and S2. Alternately, the user '
+                                                 '   By default, the activation energies from this reference will be '
+                                                 'used, as specified in Tables S1 and S2.\n    Alternately, the user '
                                                  f"may specify values, which should be specified as a dict of dict "
-                                                 f"of dicts in a configuration file using the '{E_A_KCAL_MOL}' or "
-                                                 f"'{E_A_J_PART}' parameters. The format is (bond_type: monomer(s) "
-                                                 f"involved: units involved: ea_vals), for example, {OX}: {{0: "
+                                                 f"of dicts in a \n    specified configuration file (specified with "
+                                                 f"'-c') using the '{E_A_KCAL_MOL}' or '{E_A_J_PART}' parameters.\n "
+                                                 f"   The format is (bond_type: monomer(s) involved: units involved: "
+                                                 f"ea_vals), for example:\n        {OX}: {{0: "
                                                  f"{{{MONOMER}: 0.9, {DIMER}: 6.3}}, 1: {{{MONOMER}: 0.6, {DIMER}: "
-                                                 f"2.2}}}}, where 0: {LIGNIN_SUBUNITS[0]}, 1: {LIGNIN_SUBUNITS[1]}, "
-                                                 f"2: {LIGNIN_SUBUNITS[2]}.")
+                                                 f"2.2}}}}\n    where 0: {LIGNIN_SUBUNITS[0]}, 1: {LIGNIN_SUBUNITS[1]},"
+                                                 f" 2: {LIGNIN_SUBUNITS[2]}.",
+                                     formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-c", "--config", help="The location of the configuration file in ini format. This file "
-                                               "can be used to overwrite default values such as for energies.",
+                                               "can be used to overwrite default \nvalues such as for energies.",
                         default=None, type=read_cfg)
     parser.add_argument("-i", "--initial_num_monomers", help=f"The initial number of monomers to be included in the "
                                                              f"simulation. The default is {DEF_INI_MONOS}.",
@@ -99,13 +96,31 @@ def parse_cmdline(argv=None):
                                                          f"value is {DEF_MAX_MONOS}.", default=DEF_MAX_MONOS)
     parser.add_argument("-sg", "--sg_ratio", help=f"The S:G (guaiacol:syringyl) ratio. "
                                                   f"The default is {DEF_SG}.", default=DEF_SG)
-    parser.add_argument("-t", "--temp", help=f"The temperature (in K) at which lignin biosynthesis should be modeled. "
-                                             f"The default is {DEF_TEMP} K.", default=DEF_TEMP)
+    parser.add_argument("-t", "--temperature_in_k", help=f"The temperature (in K) at which to model lignin "
+                                                         f"biosynthesis. The default is {DEF_TEMP} K.",
+                        default=DEF_TEMP)
     parser.add_argument("-r", "--random_seed", help="Random seed value to be used for testing.", default=None)
 
     args = None
     try:
         args = parser.parse_args(argv)
+        if args.config is None:
+            args.config = {INI_MONOS: args.initial_num_monomers, SIM_TIME: args.length_simulation,
+                           MAX_MONOS: args.max_num_monomers, SG_RATIO: args.sg_ratio, TEMP: args.temperature_in_K,
+                           RANDOM_SEED: args.random_seed, E_A_KCAL_MOL: DEF_E_A_KCAL_MOL, E_A_J_PART: None}
+        else:
+            arg_def_dict = {args.initial_num_monomers: {DEF_VAL: DEF_INI_MONOS, CONFIG_KEY: INI_MONOS},
+                            args.length_simulation: {DEF_VAL: DEF_SIM_TIME, CONFIG_KEY: SIM_TIME},
+                            args.max_num_monomers: {DEF_VAL: DEF_MAX_MONOS, CONFIG_KEY: MAX_MONOS},
+                            args.sg_ratio: {DEF_VAL: DEF_SG, CONFIG_KEY: SG_RATIO},
+                            args.temperature_in_k: {DEF_VAL: DEF_TEMP, CONFIG_KEY: TEMP},
+                            args.random_seed: {DEF_VAL: DEF_RANDOM_SEED, CONFIG_KEY: RANDOM_SEED}}
+            for arg_val, arg_dict in arg_def_dict.items():
+                config_key = arg_dict[CONFIG_KEY]
+                def_val = arg_dict[DEF_VAL]
+                if arg_val != def_val:
+                    # TODO: hi Buddy! This doesn't work!
+                    args.config[config_key] == arg_val
 
     except (KeyError, IOError, SystemExit) as e:
         if hasattr(e, 'code') and e.code == 0:
@@ -178,8 +193,8 @@ def main(argv=None):
 
         # decide on initial monomers, based on given SG_RATIO
         pct_s = cfg[SG_RATIO] / (1 + cfg[SG_RATIO])
-        if args.random_seed:
-            np.random.seed(args.random_seed)
+        if cfg[RANDOM_SEED]:
+            np.random.seed(int(cfg[RANDOM_SEED]))
         num_monos = cfg[INI_MONOS]
         monomer_draw = np.random.rand(num_monos)
         initial_monomers = create_initial_monomers(pct_s, num_monos, monomer_draw)
@@ -197,9 +212,9 @@ def main(argv=None):
         # begin simulation
         result = run_kmc(n_max=cfg[MAX_MONOS], t_final=cfg[SIM_TIME], rates=rxn_rates, initial_state=ini_state,
                          initial_events=ini_events, sg_ratio=cfg[SG_RATIO])
-        #  To show the state, we will print the adjacency matrix that has been generated,
-        #  although this is not the typical output examined.
-        print(result[ADJ_MATRIX].toarray())
+        # show results
+        summary = analyze_adj_matrix(adjacency=result[ADJ_MATRIX])
+        adj_analysis_to_stdout(summary)
     except InvalidDataError as e:
         warning(e)
         return INVALID_DATA

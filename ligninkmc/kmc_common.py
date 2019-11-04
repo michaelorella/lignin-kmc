@@ -15,6 +15,7 @@ SG_RATIO = 'sg_ratio'
 INI_MONOS = 'initial_num_monomers'
 MAX_MONOS = 'max_num_monomers'
 SIM_TIME = 'length_sim'
+RANDOM_SEED = 'random_seed'
 
 # bond types
 AO4 = 'ao4'
@@ -39,7 +40,7 @@ DIM_MON = (DIMER, MONOMER)
 DIM_DIM = (DIMER, DIMER)
 
 TIME = 'time'
-TEMP = 'temperature_in_K'
+TEMP = 'temperature_in_k'
 E_A_KCAL_MOL = 'e_a_in_kcal_mol'
 E_A_J_PART = 'e_a_in_j_particle'
 
@@ -113,8 +114,3 @@ DEF_E_A_KCAL_MOL = {C5O4: {(0, 0): {(MONOMER, MONOMER): 11.2, (MONOMER, DIMER): 
                         2: {MONOMER: 11.1, DIMER: 11.1}}}
 DEF_E_A_KCAL_MOL[BB][(0, 1)] = DEF_E_A_KCAL_MOL[BB][(1, 0)]
 
-cLigEnergies = {
-    'ao4': {},
-    'b1': {},
-    'ox': {},
-    'q': {}}
