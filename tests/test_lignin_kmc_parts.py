@@ -15,7 +15,7 @@ from ligninkmc.kineticMonteCarlo import run_kmc
 from ligninkmc.visualization import generate_mol, gen_psfgen
 from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, create_initial_monomers,
                                      create_initial_events, create_initial_state, DEF_INI_RATE)
-from ligninkmc.kmc_common import (TEMP, E_A_KCAL_MOL, E_A_J_PART, C5O4, OX, Q, C5C5, B5, BB, BO4, AO4, B1,
+from ligninkmc.kmc_common import (C5O4, OX, Q, C5C5, B5, BB, BO4, AO4, B1,
                                   MON_MON, MON_DIM, DIM_DIM, DIM_MON, MONOMER, DIMER, GROW, TIME, MONO_LIST,
                                   ADJ_MATRIX, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_A_KCAL_MOL,
                                   )
@@ -82,7 +82,8 @@ GOOD_RXN_RATES = {C5O4: {(0, 0): {MON_MON: 38335.597214837195, MON_DIM: 123.4195
                                  DIM_DIM: 177267402.79460046},
                         (0, 1): {MON_MON: 1860006.627196039, MON_DIM: 177267402.79460046, DIM_MON: 177267402.79460046,
                                  DIM_DIM: 177267402.79460046},
-                        (1, 1): {MON_MON: 407201.805441432, MON_DIM: 147913.05159423634, DIM_MON: 147913.05159423634},
+                        (1, 1): {MON_MON: 407201.805441432, MON_DIM: 147913.05159423634, DIM_MON: 147913.05159423634,
+                                 DIM_DIM: 147913.05159423634},
                         (2, 2): {MON_MON: 1590507825.8720958, MON_DIM: 692396712512.5765, DIM_MON: 692396712512.5765,
                                  DIM_DIM: 692396712512.5765}},
                   AO4: {(0, 0): {MON_MON: 0.004169189173972648, MON_DIM: 0.004169189173972648,
@@ -152,8 +153,7 @@ class TestCalcRates(unittest.TestCase):
     Tests calculation of rate coefficients by the Eyring equation.
     """
     def test_calc_rates_from_kcal_mol(self):
-        config = {TEMP: DEF_TEMP, E_A_KCAL_MOL: DEF_E_A_KCAL_MOL, E_A_J_PART: None}
-        rxn_rates = calc_rates(config)
+        rxn_rates = calc_rates(DEF_TEMP, ea_kcal_mol_dict=DEF_E_A_KCAL_MOL)
         # check size, then values via nested loops instead of dealing with almost equal dicts
         self.assertTrue(len(rxn_rates) == len(GOOD_RXN_RATES))
         rxn_type, substrate, substrate_type = None, None, None  # to make IDE happy

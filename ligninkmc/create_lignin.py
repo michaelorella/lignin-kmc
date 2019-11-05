@@ -133,29 +133,35 @@ def parse_cmdline(argv=None):
     return args, GOOD_RET
 
 
-def calc_rates(cfg):
+def calc_rates(temp, ea_j_part_dict=None, ea_kcal_mol_dict=None):
     """
     Uses temperature and provided activation energy to calculate rates using the Eyring equation
-    :param cfg: dict of configuration values, including TEMP, EA_KCAL_MOL, EA_J_MOL for the expected rxn_type types
-    :return: rxn_rates: dict in units of 1/s
+    dictionary formats: dict = {rxn_type: {substrate(s): {sub_lengths (e.g. (monomer, monomer)): value, ...}, ...}, ...}
+
+    Only ea_j_part_dict or ea_kcal_mol_dict are needed; if both are provided, only ea_j_part_dict will be used
+
+    :param temp: float, temperature in K
+    :param ea_j_part_dict: dictionary of activation energies in Joule/particle, in format noted above
+    :param ea_kcal_mol_dict: dictionary of activation energies in Joule/particle, in format noted above
+    :return: rxn_rates: dict of reaction rates units of 1/s
     """
     # copy config value(s) to convenient names
-    temp = cfg[TEMP]
+    temp = temp
 
     # want activation energies in J/particle; user can provide them in those units or in kcal/mol
-    if cfg[E_A_J_PART] is None:
-        cfg[E_A_J_PART] = {
-            rxn_type: {substrate: {sub_type: cfg[E_A_KCAL_MOL][rxn_type][substrate][sub_type] * KCAL_MOL_TO_J_PART
-                                   for sub_type in cfg[E_A_KCAL_MOL][rxn_type][substrate]}
-                       for substrate in cfg[E_A_KCAL_MOL][rxn_type]} for rxn_type in cfg[E_A_KCAL_MOL]}
+    if ea_j_part_dict is None:
+        ea_j_part_dict = {
+            rxn_type: {substrate: {sub_len: ea_kcal_mol_dict[rxn_type][substrate][sub_len] * KCAL_MOL_TO_J_PART
+                                   for sub_len in ea_kcal_mol_dict[rxn_type][substrate]}
+                       for substrate in ea_kcal_mol_dict[rxn_type]} for rxn_type in ea_kcal_mol_dict}
     # TODO: check if need to change to solution state...
     rxn_rates = {}
-    for rxn_type in cfg[E_A_J_PART]:
+    for rxn_type in ea_j_part_dict:
         rxn_rates[rxn_type] = {}
-        for substrate in cfg[E_A_J_PART][rxn_type]:
+        for substrate in ea_j_part_dict[rxn_type]:
             rxn_rates[rxn_type][substrate] = {}
-            for substrate_type in cfg[E_A_J_PART][rxn_type][substrate]:
-                rate = KB * temp / H * np.exp(-cfg[E_A_J_PART][rxn_type][substrate][substrate_type] / KB / temp)
+            for substrate_type in ea_j_part_dict[rxn_type][substrate]:
+                rate = KB * temp / H * np.exp(-ea_j_part_dict[rxn_type][substrate][substrate_type] / KB / temp)
                 rxn_rates[rxn_type][substrate][substrate_type] = rate
     return rxn_rates
 
@@ -191,7 +197,7 @@ def main(argv=None):
 
     try:
         # need rates before we can start modeling reactions
-        rxn_rates = calc_rates(cfg)
+        rxn_rates = calc_rates(cfg[TEMP], ea_j_part_dict=cfg[E_A_J_PART], ea_kcal_mol_dict=cfg[E_A_KCAL_MOL])
 
         # decide on initial monomers, based on given SG_RATIO
         pct_s = cfg[SG_RATIO] / (1 + cfg[SG_RATIO])

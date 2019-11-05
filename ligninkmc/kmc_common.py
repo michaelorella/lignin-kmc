@@ -80,6 +80,8 @@ DEF_E_A_KCAL_MOL = {C5O4: {(0, 0): {(MONOMER, MONOMER): 11.2, (MONOMER, DIMER): 
                                   (DIMER, DIMER): 5.2},
                          (1, 0): {(MONOMER, MONOMER): 6.5, (MONOMER, DIMER): 6.5, (DIMER, MONOMER): 6.5,
                                   (DIMER, DIMER): 6.5},
+                         (0, 1): {(MONOMER, MONOMER): 6.5, (MONOMER, DIMER): 6.5, (DIMER, MONOMER): 6.5,
+                                  (DIMER, DIMER): 6.5},
                          (1, 1): {(MONOMER, MONOMER): 5.2, (MONOMER, DIMER): 5.2, (DIMER, MONOMER): 5.2,
                                   (DIMER, DIMER): 5.2},
                          (2, 2): {(MONOMER, MONOMER): 7.2, (MONOMER, DIMER): 7.2,
@@ -90,8 +92,8 @@ DEF_E_A_KCAL_MOL = {C5O4: {(0, 0): {(MONOMER, MONOMER): 11.2, (MONOMER, DIMER): 
                                    (DIMER, MONOMER): 6.2, (DIMER, DIMER): 6.2},
                           (0, 1): {(MONOMER, MONOMER): 8.9, (MONOMER, DIMER): 6.2,
                                    (DIMER, MONOMER): 6.2, (DIMER, DIMER): 6.2},
-                          (1, 1): {(MONOMER, MONOMER): 9.8, (MONOMER, DIMER): 10.4, (DIMER, MONOMER): 10.4},
-                          # TODO: Add (Dimer, Dimer)
+                          (1, 1): {(MONOMER, MONOMER): 9.8, (MONOMER, DIMER): 10.4,
+                                   (DIMER, MONOMER): 10.4, (DIMER, DIMER): 10.4},
                           (2, 2): {(MONOMER, MONOMER): 4.9, (MONOMER, DIMER): 1.3,
                                    (DIMER, MONOMER): 1.3, (DIMER, DIMER): 1.3}},
                     AO4: {(0, 0): {(MONOMER, MONOMER): 20.7, (MONOMER, DIMER): 20.7,
@@ -112,4 +114,3 @@ DEF_E_A_KCAL_MOL = {C5O4: {(0, 0): {(MONOMER, MONOMER): 11.2, (MONOMER, DIMER): 
                     OX: {0: {MONOMER: 0.9, DIMER: 6.3}, 1: {MONOMER: 0.6, DIMER: 2.2}, 2: {MONOMER: 0.9, DIMER: 0.9}},
                     Q: {0: {MONOMER: 11.1, DIMER: 11.1}, 1: {MONOMER: 11.7, DIMER: 11.7},
                         2: {MONOMER: 11.1, DIMER: 11.1}}}
-DEF_E_A_KCAL_MOL[BB][(0, 1)] = DEF_E_A_KCAL_MOL[BB][(1, 0)]

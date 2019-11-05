@@ -50,7 +50,7 @@ class TestCreateLigninNoOutput(unittest.TestCase):
 
     def testBadConfigFile(self):
         test_input = ["-c", "ghost.ini"]
-        main(test_input)
+        # main(test_input)
         if logger.isEnabledFor(logging.DEBUG):
             main(test_input)
         with capture_stderr(main, test_input) as output:
