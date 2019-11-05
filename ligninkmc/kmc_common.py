@@ -90,8 +90,8 @@ DEF_E_A_KCAL_MOL = {C5O4: {(0, 0): {(MONOMER, MONOMER): 11.2, (MONOMER, DIMER): 
                                    (DIMER, MONOMER): 6.2, (DIMER, DIMER): 6.2},
                           (0, 1): {(MONOMER, MONOMER): 8.9, (MONOMER, DIMER): 6.2,
                                    (DIMER, MONOMER): 6.2, (DIMER, DIMER): 6.2},
-                          (1, 1): {(MONOMER, MONOMER): 9.8, (MONOMER, DIMER): 10.4,
-                                   (DIMER, MONOMER): 10.4},
+                          (1, 1): {(MONOMER, MONOMER): 9.8, (MONOMER, DIMER): 10.4, (DIMER, MONOMER): 10.4},
+                          # TODO: Add (Dimer, Dimer)
                           (2, 2): {(MONOMER, MONOMER): 4.9, (MONOMER, DIMER): 1.3,
                                    (DIMER, MONOMER): 1.3, (DIMER, DIMER): 1.3}},
                     AO4: {(0, 0): {(MONOMER, MONOMER): 20.7, (MONOMER, DIMER): 20.7,

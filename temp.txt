@@ -1,0 +1,10 @@
+As indicated, the package has been updated to move toward PEP8 compliance and adding test coverage.
+
+**The neutral news:**
+Many of the updates to make the package more PEP8 compliant are trivial, e.g. following the convention to make local variables lowercase and global variables all uppercase. Some variables were renamed for disambiguation or clarification. Hopefully, this will make the package more welcoming for the python community to use and update.
+
+**The bad news:**
+Previous functionality remains, but unfortunately the renaming of variables, functions, and file names (for compliance) will require previous scripts to be updated, even if only trivially (e.g. change a variable name to all lowercase).
+
+**The good news:**
+Testing has been added and with coverage of >= 90% for all files in lignin-kmc/lignin-kmc, *except* for visualization.py .
