@@ -372,16 +372,6 @@ def run_kmc(n_max=10, t_final=10, rates=None, initial_state=None, initial_events
     method, along with the possible rates of different bond formation events, the maximum number of monomers that
     should be included in the simulation and the total simulation time.
 
-    Example usage assuming that rates have been defined as dictionary of dictionary of dictionaries:
-    rates['event type'][(monomer 1 type, monomer 2 type)][(monomer 1 frag size, monomer 2 frag size)]
-    mons = [Monomer(1, i) for i in range(5)]
-    evs = [Event()]
-    state = {mons[i]:{evs[i]} for i in range(5)}
-    evs.add(Event(GROW))
-    run_kmc(nMax = 5 , tFinal = 10 , rates = rates , initialState = state, initialEvents = set(evs))
-
-    {TIME: , 'monomers' : , 'adjacency_matrix' : }
-
     :param n_max:   int   -- The maximum number of monomers in the simulation
     :param t_final: float -- The final simulation time (units depend on units of rates)
     :param rates:  dict   -- The rate of each of the possible events

@@ -213,13 +213,12 @@ def main(argv=None):
         # When the monomers and starting events have been initialized, they are grouped into the "state" and "events"
         # which are necessary to start the simulation. The final pieces of information needed to run_kmc the simulation
         # are the maximum number of monomers that should be studied and the final simulation time.
-        ini_state = create_initial_state(initial_events, initial_monomers, num_monos)
-        ini_events = {initial_events[i] for i in range(num_monos)}
-        ini_events.add(Event(GROW, [], rate=DEF_INI_RATE, bond=cfg[SG_RATIO]))
+        initial_state = create_initial_state(initial_events, initial_monomers, num_monos)
+        initial_events.append(Event(GROW, [], rate=DEF_INI_RATE, bond=cfg[SG_RATIO]))
 
         # begin simulation
-        result = run_kmc(n_max=cfg[MAX_MONOS], t_final=cfg[SIM_TIME], rates=rxn_rates, initial_state=ini_state,
-                         initial_events=ini_events, sg_ratio=cfg[SG_RATIO])
+        result = run_kmc(n_max=cfg[MAX_MONOS], t_final=cfg[SIM_TIME], rates=rxn_rates, initial_state=initial_state,
+                         initial_events=initial_events, sg_ratio=cfg[SG_RATIO])
         # show results
         summary = analyze_adj_matrix(adjacency=result[ADJ_MATRIX])
         adj_analysis_to_stdout(summary)
