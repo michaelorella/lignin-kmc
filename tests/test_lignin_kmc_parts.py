@@ -446,3 +446,18 @@ class TestVisualization(unittest.TestCase):
         finally:
             silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
             pass
+
+    def testWhatGrowDoes(self):
+        sg_ratio = 2.5
+        pct_s = sg_ratio / (1 + sg_ratio)
+        num_monos = 200
+        np.random.seed(10)
+        monomer_draw = np.random.rand(num_monos)
+        initial_monomers = create_initial_monomers(pct_s, num_monos, monomer_draw)
+
+        # Initialize the monomers, events, and state
+        initial_events = create_initial_events(monomer_draw, num_monos, pct_s, GOOD_RXN_RATES)
+        initial_state = create_initial_state(initial_events, initial_monomers, num_monos)
+        # don't I need this?
+        # initial_events.append(Event(GROW, [], rate=DEF_INI_RATE, bond=sg_ratio))
+        pass
