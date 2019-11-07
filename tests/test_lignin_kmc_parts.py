@@ -32,11 +32,14 @@ SUB_DATA_DIR = os.path.join(DATA_DIR, 'run_kmc')
 
 # Output files #
 PNG_10MER = os.path.join(SUB_DATA_DIR, 'test_10mer.png')
+PNG_C_LIGNIN = os.path.join(SUB_DATA_DIR, 'test_c_lignin.png')
+
 TCL_FNAME = "psfgen.tcl"
 TCL_FILE_LOC = os.path.join(SUB_DATA_DIR, TCL_FNAME)
 GOOD_TCL_OUT = os.path.join(SUB_DATA_DIR, "good_psfgen.tcl")
 GOOD_TCL_C_LIGNIN_OUT = os.path.join(SUB_DATA_DIR, "good_psfgen_c_lignin.tcl")
 GOOD_TCL_SHORT_SIM_OUT = os.path.join(SUB_DATA_DIR, "good_psfgen_short_sim.tcl")
+GOOD_TCL_NO_GROW_OUT = os.path.join(SUB_DATA_DIR, "good_psfgen_no_grow.tcl")
 
 # Data #
 SHORT_TIME = 0.0001
@@ -439,25 +442,42 @@ class TestVisualization(unittest.TestCase):
     def testMakePSFGENCLignin(self):
         # Only added one line to coverage... oh well!
         try:
+            silent_remove(PNG_C_LIGNIN)
             silent_remove(TCL_FILE_LOC)
             result = create_sample_kmc_result_c_lignin()
             gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", toppar_dir=SUB_DATA_DIR)
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_C_LIGNIN_OUT))
+
+            nodes = result[MONO_LIST]
+            adj = result[ADJ_MATRIX]
+            block = generate_mol(adj, nodes)
+            mol = MolFromMolBlock(block)
+            Compute2DCoords(mol)
+            MolToFile(mol, PNG_C_LIGNIN, size=(1300, 300))
+            self.assertTrue(os.path.isfile(PNG_C_LIGNIN))
+        finally:
+            silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
+            silent_remove(PNG_C_LIGNIN, disable=DISABLE_REMOVE)
+            pass
+
+    def testNoGrowth(self):
+        # Here, all the monomers are available at the beginning of teh simulation
+        try:
+            sg_ratio = 2.5
+            pct_s = sg_ratio / (1 + sg_ratio)
+            num_monos = 200
+            np.random.seed(10)
+            monomer_draw = np.random.rand(num_monos)
+            initial_monomers = create_initial_monomers(pct_s, num_monos, monomer_draw)
+            initial_events = create_initial_events(monomer_draw, num_monos, pct_s, GOOD_RXN_RATES)
+            initial_state = create_initial_state(initial_events, initial_monomers, num_monos)
+            # since GROW is not added to events, no additional monomers will be added
+
+            result = run_kmc(t_final=2, rates=GOOD_RXN_RATES, initial_state=initial_state,
+                             initial_events=sorted(initial_events), random_seed=10, sg_ratio=sg_ratio)
+            self.assertTrue(len(result[MONO_LIST]) == num_monos)
+            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", toppar_dir=SUB_DATA_DIR)
+            self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
         finally:
             silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
             pass
-
-    def testWhatGrowDoes(self):
-        sg_ratio = 2.5
-        pct_s = sg_ratio / (1 + sg_ratio)
-        num_monos = 200
-        np.random.seed(10)
-        monomer_draw = np.random.rand(num_monos)
-        initial_monomers = create_initial_monomers(pct_s, num_monos, monomer_draw)
-
-        # Initialize the monomers, events, and state
-        initial_events = create_initial_events(monomer_draw, num_monos, pct_s, GOOD_RXN_RATES)
-        initial_state = create_initial_state(initial_events, initial_monomers, num_monos)
-        # don't I need this?
-        # initial_events.append(Event(GROW, [], rate=DEF_INI_RATE, bond=sg_ratio))
-        pass

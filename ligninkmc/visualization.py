@@ -428,6 +428,7 @@ def gen_psfgen(orig_adj, monomers, fname="psfgen.tcl", segname="L", toppar_dir="
     resnames = {0: 'G', 1: 'S', 2: 'C'}
     f_out = create_out_fname(fname, base_dir=toppar_dir)
     with open(f_out, "w") as f:
+        print(f"Writing psfgen {f_out}")
         f.write(f"package require psfgen\n"
                 f"topology {os.path.relpath(os.path.join(toppar_dir, 'top_all36_cgenff.rtf'))}\n" 
                 f"topology {os.path.relpath(os.path.join(toppar_dir, 'top_lignin.top'))}\n"
