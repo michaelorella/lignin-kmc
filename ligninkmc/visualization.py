@@ -1,7 +1,6 @@
 # !/usr/bin/env python
 # coding=utf-8
 
-import os
 import re
 import networkx as nx
 import scipy.sparse as sp
@@ -411,7 +410,7 @@ def write_patch(open_file, patch_name, segname, resid1, resid2=None):
         open_file.write(f"patch {patch_name} {segname}:{resid1}\n")
 
 
-def gen_psfgen(orig_adj, monomers, fname="psfgen.tcl", segname="L", toppar_dir="toppar/"):
+def gen_psfgen(orig_adj, monomers, fname="psfgen.tcl", segname="L", toppar_dir="toppar/", out_dir=None):
     """
     This takes a computed adjacency matrix and monomer list and writes out a script to generate a psf file of the
     associated structure, suitable for feeding into the LigninBuilder plugin of VMD
@@ -422,16 +421,24 @@ def gen_psfgen(orig_adj, monomers, fname="psfgen.tcl", segname="L", toppar_dir="
     :param fname: desired output filename
     :param segname: desired output segment name for the generated lignin
     :param toppar_dir: location where the topology files top_lignin.top and top_all36_cgenff.rtf are expected
+    :param out_dir: subdirectory name where VMD should look for the toppar files
     :return:
     """
     adj = orig_adj.copy()
     resnames = {0: 'G', 1: 'S', 2: 'C'}
-    f_out = create_out_fname(fname, base_dir=toppar_dir)
+    f_out = create_out_fname(fname, base_dir=out_dir)
+    # add a mac/linux dir separator if there isn't already a directory separator, and if there is to be a subdirectory
+    #   (not None or "")
+    if toppar_dir and len(toppar_dir) > 0:
+        if toppar_dir[-1] != '/' and (toppar_dir[-1] != '\\'):
+            toppar_dir += "/"
+    else:
+        toppar_dir = ""
     with open(f_out, "w") as f:
         print(f"Writing psfgen {f_out}")
         f.write(f"package require psfgen\n"
-                f"topology {os.path.relpath(os.path.join(toppar_dir, 'top_all36_cgenff.rtf'))}\n" 
-                f"topology {os.path.relpath(os.path.join(toppar_dir, 'top_lignin.top'))}\n"
+                f"topology {toppar_dir}{'top_all36_cgenff.rtf'}\n" 
+                f"topology {toppar_dir}{'top_lignin.top'}\n"
                 f"segment {segname} {{\n")
         for monomer in monomers:
             resid = monomer.identity + 1

@@ -4,6 +4,7 @@ import os
 import unittest
 import numpy as np
 import scipy.sparse as sp
+import joblib as par
 from rdkit.Chem import MolFromMolBlock
 from rdkit.Chem.AllChem import Compute2DCoords
 from rdkit.Chem.Draw import MolToFile
@@ -433,7 +434,8 @@ class TestVisualization(unittest.TestCase):
         try:
             silent_remove(TCL_FILE_LOC)
             result = create_sample_kmc_result()
-            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", toppar_dir=SUB_DATA_DIR)
+            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L",
+                       toppar_dir='toppar', out_dir=SUB_DATA_DIR)
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_OUT))
         finally:
             silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
@@ -445,7 +447,8 @@ class TestVisualization(unittest.TestCase):
             silent_remove(PNG_C_LIGNIN)
             silent_remove(TCL_FILE_LOC)
             result = create_sample_kmc_result_c_lignin()
-            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", toppar_dir=SUB_DATA_DIR)
+            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", toppar_dir=None,
+                       out_dir=SUB_DATA_DIR)
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_C_LIGNIN_OUT))
 
             nodes = result[MONO_LIST]
@@ -476,8 +479,35 @@ class TestVisualization(unittest.TestCase):
             result = run_kmc(t_final=2, rates=GOOD_RXN_RATES, initial_state=initial_state,
                              initial_events=sorted(initial_events), random_seed=10, sg_ratio=sg_ratio)
             self.assertTrue(len(result[MONO_LIST]) == num_monos)
-            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", toppar_dir=SUB_DATA_DIR)
+            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
         finally:
             silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
             pass
+
+    def testMultiProc(self):
+        sg_opts = [0.1, 0.33, 4, 10]
+
+        fun = par.delayed(run_kmc)
+        saved_results = []
+
+        for sg_ratio in sg_opts:
+            # Set the percentage of S
+            pct_s = sg_ratio / (1 + sg_ratio)
+
+            # Make choices about what kinds of monomers there are and create them
+            num_monos = 200
+            monomer_draw = np.random.rand(num_monos)
+            initial_monomers = create_initial_monomers(pct_s, num_monos, monomer_draw)
+            num_repeats = 4
+
+            # Initialize the monomers, events, and state
+            initial_events = create_initial_events(monomer_draw, num_monos, pct_s, GOOD_RXN_RATES)
+            initial_state = create_initial_state(initial_events, initial_monomers, num_monos)
+
+            results = par.Parallel(n_jobs=4)([fun(n_max=num_monos, t_final=1, rates=GOOD_RXN_RATES,
+                                                  initial_state=initial_state, initial_events=initial_events)
+                                              for _ in range(num_repeats)])
+
+            saved_results.append(results)
+            print('Completed sensitivity iteration for S to G ratio: {:.2f}'.format(sg_ratio))

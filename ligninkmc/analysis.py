@@ -347,13 +347,9 @@ def adj_analysis_to_stdout(adj_results):
     :param adj_results: a dictionary from analyze_adj_matrix
     :return: n/a: prints to stdout
     """
-    # rename for readability and processing
     chain_len_results = adj_results[CHAIN_LEN]
-    olig_len_array = np.asarray(list(chain_len_results.keys()))
-    olig_num_array = np.asarray(list(chain_len_results.values()))
-    num_monos_created = np.dot(olig_num_array, olig_len_array)
+    num_monos_created = calc_oligs_monos_from_adj(chain_len_results)
 
-    # now print to stdout
     print(f"Lignin KMC created {num_monos_created} monomers, which formed:")
     print_olig_distribution(chain_len_results)
 
@@ -365,6 +361,13 @@ def adj_analysis_to_stdout(adj_results):
     print_olig_distribution(dict(adj_results[RCF_YIELDS]))
     print(f"with following remaining bond types and number:")
     print_bond_type_num(adj_results[RCF_BONDS])
+
+
+def calc_oligs_monos_from_adj(chain_len_results):
+    olig_len_array = np.asarray(list(chain_len_results.keys()))
+    olig_num_array = np.asarray(list(chain_len_results.values()))
+    num_monos_created = np.dot(olig_num_array, olig_len_array)
+    return num_monos_created
 
 
 def print_bond_type_num(lignin_bonds):

@@ -1,6 +1,6 @@
 package require psfgen
-topology tests/test_data/run_kmc/top_all36_cgenff.rtf
-topology tests/test_data/run_kmc/top_lignin.top
+topology top_all36_cgenff.rtf
+topology top_lignin.top
 segment L {
     residue 1 C
     residue 2 C
