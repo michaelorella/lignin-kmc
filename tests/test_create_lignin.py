@@ -68,7 +68,7 @@ class TestCreateLigninNormalUse(unittest.TestCase):
                              "       1 oligomer(s) of chain length 8"
         good_bond_summary = "composed of the following bond types and number:\n     " \
                             "55:    0    5O4:    2    AO4:    0     B1:    1     B5:    2     BB:    1    BO4:    2"
-        good_rcf_chain_summary = "Breaking BO4 bonds to simulate RCF results in:\n" \
+        good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n" \
                                  "       2 monomer(s) (chain length 1)\n" \
                                  "       4 dimer(s) (chain length 2)"
         good_rcf_bond_summary = "with following remaining bond types and number:\n" \
@@ -87,7 +87,7 @@ class TestCreateLigninNormalUse(unittest.TestCase):
                              "       1 oligomer(s) of chain length 10"
         good_bond_summary = "composed of the following bond types and number:\n     " \
                             "55:    0    5O4:    0    AO4:    0     B1:    0     B5:    2     BB:    1    BO4:    6"
-        good_rcf_chain_summary = "Breaking BO4 bonds to simulate RCF results in:\n" \
+        good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n" \
                                  "       4 monomer(s) (chain length 1)\n" \
                                  "       3 dimer(s) (chain length 2)"
         good_rcf_bond_summary = "with following remaining bond types and number:\n     " \

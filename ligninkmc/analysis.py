@@ -32,24 +32,22 @@ def find_fragments(adj=None):
     fragments. This implementation does not care about the specific values within the adjacency matrix, but effectively
     treats the adjacency matrix as boolean.
 
-    a = sp.dok_matrix((2,2))
-    findFragments(a)
+    > a = sp.dok_matrix((2,2))
+    > find_fragments(a)
+    [{0}, {1}]
 
-    {{0},{1}}
+    > a.resize((5,5))
+    > a[0,1] = 1; a[1,0] = 1; a[0,2] = 1; a[2,0] = 1; a[3,4] = 1; a[4,3] = 1
+    > find_fragments(a)
+    [{0, 1, 2}, {3, 4}]
 
-    a.resize((5,5))
-    a[0,1] = 1; a[1,0] = 1; a[0,2] = 1; a[2,0] = 1; a[3,4] = 1; a[4,3] = 1
-    findFragments(a)
+    > a = sp.dok_matrix((5, 5))
+    > a[0, 4] = 1
+    > a[4, 0] = 1
+    > find_fragments(a)
+    [{0, 4}, {1}, {2}, {3}]
 
-    {{0,1,2},{3,4}}
-
-    a = sp.dok_matrix((5,5))
-    a[0,4] = 1; a[4,0] = 1
-    findFragments(a)
-
-    {{0,4},{1},{2},{3}}
-
-    :param adj: DOK_MATRIX  -- NxN sparse matrix in dictionary of keys format that contains all of the connectivity
+    :param adj: dok_matrix  -- NxN sparse matrix in dictionary of keys format that contains all of the connectivity
         information for the current lignification state
     :return: A set of sets of the unique integer identifiers for the monomers contained within each fragment.
     """
@@ -93,34 +91,29 @@ def fragment_size(frags=None):
     A rigorous way to analyze_adj_matrix the size of fragments that have been identified using the find_fragments(adj)
     tool. Makes a dictionary of monomer identities mapped to the length of the fragment that contains them.
 
-    Inputs:
-        frags   -- set of sets -- The set of monomer identifier sets that were output from the findFragments code, or
-        the sets of monomers that are connected to each other
+    Example usage:
+    > frags = [{0}, {1}]
+    > result = fragment_size(frags)
+    {0: 1, 1: 1}
 
-    Outputs:
-        Dictionary mapping the identity of each monomer [0,N-1] to the length of the fragment that it is found in
+    > frags = [{0, 4, 2}, {1, 3}]
+    > result = fragment_size(frags)
+    {0: 3, 2: 3, 4: 3, 1: 2, 3: 2}
 
+    > frags = [{0, 1, 2, 3, 4}]
+    > result = fragment_size(frags)
+    {0: 5, 1: 5, 2: 5, 3: 5, 4: 5}
 
-    frags = {{0},{1}}
-    fragmentSize(frags)
-
-    { 0:1 , 1:1 }
-
-    frags = {{0,4,2},{1,3}}
-    fragmentSize(frags)
-
-    { 0:3 , 1:2 , 2:3 , 3:2 , 4:3 }
-
-    frags = {{0,1,2,3,4}}
-    fragmentSize(frags)
-
-    { 0:5 , 1:5 , 2:5 , 3:5 , 4:5 }
+    :param frags: list of sets; the set (list) of monomer identifier sets that were output from
+                  find_fragments, or the sets of monomers that are connected to each other
+    :return: dict mapping the integer identity of each monomer to the length of the fragment that it is found in
     """
     sizes = {}
     for fragment in frags:
         length = len(fragment)
         for node in fragment:
             sizes[node] = length
+    return sizes
 
 
 def break_bond_type(adj=None, bond_type=None):
@@ -239,7 +232,7 @@ def count_bonds(adj=None):
 
 def count_yields(adj=None):
     """
-    Use the depth first search implemented in findFragments(adj) to locate individual fragments, and then determine the
+    Use the depth first search implemented in find_fragments(adj) to locate individual fragments, and then determine the
     sizes of these individual fragments to obtain estimates of simulated oligomeric yields.
 
     Use case examples:
@@ -357,7 +350,7 @@ def adj_analysis_to_stdout(adj_results):
     print(f"composed of the following bond types and number:")
     print_bond_type_num(lignin_bonds)
 
-    print("\nBreaking BO4 bonds to simulate RCF results in:")
+    print("\nBreaking C-O bonds to simulate RCF results in:")
     print_olig_distribution(dict(adj_results[RCF_YIELDS]))
     print(f"with following remaining bond types and number:")
     print_bond_type_num(adj_results[RCF_BONDS])

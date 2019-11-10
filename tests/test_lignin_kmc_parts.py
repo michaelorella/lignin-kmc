@@ -11,7 +11,8 @@ from rdkit.Chem.Draw import MolToFile
 from common_wrangler.common import InvalidDataError, capture_stdout, silent_remove, diff_lines
 from ligninkmc import Event
 from ligninkmc import Monomer
-from ligninkmc.analysis import analyze_adj_matrix, count_bonds, count_yields, break_bond_type, adj_analysis_to_stdout
+from ligninkmc.analysis import (analyze_adj_matrix, count_bonds, count_yields, break_bond_type, adj_analysis_to_stdout,
+                                find_fragments, fragment_size)
 from ligninkmc.kineticMonteCarlo import run_kmc
 from ligninkmc.visualization import generate_mol, gen_psfgen
 from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, create_initial_monomers,
@@ -121,15 +122,15 @@ def create_sample_kmc_result(final_time=1., num_initial_monos=3, max_monos=10, s
         monomer_draw = np.random.rand(num_initial_monos)
 
     # these are tested separately
-    initial_monomers = create_initial_monomers(sg_ratio, num_initial_monos, monomer_draw)
-    initial_events = create_initial_events(monomer_draw, num_initial_monos, sg_ratio, GOOD_RXN_RATES)
-    ini_state = create_initial_state(initial_events, initial_monomers, num_initial_monos)
+    initial_monomers = create_initial_monomers(sg_ratio, monomer_draw)
+    initial_events = create_initial_events(monomer_draw, sg_ratio, GOOD_RXN_RATES)
+    initial_state = create_initial_state(initial_events, initial_monomers)
     # new to test
     events = {initial_events[i] for i in range(num_initial_monos)}
     events.add(Event(GROW, [], rate=DEF_INI_RATE))
     # make random seed and sort events for testing reliability
     np.random.seed(10)
-    result = run_kmc(n_max=max_monos, t_final=final_time, rates=GOOD_RXN_RATES, initial_state=ini_state,
+    result = run_kmc(n_max=max_monos, t_final=final_time, rates=GOOD_RXN_RATES, initial_state=initial_state,
                      initial_events=sorted(events), random_seed=10, sg_ratio=sg_ratio)
     return result
 
@@ -139,11 +140,10 @@ def create_sample_kmc_result_c_lignin():
     initial_monomers = [Monomer(2, i) for i in range(num_monos)]
     # noinspection PyTypeChecker
     initial_events = [Event(OX, [i], GOOD_RXN_RATES[OX][2][MONOMER]) for i in range(num_monos)]
-    ini_state = create_initial_state(initial_events, initial_monomers, num_monos)
-    events = {initial_events[i] for i in range(num_monos)}
-    events.add(Event(GROW, [], rate=DEF_INI_RATE))
-    result = run_kmc(n_max=12, t_final=2, rates=GOOD_RXN_RATES, initial_state=ini_state,
-                     initial_events=sorted(events), random_seed=10)
+    initial_state = create_initial_state(initial_events, initial_monomers)
+    initial_events.append(Event(GROW, [], rate=DEF_INI_RATE))
+    result = run_kmc(n_max=12, t_final=2, rates=GOOD_RXN_RATES, initial_state=initial_state,
+                     initial_events=sorted(initial_events), random_seed=10)
     return result
 
 
@@ -213,27 +213,27 @@ class TestEvent(unittest.TestCase):
         self.assertTrue(repr(event1) == good_str)
 
     def testEventIDHash(self):
-        events1 = create_initial_events([0.48772], 1, 0.75, GOOD_RXN_RATES)
-        events2 = create_initial_events([0.48772], 1, 0.75, GOOD_RXN_RATES)
+        events1 = create_initial_events([0.48772], 0.75, GOOD_RXN_RATES)
+        events2 = create_initial_events([0.48772], 0.75, GOOD_RXN_RATES)
         self.assertTrue(events1 == events2)
         check_set = {events1[0], events2[0]}
         self.assertTrue(len(check_set) == 1)
 
     def testInitialEvents(self):
-        initial_events = create_initial_events([0.48772, 0.15174, 0.7886], 3, 0.75, GOOD_RXN_RATES)
+        initial_events = create_initial_events([0.48772, 0.15174, 0.7886], 0.75, GOOD_RXN_RATES)
         self.assertTrue(initial_events[2].index == [2])
 
 
 class TestCreateInitialMonomers(unittest.TestCase):
     def testInvalidSGRatio(self):
         try:
-            create_initial_monomers(None, 3, [0.48772, 0.15174, 0.7886])
+            create_initial_monomers(None, [0.48772, 0.15174, 0.7886])
             self.assertFalse("Should not arrive here; An error should have be raised")
         except InvalidDataError as e:
             self.assertTrue("None" in e.args[0])
 
     def testCreate3Monomers(self):
-        initial_monomers = create_initial_monomers(0.75, 3, [0.48772, 0.15174, 0.7886])
+        initial_monomers = create_initial_monomers(0.75, [0.48772, 0.15174, 0.7886])
         self.assertTrue(len(initial_monomers) == 3)
         self.assertTrue(initial_monomers[0].type == 1)
         self.assertTrue(initial_monomers[1].type == 1)
@@ -244,14 +244,13 @@ class TestCreateInitialMonomers(unittest.TestCase):
 
 class TestState(unittest.TestCase):
     def testCreateInitialState(self):
-        num_monos = 3
         sg_ratio = 0.75
         monomer_draw = [0.48772, 0.15174, 0.7886]
-        initial_monomers = create_initial_monomers(sg_ratio, num_monos, monomer_draw)
-        initial_events = create_initial_events(monomer_draw, num_monos, sg_ratio, GOOD_RXN_RATES)
-        ini_state = create_initial_state(initial_events, initial_monomers, num_monos)
-        self.assertTrue(len(ini_state) == 3)
-        self.assertTrue(str(initial_monomers[0]) == str(ini_state[0][MONOMER]))
+        initial_monomers = create_initial_monomers(sg_ratio, monomer_draw)
+        initial_events = create_initial_events(monomer_draw, sg_ratio, GOOD_RXN_RATES)
+        initial_state = create_initial_state(initial_events, initial_monomers)
+        self.assertTrue(len(initial_state) == 3)
+        self.assertTrue(str(initial_monomers[0]) == str(initial_state[0][MONOMER]))
 
 
 class TestRunKMC(unittest.TestCase):
@@ -261,14 +260,13 @@ class TestRunKMC(unittest.TestCase):
         num_initial_monos = 3
         monomer_draw = np.random.rand(num_initial_monos)
         # these are tested separately
-        initial_monomers = create_initial_monomers(initial_sg_ratio, num_initial_monos, monomer_draw)
-        initial_events = create_initial_events(monomer_draw, num_initial_monos,
-                                               initial_sg_ratio, GOOD_RXN_RATES)
-        ini_state = create_initial_state(initial_events, initial_monomers, num_initial_monos)
+        initial_monomers = create_initial_monomers(initial_sg_ratio, monomer_draw)
+        initial_events = create_initial_events(monomer_draw, initial_sg_ratio, GOOD_RXN_RATES)
+        initial_state = create_initial_state(initial_events, initial_monomers)
         events = {initial_events[i] for i in range(num_initial_monos)}
         events.add(Event(GROW, [], rate=DEF_INI_RATE))
         try:
-            run_kmc(n_max=20, t_final=1, rates=GOOD_RXN_RATES, initial_state=ini_state,
+            run_kmc(n_max=20, t_final=1, rates=GOOD_RXN_RATES, initial_state=initial_state,
                     initial_events=sorted(events), random_seed=10)
             self.assertFalse("Should not arrive here; An error should have be raised")
         except InvalidDataError as e:
@@ -303,6 +301,52 @@ class TestRunKMC(unittest.TestCase):
 
 
 class TestAnalyzeKMC(unittest.TestCase):
+    def testFindOneFragment(self):
+        a = sp.dok_matrix((2, 2))
+        result = find_fragments(a)
+        good_result = [{0}, {1}]
+        self.assertEqual(result, good_result)
+
+    def testFindTwoFragments(self):
+        a_array = [[0., 1., 1., 0., 0.],
+                   [1., 0., 0., 0., 0.],
+                   [1., 0., 0., 0., 0.],
+                   [0., 0., 0., 0., 1.],
+                   [0., 0., 0., 1., 0.]]
+        a = sp.dok_matrix(a_array)
+        result = find_fragments(a)
+        good_result = [{0, 1, 2}, {3, 4}]
+        self.assertEqual(result, good_result)
+
+    def testFindThreeFragments(self):
+        # does not increase coverage, but that's okay
+        a = sp.dok_matrix((5, 5))
+        a[0, 4] = 1
+        a[4, 0] = 1
+        result = find_fragments(a)
+        good_result = [{0, 4}, {1}, {2}, {3}]
+        self.assertEqual(result, good_result)
+
+    def testFragmentSize1(self):
+        frags = [{0}, {1}]
+        result = fragment_size(frags)
+        good_result = {0: 1, 1: 1}
+        self.assertEqual(result, good_result)
+
+    def testFragmentSize2(self):
+        # Does not increase coverage; keep anyway
+        frags = [{0, 4, 2}, {1, 3}]
+        result = fragment_size(frags)
+        good_result = {0: 3, 2: 3, 4: 3, 1: 2, 3: 2}
+        self.assertEqual(result, good_result)
+
+    def testFragmentSize3(self):
+        # Does not increase coverage; keep anyway
+        frags = [{0, 1, 2, 3, 4}]
+        result = fragment_size(frags)
+        good_result = {0: 5, 1: 5, 2: 5, 3: 5, 4: 5}
+        self.assertEqual(result, good_result)
+
     def testCountYieldsAllMonomers(self):
         good_adj_zeros_dict = {1: 5}
         adj_yields_dict = dict(count_yields(ADJ_ZEROS))
@@ -391,7 +435,7 @@ class TestAnalyzeKMC(unittest.TestCase):
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n       1 oligomer(s) of chain length 10"
         good_bond_summary = "composed of the following bond types and number:\n     55:    0    5O4:    0    " \
                             "AO4:    0     B1:    0     B5:    6     BB:    0    BO4:    3"
-        good_rcf_chain_summary = "Breaking BO4 bonds to simulate RCF results in:\n       1 monomer(s) (chain length " \
+        good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n       1 monomer(s) (chain length " \
                                  "1)\n       2 dimer(s) (chain length 2)\n       1 oligomer(s) of chain length 5"
         good_rcf_bond_summary = "with following remaining bond types and number:\n     55:    0    5O4:    0    " \
                                 "AO4:    0     B1:    0     B5:    6     BB:    0    BO4:    0"
@@ -408,7 +452,7 @@ class TestAnalyzeKMC(unittest.TestCase):
         good_chain_summary = "Lignin KMC created 3 monomers, which formed:\n       1 trimer(s) (chain length 3)"
         good_bond_summary = "composed of the following bond types and number:\n     55:    0    5O4:    0    " \
                             "AO4:    0     B1:    0     B5:    1     BB:    0    BO4:    1"
-        good_rcf_olig_summary = "Breaking BO4 bonds to simulate RCF results in:\n       1 monomer(s) (chain " \
+        good_rcf_olig_summary = "Breaking C-O bonds to simulate RCF results in:\n       1 monomer(s) (chain " \
                                 "length 1)\n       1 dimer(s) (chain length 2)"
         good_rcf_bond_summary = "with following remaining bond types and number:\n     55:    0    5O4:    0    " \
                                 "AO4:    0     B1:    0     B5:    1     BB:    0    BO4:    0"
@@ -427,7 +471,7 @@ class TestAnalyzeKMC(unittest.TestCase):
                              "       1 oligomer(s) of chain length 4\n       1 oligomer(s) of chain length 5"
         good_bond_summary = "composed of the following bond types and number:\n     55:    0    5O4:    1    " \
                             "AO4:    0     B1:    0     B5:    1     BB:    4    BO4:    4"
-        good_rcf_olig_summary = "Breaking BO4 bonds to simulate RCF results in:\n      10 monomer(s) (chain length 1)" \
+        good_rcf_olig_summary = "Breaking C-O bonds to simulate RCF results in:\n      10 monomer(s) (chain length 1)" \
                                 "\n       5 dimer(s) (chain length 2)"
         good_rcf_bond_summary = "with following remaining bond types and number:\n     55:    0    5O4:    0    " \
                                 "AO4:    0     B1:    0     B5:    1     BB:    4    BO4:    0"
@@ -512,9 +556,9 @@ class TestVisualization(unittest.TestCase):
             num_monos = 200
             np.random.seed(10)
             monomer_draw = np.random.rand(num_monos)
-            initial_monomers = create_initial_monomers(pct_s, num_monos, monomer_draw)
-            initial_events = create_initial_events(monomer_draw, num_monos, pct_s, GOOD_RXN_RATES)
-            initial_state = create_initial_state(initial_events, initial_monomers, num_monos)
+            initial_monomers = create_initial_monomers(pct_s, monomer_draw)
+            initial_events = create_initial_events(monomer_draw, pct_s, GOOD_RXN_RATES)
+            initial_state = create_initial_state(initial_events, initial_monomers)
             # since GROW is not added to events, no additional monomers will be added
 
             result = run_kmc(t_final=2, rates=GOOD_RXN_RATES, initial_state=initial_state,
@@ -557,11 +601,11 @@ class TestVisualization(unittest.TestCase):
             # make the seed sg_ratio so doesn't use the same seed for each iteration
             np.random.seed(random_seed)
             monomer_draw = np.random.rand(num_monos)
-            initial_monomers = create_initial_monomers(pct_s, num_monos, monomer_draw)
+            initial_monomers = create_initial_monomers(pct_s, monomer_draw)
 
             # Initialize the monomers, events, and state
-            initial_events = create_initial_events(monomer_draw, num_monos, pct_s, GOOD_RXN_RATES)
-            initial_state = create_initial_state(initial_events, initial_monomers, num_monos)
+            initial_events = create_initial_events(monomer_draw, pct_s, GOOD_RXN_RATES)
+            initial_state = create_initial_state(initial_events, initial_monomers)
 
             if run_multi:
                 results = par.Parallel(n_jobs=num_jobs)([fun(n_max=num_monos, t_final=1, rates=GOOD_RXN_RATES,
@@ -610,11 +654,11 @@ class TestVisualization(unittest.TestCase):
             # Make choices about what kinds of monomers there are and create them
             np.random.seed(random_seed)
             monomer_draw = np.random.rand(ini_monos)
-            initial_monomers = create_initial_monomers(pct_s, ini_monos, monomer_draw)
+            initial_monomers = create_initial_monomers(pct_s, monomer_draw)
 
             # Initialize events and state, then add ability to grow
-            initial_events = create_initial_events(monomer_draw, ini_monos, pct_s, GOOD_RXN_RATES)
-            initial_state = create_initial_state(initial_events, initial_monomers, ini_monos)
+            initial_events = create_initial_events(monomer_draw, pct_s, GOOD_RXN_RATES)
+            initial_state = create_initial_state(initial_events, initial_monomers)
             initial_events.append(Event(GROW, [], rate=add_rate, bond=sg_ratio))
 
             if run_multi:

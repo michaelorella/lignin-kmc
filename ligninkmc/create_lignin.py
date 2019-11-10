@@ -166,12 +166,12 @@ def calc_rates(temp, ea_j_part_dict=None, ea_kcal_mol_dict=None):
     return rxn_rates
 
 
-def create_initial_monomers(pct_s, num_monos, monomer_draw):
+def create_initial_monomers(pct_s, monomer_draw):
     # TODO: If want more than 2 monomer options, need to change logic
     # if mon_choice < pct_s, make it an S; that is, the evaluation comes back True (=1='S');
     #     otherwise, get False = 0 = 'G'. Since only two options (True/False) only works for 2 monomers
     try:
-        return [Monomer(int(mono_type_draw < pct_s), i) for i, mono_type_draw in zip(range(num_monos), monomer_draw)]
+        return [Monomer(int(mono_type_draw < pct_s), i) for i, mono_type_draw in enumerate(monomer_draw)]
     except TypeError as e:
         if "'<' not supported between instances of 'float' and 'NoneType'" in e.args[0]:
             raise InvalidDataError(f"A float is required for the sg_ratio; instead found: {pct_s}")
@@ -179,13 +179,13 @@ def create_initial_monomers(pct_s, num_monos, monomer_draw):
             raise InvalidDataError(e)
 
 
-def create_initial_events(monomer_draw, num_monos, pct_s, rxn_rates):
+def create_initial_events(monomer_draw, pct_s, rxn_rates):
     return [Event(OX, [i], rxn_rates[OX][int(mono_type_draw < pct_s)][MONOMER])
-            for i, mono_type_draw in zip(range(num_monos), monomer_draw)]
+            for i, mono_type_draw in enumerate(monomer_draw)]
 
 
-def create_initial_state(initial_events, initial_monomers, num_monos):
-    return {i: {MONOMER: initial_monomers[i], AFFECTED: {initial_events[i]}} for i in range(num_monos)}
+def create_initial_state(initial_events, initial_monomers):
+    return {i: {MONOMER: initial_monomers[i], AFFECTED: {initial_events[i]}} for i in range(len(initial_monomers))}
 
 
 def main(argv=None):
@@ -209,17 +209,17 @@ def main(argv=None):
         pct_s = cfg[SG_RATIO] / (1 + cfg[SG_RATIO])
         if cfg[RANDOM_SEED]:
             np.random.seed(int(cfg[RANDOM_SEED]))
-        num_monos = cfg[INI_MONOS]
-        monomer_draw = np.random.rand(num_monos)
-        initial_monomers = create_initial_monomers(pct_s, num_monos, monomer_draw)
+        ini_num_monos = cfg[INI_MONOS]
+        monomer_draw = np.random.rand(ini_num_monos)
+        initial_monomers = create_initial_monomers(pct_s, monomer_draw)
 
         # initial event must be oxidation to create reactive species; all monomers a chance of being oxidized
-        initial_events = create_initial_events(monomer_draw, num_monos, pct_s, rxn_rates)
+        initial_events = create_initial_events(monomer_draw, pct_s, rxn_rates)
 
         # When the monomers and starting events have been initialized, they are grouped into the "state" and "events"
         # which are necessary to start the simulation. The final pieces of information needed to run_kmc the simulation
         # are the maximum number of monomers that should be studied and the final simulation time.
-        initial_state = create_initial_state(initial_events, initial_monomers, num_monos)
+        initial_state = create_initial_state(initial_events, initial_monomers)
         initial_events.append(Event(GROW, [], rate=DEF_INI_RATE, bond=cfg[SG_RATIO]))
 
         # begin simulation
