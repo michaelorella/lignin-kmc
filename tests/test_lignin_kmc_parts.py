@@ -113,14 +113,13 @@ GOOD_RXN_RATES = {C5O4: {(0, 0): {MON_MON: 38335.597214837195, MON_DIM: 123.4195
                       2: {MONOMER: 45383.99955642849, DIMER: 45383.99955642849}}}
 
 
-def create_sample_kmc_result(final_time=1., num_initial_monos=3, max_monos=10):
+def create_sample_kmc_result(final_time=1., num_initial_monos=3, max_monos=10, sg_ratio=0.75):
     if num_initial_monos == 3:
         monomer_draw = MONO_DRAW_3
     else:
         np.random.seed(10)
         monomer_draw = np.random.rand(num_initial_monos)
 
-    sg_ratio = 0.75
     # these are tested separately
     initial_monomers = create_initial_monomers(sg_ratio, num_initial_monos, monomer_draw)
     initial_events = create_initial_events(monomer_draw, num_initial_monos, sg_ratio, GOOD_RXN_RATES)
@@ -143,8 +142,6 @@ def create_sample_kmc_result_c_lignin():
     ini_state = create_initial_state(initial_events, initial_monomers, num_monos)
     events = {initial_events[i] for i in range(num_monos)}
     events.add(Event(GROW, [], rate=DEF_INI_RATE))
-    # make random seed and sort events for testing reliability
-    np.random.seed(10)
     result = run_kmc(n_max=12, t_final=2, rates=GOOD_RXN_RATES, initial_state=ini_state,
                      initial_events=sorted(events), random_seed=10)
     return result
@@ -228,6 +225,13 @@ class TestEvent(unittest.TestCase):
 
 
 class TestCreateInitialMonomers(unittest.TestCase):
+    def testInvalidSGRatio(self):
+        try:
+            create_initial_monomers(None, 3, [0.48772, 0.15174, 0.7886])
+            self.assertFalse("Should not arrive here; An error should have be raised")
+        except InvalidDataError as e:
+            self.assertTrue("None" in e.args[0])
+
     def testCreate3Monomers(self):
         initial_monomers = create_initial_monomers(0.75, 3, [0.48772, 0.15174, 0.7886])
         self.assertTrue(len(initial_monomers) == 3)
@@ -251,6 +255,25 @@ class TestState(unittest.TestCase):
 
 
 class TestRunKMC(unittest.TestCase):
+    def testMissingRequiredSGRatio(self):
+        # set up variable to allow running run_kmc without specifying sg_ratio
+        initial_sg_ratio = 0.75
+        num_initial_monos = 3
+        monomer_draw = np.random.rand(num_initial_monos)
+        # these are tested separately
+        initial_monomers = create_initial_monomers(initial_sg_ratio, num_initial_monos, monomer_draw)
+        initial_events = create_initial_events(monomer_draw, num_initial_monos,
+                                               initial_sg_ratio, GOOD_RXN_RATES)
+        ini_state = create_initial_state(initial_events, initial_monomers, num_initial_monos)
+        events = {initial_events[i] for i in range(num_initial_monos)}
+        events.add(Event(GROW, [], rate=DEF_INI_RATE))
+        try:
+            run_kmc(n_max=20, t_final=1, rates=GOOD_RXN_RATES, initial_state=ini_state,
+                    initial_events=sorted(events), random_seed=10)
+            self.assertFalse("Should not arrive here; An error should have be raised")
+        except InvalidDataError as e:
+            self.assertTrue("A numeric sg_ratio" in e.args[0])
+
     def testSampleRunKMC(self):
         result = create_sample_kmc_result()
         self.assertTrue(len(result[TIME]) == 39)
@@ -415,6 +438,24 @@ class TestAnalyzeKMC(unittest.TestCase):
             self.assertTrue(good_rcf_bond_summary in output)
 
 
+def get_avg_bo4_bonds(num_opts, result_list, num_repeats, num_jobs=None):
+    analysis = []
+    for i in range(num_opts):
+        opt_results = result_list[i]
+        cur_adjs = [opt_results[j][ADJ_MATRIX] for j in range(num_repeats)]
+        if num_jobs:
+            analysis.append(par.Parallel(n_jobs=num_jobs)(par.delayed(analyze_adj_matrix)(adjacency=cur_adjs[j])
+                                                          for j in range(num_repeats)))
+        else:
+            analysis.append([analyze_adj_matrix(adjacency=cur_adjs[j]) for j in range(num_repeats)])
+
+    bo4_bonds = [[analysis[j][i][BONDS][BO4]/sum(analysis[j][i][BONDS].values())
+                  for i in range(num_repeats)] for j in range(num_opts)]
+    av_bo4_bonds = [np.mean(bond_pcts) for bond_pcts in bo4_bonds]
+    std_bo4_bonds = [np.sqrt(np.var(bond_pcts)) for bond_pcts in bo4_bonds]
+    return av_bo4_bonds, std_bo4_bonds
+
+
 class TestVisualization(unittest.TestCase):
     def testMakePNG(self):
         try:
@@ -486,28 +527,110 @@ class TestVisualization(unittest.TestCase):
             pass
 
     def testMultiProc(self):
-        sg_opts = [0.1, 0.33, 4, 10]
+        # Note: this test did not increase coverage. Added to help debug notebook; does not need to be
+        #    part of test suite
+        # Earlier testing with 200 monos and 4 sg_options, n_jobs=4:
+        #     with run_multi: Ran 1 test in 30.875s
+        #     without run_multi: Ran 1 test in 85.104s
+        run_multi = True
+        if run_multi:
+            fun = par.delayed(run_kmc)
+            num_jobs = 4
+        else:
+            fun = None
+            num_jobs = None
+        sg_opts = [0.1, 2.33, 10]
+        num_sg_opts = len(sg_opts)
+        num_repeats = 4
+        num_monos = 40
 
-        fun = par.delayed(run_kmc)
-        saved_results = []
+        sg_result_list = []
 
+        # will add to random seed in the iterations to insure using a different seed for each repeat
+        random_seed = 10
         for sg_ratio in sg_opts:
+            random_seed += int(sg_ratio)
             # Set the percentage of S
             pct_s = sg_ratio / (1 + sg_ratio)
 
             # Make choices about what kinds of monomers there are and create them
-            num_monos = 200
+            # make the seed sg_ratio so doesn't use the same seed for each iteration
+            np.random.seed(random_seed)
             monomer_draw = np.random.rand(num_monos)
             initial_monomers = create_initial_monomers(pct_s, num_monos, monomer_draw)
-            num_repeats = 4
 
             # Initialize the monomers, events, and state
             initial_events = create_initial_events(monomer_draw, num_monos, pct_s, GOOD_RXN_RATES)
             initial_state = create_initial_state(initial_events, initial_monomers, num_monos)
 
-            results = par.Parallel(n_jobs=4)([fun(n_max=num_monos, t_final=1, rates=GOOD_RXN_RATES,
-                                                  initial_state=initial_state, initial_events=initial_events)
-                                              for _ in range(num_repeats)])
+            if run_multi:
+                results = par.Parallel(n_jobs=num_jobs)([fun(n_max=num_monos, t_final=1, rates=GOOD_RXN_RATES,
+                                                         initial_state=initial_state, initial_events=initial_events,
+                                                         random_seed=(random_seed + i)) for i in range(num_repeats)])
+            else:
+                results = [run_kmc(n_max=num_monos, t_final=1, rates=GOOD_RXN_RATES, initial_state=initial_state,
+                                   initial_events=initial_events, random_seed=(random_seed + i))
+                           for i in range(num_repeats)]
+            sg_result_list.append(results)
 
-            saved_results.append(results)
-            print('Completed sensitivity iteration for S to G ratio: {:.2f}'.format(sg_ratio))
+        av_bo4_bonds, std_bo4_bonds = get_avg_bo4_bonds(num_sg_opts, sg_result_list, num_repeats, num_jobs)
+
+        good_av_bo4 = [0.369551282051282, 0.6275655354602723, 0.7924836601307189]
+        good_std_bo4 = [0.04336646245367748, 0.04148252892416798, 0.03911342876988829]
+        self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))
+        self.assertTrue(np.allclose(std_bo4_bonds, good_std_bo4))
+
+    def testIniRates(self):
+        # Note: this test did not increase coverage. Added to help debug notebook; does not need to be
+        #    part of test suite
+        run_multi = True
+        if run_multi:
+            fun = par.delayed(run_kmc)
+            num_jobs = 4
+        else:
+            fun = None
+            num_jobs = None
+        # Set the percentage of S
+        sg_ratio = 1.1
+        pct_s = sg_ratio / (1 + sg_ratio)
+
+        ini_monos = 2
+        max_monos = 32
+        num_repeats = 4
+
+        # FYI: np.logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0)[source]
+        num_rates = 3
+        add_rates = np.logspace(4, 12, num_rates)
+        add_rates_result_list = []
+
+        # will add to random seed in the iterations to insure using a different seed for each repeat
+        random_seed = 10
+
+        for add_rate in add_rates:
+            # Make choices about what kinds of monomers there are and create them
+            np.random.seed(random_seed)
+            monomer_draw = np.random.rand(ini_monos)
+            initial_monomers = create_initial_monomers(pct_s, ini_monos, monomer_draw)
+
+            # Initialize events and state, then add ability to grow
+            initial_events = create_initial_events(monomer_draw, ini_monos, pct_s, GOOD_RXN_RATES)
+            initial_state = create_initial_state(initial_events, initial_monomers, ini_monos)
+            initial_events.append(Event(GROW, [], rate=add_rate, bond=sg_ratio))
+
+            if run_multi:
+                results = par.Parallel(n_jobs=num_jobs)([fun(n_max=max_monos, t_final=1, rates=GOOD_RXN_RATES,
+                                                             initial_state=initial_state, initial_events=initial_events,
+                                                             sg_ratio=pct_s, random_seed=(random_seed + i))
+                                                         for i in range(num_repeats)])
+            else:
+                results = [run_kmc(n_max=max_monos, t_final=1, rates=GOOD_RXN_RATES, initial_state=initial_state,
+                                   initial_events=initial_events, sg_ratio=pct_s, random_seed=(random_seed + i))
+                           for i in range(num_repeats)]
+            add_rates_result_list.append(results)
+
+        av_bo4_bonds, std_bo4_bonds = get_avg_bo4_bonds(num_rates, add_rates_result_list, num_repeats, num_jobs)
+
+        good_av_bo4 = [0.3519924098671727, 0.15933528836754643, 0.43202764976958524]
+        good_std_bo4 = [0.17148021343411038, 0.1168981315424912, 0.25275090383382787]
+        self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))
+        self.assertTrue(np.allclose(std_bo4_bonds, good_std_bo4))

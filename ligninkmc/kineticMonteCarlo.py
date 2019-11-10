@@ -271,7 +271,7 @@ def connected_size(mon=None):
         return connected_size(mon=mon.parent)
 
 
-def do_event(event=None, state=None, adj=None, sg_ratio=None):
+def do_event(event, state, adj, sg_ratio=None):
     """
     The second key component of the lignin implementation of the Monte Carlo algorithm, this method actually executes
     the chosen event on the current state and modifies it to reflect the updates.
@@ -279,7 +279,9 @@ def do_event(event=None, state=None, adj=None, sg_ratio=None):
     :param event: The event object that should be executed on the current state
     :param state: dict, The dictionary of dictionaries that contains the state information for each monomer
     :param adj: dok_matrix, The adjacency matrix in the current state
-    :param sg_ratio: float needed if there are S and G and only S and G
+    :param sg_ratio: float needed if and only if:
+                         a) there are S and G and only S and G, and
+                         b) new monomers will be added
     :return: N/A - mutates the list of monomers and adjacency matrix instead
     """
 
@@ -358,8 +360,16 @@ def do_event(event=None, state=None, adj=None, sg_ratio=None):
             if monomers and monomers[-1].type == 2:
                 mon_type = 2
             else:
-                pct = sg_ratio / (1 + sg_ratio)
-                mon_type = int(np.random.rand() < pct)
+                try:
+                    pct = sg_ratio / (1 + sg_ratio)
+                    mon_type = int(np.random.rand() < pct)
+                except TypeError:
+                    if sg_ratio is None:
+                        sg_note = " the default value 'None'."
+                    else:
+                        sg_note = f": {sg_ratio}"
+                    raise InvalidDataError(f"A numeric sg_ratio must be supplied. Instead, found{sg_note}")
+
             new_mon = Monomer(mon_type, current_size)
             state[current_size] = {MONOMER: new_mon, AFFECTED: set()}
 

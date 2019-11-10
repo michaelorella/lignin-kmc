@@ -170,7 +170,13 @@ def create_initial_monomers(pct_s, num_monos, monomer_draw):
     # TODO: If want more than 2 monomer options, need to change logic
     # if mon_choice < pct_s, make it an S; that is, the evaluation comes back True (=1='S');
     #     otherwise, get False = 0 = 'G'. Since only two options (True/False) only works for 2 monomers
-    return [Monomer(int(mono_type_draw < pct_s), i) for i, mono_type_draw in zip(range(num_monos), monomer_draw)]
+    try:
+        return [Monomer(int(mono_type_draw < pct_s), i) for i, mono_type_draw in zip(range(num_monos), monomer_draw)]
+    except TypeError as e:
+        if "'<' not supported between instances of 'float' and 'NoneType'" in e.args[0]:
+            raise InvalidDataError(f"A float is required for the sg_ratio; instead found: {pct_s}")
+        else:
+            raise InvalidDataError(e)
 
 
 def create_initial_events(monomer_draw, num_monos, pct_s, rxn_rates):
