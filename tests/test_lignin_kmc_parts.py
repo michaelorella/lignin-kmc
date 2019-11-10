@@ -678,3 +678,52 @@ class TestVisualization(unittest.TestCase):
         good_std_bo4 = [0.17148021343411038, 0.1168981315424912, 0.25275090383382787]
         self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))
         self.assertTrue(np.allclose(std_bo4_bonds, good_std_bo4))
+
+    def testDynamics(self):
+        # Tests procedures in the Dynamics.ipynb
+        try:
+            sg_ratio = 1
+            pct_s = sg_ratio / (1 + sg_ratio)
+            num_monos = 40
+            np.random.seed(10)
+            monomer_draw = np.random.rand(num_monos)
+            initial_monomers = create_initial_monomers(pct_s, monomer_draw)
+            initial_events = create_initial_events(monomer_draw, pct_s, GOOD_RXN_RATES)
+            initial_state = create_initial_state(initial_events, initial_monomers)
+            # since GROW is not added to events, no additional monomers will be added
+            result = run_kmc(t_final=20, rates=GOOD_RXN_RATES, initial_state=initial_state,
+                             initial_events=sorted(initial_events), random_seed=10, dynamics=True)
+            # With dynamics, the MONO_LIST will be a list of lists:
+            #    the inner list is the usual MONO_LIST, but here is it saved for every time step
+            expected_num_t_steps = 140
+            self.assertTrue(len(result[MONO_LIST]) == expected_num_t_steps)
+            self.assertTrue(len(result[MONO_LIST][-1]) == num_monos)
+
+            #
+            t_steps = result[TIME]
+            monomers = result[MONO_LIST]
+            adjs = result[ADJ_MATRIX]
+            bond_counts = []  # List of dicts
+            frag_counts = []  # List of counters
+            for mon, adj in zip(monomers, adjs):
+                bonds = count_bonds(adj=adj)
+                frags = count_yields(adj=adj)
+                bond_counts.append(bonds)
+                frag_counts.append(frags)
+            # # for intermediate testing:
+            # for i in range(expected_num_t_steps):
+            #     if 1 in frag_counts[i]:
+            #         lost_monos = frag_counts[i][1] - frag_counts[i-1][1]
+            #         added_b04 = bond_counts[i][BO4] - bond_counts[i-1][BO4]
+            #         if added_b04 > 0 and lost_monos == 0:
+            #             print(f"Check me out!! Step {i}")
+            intermed_bond_count = bond_counts[64]
+            good_intermed_bond_count = {BO4: 6, B1: 0, BB: 4, B5: 2, C5C5: 0, AO4: 0, C5O4: 1}
+            intermed_frag_count = dict(frag_counts[128])
+            good_intermed_frag_count = {9: 1, 12: 1, 19: 1}
+            self.assertEqual(intermed_bond_count, good_intermed_bond_count)
+            self.assertEqual(intermed_frag_count, good_intermed_frag_count)
+            self.assertTrue(len(t_steps) == expected_num_t_steps)
+        finally:
+            pass
+
