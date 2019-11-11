@@ -62,7 +62,7 @@ class TestCreateLigninNoOutput(unittest.TestCase):
 class TestCreateLigninNormalUse(unittest.TestCase):
     def testDefArgs(self):
         test_input = ["-r", "10"]
-        # main(test_input)
+        main(test_input)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n" \
                              "       1 dimer(s) (chain length 2)\n" \
                              "       1 oligomer(s) of chain length 8"

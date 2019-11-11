@@ -34,8 +34,8 @@ This project runs on Python ≥3.6 with the following packages installed:
 For users with no Python experience, a helpful guide to installing Python via miniconda or anaconda can be found 
 [here](https://conda.io/docs/user-guide/install/index.html). 
 
-Once Python has been installed, you will need install [RDKit](https://www.rdkit.org/docs/Install.html) using conda. It 
-will install any missing required dependencies when it does so.
+Once Python has been installed, you will need install [RDKit](https://www.rdkit.org/docs/Install.html) using conda: 
+`conda install -c conda-forge rdkit`. Conda will install any missing required dependencies when it does so.
 
 You can then install [lignin-kmc]() using  pip (`pip install lignin-kmc`). Additional dependencies will again be 
 installed as required.
@@ -91,7 +91,7 @@ lignin biosynthesis), see `~/LigninPolymerizationNotebook.ipynb` and `~/Example.
 __Monomer__(type, index)
 - type = {0, 1, 2} = a switch that indicates whether the monomer is G = 0, S = 1, or C = 2. Extensions to include more 
   monomers would be needed to expand this definition
-- index = Z+ = a number that should be unique for all monomers in a simulation. This is returned as the hash value and 
+- index = int = a number that should be unique for all monomers in a simulation. This is returned as the hash value and 
   is the tie in to the adjacency matrix
 
 The class that contains information about each monomer in the simulation, most importantly tracking the index and the 
@@ -105,9 +105,9 @@ monomer type.
 
 __Event__(key, index, rate, bond)
 - key = str = name of the event that is taking place (e.g. '5o4', 'ox', etc.)
-- index = [Z+, Z+] = list of indices to the monomers that are affected by this event
+- index = [int, int] = list of indices to the monomers that are affected by this event
 - rate = R+ = the rate of the event that is occurring (units consistent with time units in simulation)
-- bond = [Z+,Z+] = list of changes that need to be made to the adjacency matrix to perform the event
+- bond = [int, int] = list of changes that need to be made to the adjacency matrix to perform the event
 
 The class that is used to define events, which can be unpacked by the `run` function to execute the events occurring in 
 the simulation.
@@ -175,7 +175,7 @@ __update_events__(monomers, adj, last_event, events, rate_vec, rate_dict, max_mo
   current state after the method is run
 - rate_vec = dict() = map the hash value of each event to the rate of that event
 - rate_dict = dict() = the rates that are obtained *a priori* from DFT calculations
-- max_mon = Z+ = the maximum number of monomers in the simulation
+- max_mon = int = the maximum number of monomers in the simulation
 - return = None
 
 Mutates the dictionary of events and rateVec that are passed to the function. These mutations are done so that the 
