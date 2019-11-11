@@ -11,8 +11,9 @@ from rdkit.Chem.Draw import MolToFile
 from common_wrangler.common import InvalidDataError, capture_stdout, silent_remove, diff_lines
 from ligninkmc import Event
 from ligninkmc import Monomer
-from ligninkmc.analysis import (analyze_adj_matrix, count_bonds, count_yields, break_bond_type, adj_analysis_to_stdout,
-                                find_fragments, fragment_size)
+from ligninkmc.analysis import (analyze_adj_matrix, count_bonds, count_oligomer_yields, calc_monos_per_olig,
+                                break_bond_type, adj_analysis_to_stdout, find_fragments, fragment_size,
+                                get_bond_type_v_time_dict)
 from ligninkmc.kineticMonteCarlo import run_kmc
 from ligninkmc.visualization import generate_mol, gen_psfgen
 from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, create_initial_monomers,
@@ -112,6 +113,18 @@ GOOD_RXN_RATES = {C5O4: {(0, 0): {MON_MON: 38335.597214837195, MON_DIM: 123.4195
                   Q: {0: {MONOMER: 45383.99955642849, DIMER: 45383.99955642849},
                       1: {MONOMER: 16485.40300715421, DIMER: 16485.40300715421},
                       2: {MONOMER: 45383.99955642849, DIMER: 45383.99955642849}}}
+
+ADJ2 = sp.dok_matrix([[0, 4, 0, 0, 0],
+                      [8, 0, 0, 0, 0],
+                      [0, 0, 0, 8, 0],
+                      [0, 0, 5, 0, 0],
+                      [0, 0, 0, 0, 0]])
+
+ADJ3 = sp.dok_matrix([[0, 4, 8, 0, 0],
+                      [8, 0, 0, 0, 0],
+                      [5, 0, 0, 0, 0],
+                      [0, 0, 0, 0, 0],
+                      [0, 0, 0, 0, 0]])
 
 
 def create_sample_kmc_result(final_time=1., num_initial_monos=3, max_monos=10, sg_ratio=0.75):
@@ -349,38 +362,38 @@ class TestAnalyzeKMC(unittest.TestCase):
 
     def testCountYieldsAllMonomers(self):
         good_adj_zeros_dict = {1: 5}
-        adj_yields_dict = dict(count_yields(ADJ_ZEROS))
+        adj_yields_dict = dict(count_oligomer_yields(ADJ_ZEROS))
         self.assertTrue(adj_yields_dict == good_adj_zeros_dict)
 
     def testCountYields1(self):
-        good_adj_dict = {2: 1, 1: 3}
+        good_yield_dict = {2: 1, 1: 3}
         adj_1 = sp.dok_matrix([[0, 4, 0, 0, 0],
                                [8, 0, 0, 0, 0],
                                [0, 0, 0, 0, 0],
                                [0, 0, 0, 0, 0],
                                [0, 0, 0, 0, 0]])
-        adj_yields_dict = dict(count_yields(adj_1))
-        self.assertTrue(adj_yields_dict == good_adj_dict)
+        adj_yields_dict = dict(count_oligomer_yields(adj_1))
+        self.assertTrue(adj_yields_dict == good_yield_dict)
 
     def testCountYields2(self):
-        good_adj_dict = {1: 1, 2: 2}
-        adj_2 = sp.dok_matrix([[0, 4, 0, 0, 0],
-                               [8, 0, 0, 0, 0],
-                               [0, 0, 0, 8, 0],
-                               [0, 0, 5, 0, 0],
-                               [0, 0, 0, 0, 0]])
-        adj_yields_dict = dict(count_yields(adj_2))
-        self.assertTrue(adj_yields_dict == good_adj_dict)
+        good_yield_dict = {1: 1, 2: 2}
+        adj_yields_dict = dict(count_oligomer_yields(ADJ2))
+        self.assertTrue(adj_yields_dict == good_yield_dict)
 
     def testCountYields3(self):
-        good_adj_dict = {3: 1, 1: 2}
-        adj_3 = sp.dok_matrix([[0, 4, 8, 0, 0],
-                               [8, 0, 0, 0, 0],
-                               [5, 0, 0, 0, 0],
-                               [0, 0, 0, 0, 0],
-                               [0, 0, 0, 0, 0]])
-        adj_yields_dict = dict(count_yields(adj_3))
-        self.assertTrue(adj_yields_dict == good_adj_dict)
+        good_yield_dict = {3: 1, 1: 2}
+        adj_yields_dict = dict(count_oligomer_yields(ADJ3))
+        self.assertTrue(adj_yields_dict == good_yield_dict)
+
+    def testCalcMonosPerOlig2(self):
+        good_adj_dict = {1: 1, 2: 4}
+        olig_monos_dict = dict(calc_monos_per_olig(ADJ2))
+        self.assertTrue(olig_monos_dict == good_adj_dict)
+
+    def testCalcMonosPerOlig3(self):
+        good_adj_dict = {3: 3, 1: 2}
+        olig_monos_dict = dict(calc_monos_per_olig(ADJ3))
+        self.assertTrue(olig_monos_dict == good_adj_dict)
 
     def testCountBonds(self):
         good_bond_dict = {BO4: 2, B1: 0, BB: 1, B5: 1, C5C5: 0, AO4: 0, C5O4: 0}
@@ -681,49 +694,51 @@ class TestVisualization(unittest.TestCase):
 
     def testDynamics(self):
         # Tests procedures in the Dynamics.ipynb
-        try:
-            sg_ratio = 1
-            pct_s = sg_ratio / (1 + sg_ratio)
-            num_monos = 40
-            np.random.seed(10)
-            monomer_draw = np.random.rand(num_monos)
-            initial_monomers = create_initial_monomers(pct_s, monomer_draw)
-            initial_events = create_initial_events(monomer_draw, pct_s, GOOD_RXN_RATES)
-            initial_state = create_initial_state(initial_events, initial_monomers)
-            # since GROW is not added to events, no additional monomers will be added
-            result = run_kmc(t_final=20, rates=GOOD_RXN_RATES, initial_state=initial_state,
-                             initial_events=sorted(initial_events), random_seed=10, dynamics=True)
-            # With dynamics, the MONO_LIST will be a list of lists:
-            #    the inner list is the usual MONO_LIST, but here is it saved for every time step
-            expected_num_t_steps = 140
-            self.assertTrue(len(result[MONO_LIST]) == expected_num_t_steps)
-            self.assertTrue(len(result[MONO_LIST][-1]) == num_monos)
+        sg_ratio = 1
+        pct_s = sg_ratio / (1 + sg_ratio)
+        num_monos = 40
+        np.random.seed(10)
+        monomer_draw = np.random.rand(num_monos)
+        initial_monomers = create_initial_monomers(pct_s, monomer_draw)
+        initial_events = create_initial_events(monomer_draw, pct_s, GOOD_RXN_RATES)
+        initial_state = create_initial_state(initial_events, initial_monomers)
+        # since GROW is not added to events, no additional monomers will be added
+        result = run_kmc(t_final=20, rates=GOOD_RXN_RATES, initial_state=initial_state,
+                         initial_events=sorted(initial_events), random_seed=10, dynamics=True)
+        # With dynamics, the MONO_LIST will be a list of lists:
+        #    the inner list is the usual MONO_LIST, but here is it saved for every time step
+        expected_num_t_steps = 140
+        self.assertTrue(len(result[MONO_LIST]) == expected_num_t_steps)
+        self.assertTrue(len(result[MONO_LIST][-1]) == num_monos)
 
-            #
-            t_steps = result[TIME]
-            monomers = result[MONO_LIST]
-            adjs = result[ADJ_MATRIX]
-            bond_counts = []  # List of dicts
-            frag_counts = []  # List of counters
-            for mon, adj in zip(monomers, adjs):
-                bonds = count_bonds(adj=adj)
-                frags = count_yields(adj=adj)
-                bond_counts.append(bonds)
-                frag_counts.append(frags)
-            # # for intermediate testing:
-            # for i in range(expected_num_t_steps):
-            #     if 1 in frag_counts[i]:
-            #         lost_monos = frag_counts[i][1] - frag_counts[i-1][1]
-            #         added_b04 = bond_counts[i][BO4] - bond_counts[i-1][BO4]
-            #         if added_b04 > 0 and lost_monos == 0:
-            #             print(f"Check me out!! Step {i}")
-            intermed_bond_count = bond_counts[64]
-            good_intermed_bond_count = {BO4: 6, B1: 0, BB: 4, B5: 2, C5C5: 0, AO4: 0, C5O4: 1}
-            intermed_frag_count = dict(frag_counts[128])
-            good_intermed_frag_count = {9: 1, 12: 1, 19: 1}
-            self.assertEqual(intermed_bond_count, good_intermed_bond_count)
-            self.assertEqual(intermed_frag_count, good_intermed_frag_count)
-            self.assertTrue(len(t_steps) == expected_num_t_steps)
-        finally:
-            pass
+        # Setting up to print: want dict[key: [], ...] where the inner list is values by timestep
+        #                      instead of list of timesteps with [[key: val, ...], ... ]
+        t_steps = result[TIME]
+        adj_list = result[ADJ_MATRIX]
+        good_num_timesteps = 140
+        self.assertEqual(len(t_steps), good_num_timesteps)
 
+        bond_type_dict, olig_len_dict, sum_list = get_bond_type_v_time_dict(adj_list, sum_len_larger_than=10)
+
+        # test results by checking sums
+        good_bond_type_sum_dict = {BO4: 1111, B1: 0, BB: 358, B5: 705, C5C5: 0, AO4: 0, C5O4: 112}
+        bond_type_sum_dict = {}
+        for bond_type, val_list in bond_type_dict.items():
+            self.assertEqual(len(val_list), good_num_timesteps)
+            bond_type_sum_dict[bond_type] = sum(val_list)
+        self.assertEqual(bond_type_sum_dict, good_bond_type_sum_dict)
+
+        good_olig_len_sum_dict = {1: 2984, 2: 168, 3: 24, 4: 88, 5: 20, 6: 72, 7: 42, 8: 80, 9: 810, 10: 40, 11: 121,
+                                  12: 504, 13: 39, 14: 28, 15: 75, 16: 96, 17: 0, 18: 36, 19: 247, 20: 0, 21: 126}
+        olig_len_sum_dict = {}
+        for olig_len, val_list in olig_len_dict.items():
+            self.assertEqual(len(val_list), good_num_timesteps)
+            olig_len_sum_dict[olig_len] = sum(val_list)
+        self.assertEqual(olig_len_sum_dict, good_olig_len_sum_dict)
+
+        good_sum_sum_list = 1312
+        self.assertEqual(sum(sum_list), good_sum_sum_list)
+
+    def testSimple(self):
+        my_tuple = (10, [11, 12])
+        print(my_tuple[0])

@@ -16,7 +16,7 @@ analysis = kmc.analyze_adj_matrix( adjacency = adj , nodes = mons )
 
 import scipy.sparse as sp
 import numpy as np
-from collections import Counter, OrderedDict
+from collections import Counter, OrderedDict, defaultdict
 from ligninkmc.kmc_common import (AO4, B1, B1_ALT, B5, BB, BO4, C5C5, C5O4, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS)
 
 
@@ -198,7 +198,7 @@ def remove_prev_bond(adj, search_loc, new_adj):
     new_adj[(idx, search_loc)] = 0
 
 
-def count_bonds(adj=None):
+def count_bonds(adj):
     """
     Counter for the different bonds that are present in the adjacency matrix. Primarily used for getting easy analysis
     of the properties of a simulated lignin from the resulting adjacency matrix.
@@ -230,10 +230,9 @@ def count_bonds(adj=None):
     return bound_count_dict
 
 
-def count_yields(adj=None):
+def count_oligomer_yields(adj):
     """
-    Use the depth first search implemented in find_fragments(adj) to locate individual fragments, and then determine the
-    sizes of these individual fragments to obtain estimates of simulated oligomeric yields.
+    Use the depth first search implemented in find_fragments(adj) to locate individual fragments
 
     Use case examples:
     > a = sp.dok_matrix([[0,0,0,0,0],
@@ -241,7 +240,7 @@ def count_yields(adj=None):
     >                    [0,0,0,0,0],
     >                    [0,0,0,0,0],
     >                    [0,0,0,0,0]])
-    > count_yields(a)
+    > count_oligomer_yields(a)
     {1: 5}
 
     > a = sp.dok_matrix([[0,4,0,0,0],
@@ -249,7 +248,7 @@ def count_yields(adj=None):
     >                    [0,0,0,0,0],
     >                    [0,0,0,0,0],
     >                    [0,0,0,0,0]])
-    > count_yields(a)
+    > count_oligomer_yields(a)
     {2: 1, 1: 3}
 
     > a = sp.dok_matrix([[0,4,0,0,0],
@@ -257,7 +256,7 @@ def count_yields(adj=None):
     >                    [0,0,0,8,0],
     >                    [0,0,5,0,0],
     >                    [0,0,0,0,0]])
-    > count_yields(a)
+    > count_oligomer_yields(a)
     {2: 2, 1: 1}
 
     > a = sp.dok_matrix([[0,4,8,0,0],
@@ -265,17 +264,31 @@ def count_yields(adj=None):
     >                    [5,0,0,0,0],
     >                    [0,0,0,0,0],
     >                    [0,0,0,0,0]])
-    > count_yields(a)
+    > count_oligomer_yields(a)
     {3: 1, 1: 2}
 
-    :param adj: DOK_MATRIX   -- the adjacency matrix for the lignin polymer that has been simulated
+    :param adj: scipy dok_matrix, the adjacency matrix for the lignin polymer that has been simulated
     :return: dict mapping the length of fragments (keys) to the number of occurrences of that length (vals)
     """
     # Figure out what is still connected by using the determineCycles function, and look at the length of each
     # connected piece
     oligomers = find_fragments(adj=adj)
-    olig_len_counts = Counter(map(len, oligomers))
-    return olig_len_counts
+    olig_len_counter = Counter(map(len, oligomers))
+    return dict(olig_len_counter)
+
+
+def calc_monos_per_olig(adj):
+    """
+    From an adjacency matrix, creates a dictionary of olig_lengths: num_monos_in_olig_length
+    :param adj: DOK_MATRIX   -- the adjacency matrix for the lignin polymer that has been simulated
+    :return: dict mapping the length of fragments (keys) to the number of monomers that ended up in oligomers of
+                 that length (vals)
+    """
+    olig_len_dict = count_oligomer_yields(adj)
+    olig_monos_dict = {}
+    for olig_len, olig_num in olig_len_dict.items():
+        olig_monos_dict[olig_len] = olig_len * olig_num
+    return olig_monos_dict
 
 
 def analyze_adj_matrix(adjacency=None):
@@ -285,17 +298,17 @@ def analyze_adj_matrix(adjacency=None):
     silico RCF. The specific code to handle each of these properties is written in the countBonds(adj) and
     countYields(adj) specifically.
 
-     a = sp.dok_matrix( [ [0,0,0,0,0],
-                             [0,0,0,0,0],
-                             [0,0,0,0,0],
-                             [0,0,0,0,0],
-                             [0,0,0,0,0] ] )
-    analyze_adj_matrix(a)
+    > a = sp.dok_matrix([[0, 0, 0, 0, 0],
+    >                    [0, 0, 0, 0, 0],
+    >                    [0, 0, 0, 0, 0],
+    >                    [0, 0, 0, 0, 0],
+    >                    [0, 0, 0, 0, 0] ] )
+    > analyze_adj_matrix(a)
+    {'Chain Lengths': output from count_oligomer_yields(a), 'Bonds': output from count_bonds(a) ,
+     'RCF Yields': output from count_oligomer_yields(a') where a' has bonds broken,
+     'RCF Bonds': output from count_bonds(a)}
 
-    { 'Chain Lengths' : output from count_yields(a) , 'Bonds' : output from count_bonds(a) , 'RCF Yields' : output from
-    count_yields(a') where a' has bonds broken , 'RCF Bonds' : output from count_bonds(a') }
-
-    :param adjacency: DOK_MATRIX   -- the adjacency matrix for the lignin polymer that has been simulated
+    :param adjacency: scipy dok_matrix  -- the adjacency matrix for the lignin polymer that has been simulated
     :return: A dictionary of keywords to the desired result - e.g. Chain Lengths, RCF Yields, Bonds, and RCF Bonds
     """
 
@@ -304,7 +317,7 @@ def analyze_adj_matrix(adjacency=None):
     adjacency = break_bond_type(adj=adjacency, bond_type=B1_ALT)
 
     # Examine the initial polymers before any bonds are broken
-    yields = count_yields(adj=adjacency)
+    yields = count_oligomer_yields(adj=adjacency)
     bond_distributions = count_bonds(adj=adjacency)
 
     # Simulate the RCF process at complete conversion by breaking all of the
@@ -313,7 +326,7 @@ def analyze_adj_matrix(adjacency=None):
                               bond_type=C5O4)
 
     # Now count the bonds and yields remaining
-    rcf_yields = count_yields(adj=rcf_adj)
+    rcf_yields = count_oligomer_yields(adj=rcf_adj)
     rcf_bonds = count_bonds(adj=rcf_adj)
 
     # sort results for reliably repeatable (and more readable) output
@@ -408,3 +421,38 @@ def branching_coefficient(adj):
     """
     degrees = degree(adj)
     return np.sum(degrees >= 3) / len(degrees)
+
+
+def get_bond_type_v_time_dict(adj_list, sum_len_larger_than=None):
+    """
+    given a list of adjs (one per timestep), flip nesting so have dictionaries of lists of type val vs. time
+    for graphing, also created a 10+ list
+    :param adj_list: list of adj dok_matrices
+    :param sum_len_larger_than: None or an integer; if an integer, make a val_list that sums all lens >= that value
+    :return: two dict of dicts
+    """
+    bond_type_dict = defaultdict(list)
+    # a little more work for olig_len_dict, since each timestep does not contain all possible keys
+    olig_len_dict = defaultdict(list)
+    frag_count_dict_list = []  # first make list of dicts to get max bond_length
+    for adj in adj_list:  # loop over each timestep
+        # this is keys = timestep  values
+        count_bonds_list = count_bonds(adj)
+        for bond_type in count_bonds_list:
+            bond_type_dict[bond_type].append(count_bonds_list[bond_type])
+        frag_count_dict_list.append(calc_monos_per_olig(adj))
+    # since breaking bonds is not allowed, the longest oligomer will be from the last step; find that length
+    max_olig_len = max(frag_count_dict_list[-1].keys())
+    # can now get the dict of lists from list of dicts
+    for frag_count_list in frag_count_dict_list:
+        for olig_len in range(1, max_olig_len + 1):
+            olig_len_dict[olig_len].append(frag_count_list.get(olig_len, 0))
+    # now make a list of all values greater than a number, if given
+    len_plus_list = None
+    if sum_len_larger_than:
+        if sum_len_larger_than in olig_len_dict.keys():
+            len_plus_list = olig_len_dict[10].copy()
+        for olig_len, val_list in olig_len_dict.items():
+            if olig_len > sum_len_larger_than:
+                len_plus_list = np.add(len_plus_list, val_list)
+    return bond_type_dict, olig_len_dict, len_plus_list
