@@ -162,70 +162,65 @@ __quick_frag_size__(monomer)
 
 Uses the open positions attribute of the monomer object to determine whether there is anything connected to this monomer yet
 
-__updateEvents__(monomers, adj, lastEvent = None, events = {}, rateVec = None, r = None, maxMon = 500)
+__update_events__(monomers, adj, last_event, events, rate_vec, rate_dict, max_mon=500)
 - monomers = dict() = maps the index of the monomer to the object and the events that a change to this index would effect
 - adj = dok_matrix = adjacency matrix
-- lastEvent = Event = the previous event that occurred
+- last_event = Event = the previous event that occurred
 - events = dict() = map the hash value of each event to the unique event - this is all of the possible events at the 
   current state after the method is run
-- rateVec = dict() = map the hash value of each event to the rate of that event
-- r = dict() = the rates that are obtained *a priori* from DFT calculations
-- maxMon = Z+ = the maximum number of monomers in the simulation
+- rate_vec = dict() = map the hash value of each event to the rate of that event
+- rate_dict = dict() = the rates that are obtained *a priori* from DFT calculations
+- max_mon = Z+ = the maximum number of monomers in the simulation
 - return = None
 
 Mutates the dictionary of events and rateVec that are passed to the function. These mutations are done so that the 
 entire state doesn't need to be reconstructed on every iteration of the simulation. Once these changes are made, the 
 event choice is ready to be made and the chosen event can be performed.
 
-__doEvent__(event = None, state = None, adj = None)
+__do_event__(event, state, adj, sg_ratio=None)
 - event = Event = the event that was chosen to be performed
 - state = dict() = the dictionary mapping monomer indices to the monomer object and events that would be changed by a 
   change to the monomer
 - adj = dok_matrix = adjacency matrix
+- sg_ratio = float needed if and only if: a) there are S and G and only S and G, and b) new monomers will be added
 
 Updates the monomers and adjacency matrix to reflect the execution of the chosen event
 
-__run__(nMax = 10, tFinal = 10, rates = None, initialState = None, initialEvents = None)
-- nMax = Z+ = maximum number of monomers in the simulation
-- tFinal = R+ = final simulation time (should be units consistent with the rates)
-- rates = dict() = the rate of each of the possible events as a 3-d dictionary mapping bond type, monomers sizes, and 
-  monomer types to a rate in units consistent with your final time definition
-- initialState = dict() = map of monomer index to monomer object and changeable events
-- initialEvents = dict() = map of event hashes to event objects
-- return = dict() = adjacency matrix, list of monomers, and list of time steps at the end of the simulation
+__run_kmc__(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynamics=False, random_seed=None, 
+            sg_ratio=None)
+- rate_dict:  dict -- the rate of each of the possible events as a 3-d dictionary mapping bond type, monomers sizes,  
+                      and monomer types to a rate in units consistent with your final time definition
+- initial_state: dict  -- The dictionary mapping the index of each monomer to a dictionary with the monomer
+-      and the set of events that a change to this monomer would impact
+- initial_events: dictionary -- The dictionary mapping event hash values to those events
+- n_max: int   -- The maximum number of monomers in the simulation
+- t_max: float -- The final simulation time (units depend on units of rates)
+- dynamics: boolean -- if True, will keep values for every time step
+- random_seed: None or hashable value to aid testing
+- sg_ratio: needed if there is S and G and nothing else
+- return: dict with the simulation times, adjacency matrix, and list of monomers at the end of the simulation
 
 Runs the Gillespie algorithm on the situation specified by the parameters. This is the workhorse of the code, where the 
 monomers are changed and linked to simulate the growth of lignin *in planta*.
 
-### Visualization.py
-
-#### CLASSES
+### visualization.py
 
 #### FUNCTIONS
 
-__generateMol__(adj,nodeList)
+__generate_mol__(adj,nodeList)
 - adj = dok_matrix = adjacency matrix
-- nodeList = [Monomer,Monomer,...,Monomer] = list of monomers output from the simulation
+- nodeList = [Monomer, Monomer, ..., Monomer] = list of monomers output from the simulation
 - return = str = molfile contents
 
-Generates a file format as specified by CTAN that represents the molecule that was just simulated by `run`. This file 
-can then be used together with rdKit for further visualization or analysis, or any one of your favorite chemical 
-drawing software.
-
-__moltosvg__(mol,molSize=(450,150),kekulize=True)
-- mol = rdkit.molecule = molecule object
-- molSize = (R+,R+) = tuple of pixel dimensions of the drawing area
-- kekulize = bool = flag for whether the molecule should be Kekulized or not
-- return = svg = svg file with the drawing
-
-Outputs the vector graphic image of the molecule that was just simulated. Useful for easy and quick visualization in 
-Jupyter notebooks for simulation results, but doesn't do a great job of 2D structure cleaning. This function is adapted 
-from the 2015.03 release of RDKit.
+Generates a file format as specified by [CTAN](https://ctan.org/) that represents the molecule that was just simulated 
+by `run_kmc`. This file can then be used together with rdKit for further visualization or analysis, or any one of your 
+favorite chemical drawing software packages.
 
 # Credits
 [<img src="https://avatars0.githubusercontent.com/u/40570716?s=400&u=7bde054e05bbba59c19cefd3aa2f4c84e2a9dfc6&v=4" height="150" width="150">](https://github.com/michaelorella) | [<img src="https://avatars0.githubusercontent.com/u/17909849?s=460&v=4" height="150" width="150">](https://github.com/terrygani)
---- | --- 
-[Michael Orella](https://github.com/michaelorella) | [Terry Gani](https://github.com/terrygani)
+--- | --- | ---
+[Michael Orella](https://github.com/michaelorella) | [Terry Gani](https://github.com/terrygani) | 
+[Heather Mayes](https://github.com/team-mayes)
 
 
 # Contribute
@@ -251,7 +246,8 @@ following points and be as detailed as possible:
 
 ## Pull Requests
 Pull requests are always welcome for suggestions to improve either the code or usability. Before submitting the pull 
-request, please ensure that your standalone code is working properly.
+request, please ensure that your standalone code is working properly by both running the existing tests and adding 
+tests of any new functionality.
 
 # License
 MIT © Michael Orella

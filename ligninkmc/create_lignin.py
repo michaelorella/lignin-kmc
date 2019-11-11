@@ -223,8 +223,8 @@ def main(argv=None):
         initial_events.append(Event(GROW, [], rate=DEF_INI_RATE, bond=cfg[SG_RATIO]))
 
         # begin simulation
-        result = run_kmc(n_max=cfg[MAX_MONOS], t_final=cfg[SIM_TIME], rates=rxn_rates, initial_state=initial_state,
-                         initial_events=initial_events, sg_ratio=cfg[SG_RATIO])
+        result = run_kmc(rxn_rates, initial_state, initial_events, n_max=cfg[MAX_MONOS], t_max=cfg[SIM_TIME],
+                         sg_ratio=cfg[SG_RATIO])
         # show results
         summary = analyze_adj_matrix(result[ADJ_MATRIX])
         adj_analysis_to_stdout(summary)

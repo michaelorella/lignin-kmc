@@ -127,7 +127,7 @@ ADJ3 = sp.dok_matrix([[0, 4, 8, 0, 0],
                       [0, 0, 0, 0, 0]])
 
 
-def create_sample_kmc_result(final_time=1., num_initial_monos=3, max_monos=10, sg_ratio=0.75):
+def create_sample_kmc_result(max_time=1., num_initial_monos=3, max_monos=10, sg_ratio=0.75):
     if num_initial_monos == 3:
         monomer_draw = MONO_DRAW_3
     else:
@@ -143,8 +143,8 @@ def create_sample_kmc_result(final_time=1., num_initial_monos=3, max_monos=10, s
     events.add(Event(GROW, [], rate=DEF_INI_RATE))
     # make random seed and sort events for testing reliability
     np.random.seed(10)
-    result = run_kmc(n_max=max_monos, t_final=final_time, rates=GOOD_RXN_RATES, initial_state=initial_state,
-                     initial_events=sorted(events), random_seed=10, sg_ratio=sg_ratio)
+    result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(events), n_max=max_monos, t_max=max_time,
+                     random_seed=10, sg_ratio=sg_ratio)
     return result
 
 
@@ -155,8 +155,8 @@ def create_sample_kmc_result_c_lignin():
     initial_events = [Event(OX, [i], GOOD_RXN_RATES[OX][2][MONOMER]) for i in range(num_monos)]
     initial_state = create_initial_state(initial_events, initial_monomers)
     initial_events.append(Event(GROW, [], rate=DEF_INI_RATE))
-    result = run_kmc(n_max=12, t_final=2, rates=GOOD_RXN_RATES, initial_state=initial_state,
-                     initial_events=sorted(initial_events), random_seed=10)
+    result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), n_max=12, t_max=2,
+                     random_seed=10)
     return result
 
 
@@ -279,8 +279,7 @@ class TestRunKMC(unittest.TestCase):
         events = {initial_events[i] for i in range(num_initial_monos)}
         events.add(Event(GROW, [], rate=DEF_INI_RATE))
         try:
-            run_kmc(n_max=20, t_final=1, rates=GOOD_RXN_RATES, initial_state=initial_state,
-                    initial_events=sorted(events), random_seed=10)
+            run_kmc(GOOD_RXN_RATES, initial_state, sorted(events), n_max=20, t_max=1, random_seed=10)
             self.assertFalse("Should not arrive here; An error should have be raised")
         except InvalidDataError as e:
             self.assertTrue("A numeric sg_ratio" in e.args[0])
@@ -459,7 +458,7 @@ class TestAnalyzeKMC(unittest.TestCase):
             self.assertTrue(good_rcf_bond_summary in output)
 
     def testKMCShortSimResultSummaryDescription(self):
-        result = create_sample_kmc_result(final_time=SHORT_TIME)
+        result = create_sample_kmc_result(max_time=SHORT_TIME)
         summary = analyze_adj_matrix(result[ADJ_MATRIX])
         adj_analysis_to_stdout(summary)
         good_chain_summary = "Lignin KMC created 3 monomers, which formed:\n       1 trimer(s) (chain length 3)"
@@ -476,7 +475,7 @@ class TestAnalyzeKMC(unittest.TestCase):
             self.assertTrue(good_rcf_bond_summary in output)
 
     def testKMCShortSimManyMonosResultSummaryDescription(self):
-        result = create_sample_kmc_result(final_time=SHORT_TIME, num_initial_monos=20, max_monos=40)
+        result = create_sample_kmc_result(max_time=SHORT_TIME, num_initial_monos=20, max_monos=40)
         summary = analyze_adj_matrix(result[ADJ_MATRIX])
         adj_analysis_to_stdout(summary)
         good_chain_summary = "Lignin KMC created 20 monomers, which formed:\n       6 monomer(s) (chain length 1)\n" \
@@ -573,9 +572,8 @@ class TestVisualization(unittest.TestCase):
             initial_events = create_initial_events(monomer_draw, pct_s, GOOD_RXN_RATES)
             initial_state = create_initial_state(initial_events, initial_monomers)
             # since GROW is not added to events, no additional monomers will be added
-
-            result = run_kmc(t_final=2, rates=GOOD_RXN_RATES, initial_state=initial_state,
-                             initial_events=sorted(initial_events), random_seed=10, sg_ratio=sg_ratio)
+            result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=2, random_seed=10,
+                             sg_ratio=sg_ratio)
             self.assertTrue(len(result[MONO_LIST]) == num_monos)
             gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
@@ -621,13 +619,12 @@ class TestVisualization(unittest.TestCase):
             initial_state = create_initial_state(initial_events, initial_monomers)
 
             if run_multi:
-                results = par.Parallel(n_jobs=num_jobs)([fun(n_max=num_monos, t_final=1, rates=GOOD_RXN_RATES,
-                                                         initial_state=initial_state, initial_events=initial_events,
-                                                         random_seed=(random_seed + i)) for i in range(num_repeats)])
+                results = par.Parallel(n_jobs=num_jobs)([fun(GOOD_RXN_RATES, initial_state, initial_events,
+                                                             n_max=num_monos, t_max=1, random_seed=(random_seed + i))
+                                                         for i in range(num_repeats)])
             else:
-                results = [run_kmc(n_max=num_monos, t_final=1, rates=GOOD_RXN_RATES, initial_state=initial_state,
-                                   initial_events=initial_events, random_seed=(random_seed + i))
-                           for i in range(num_repeats)]
+                results = [run_kmc(GOOD_RXN_RATES, initial_state, initial_events, n_max=num_monos, t_max=1,
+                                   random_seed=(random_seed + i)) for i in range(num_repeats)]
             sg_result_list.append(results)
 
         av_bo4_bonds, std_bo4_bonds = get_avg_bo4_bonds(num_sg_opts, sg_result_list, num_repeats, num_jobs)
@@ -675,14 +672,13 @@ class TestVisualization(unittest.TestCase):
             initial_events.append(Event(GROW, [], rate=add_rate, bond=sg_ratio))
 
             if run_multi:
-                results = par.Parallel(n_jobs=num_jobs)([fun(n_max=max_monos, t_final=1, rates=GOOD_RXN_RATES,
-                                                             initial_state=initial_state, initial_events=initial_events,
-                                                             sg_ratio=pct_s, random_seed=(random_seed + i))
+                results = par.Parallel(n_jobs=num_jobs)([fun(GOOD_RXN_RATES, initial_state, initial_events,
+                                                             n_max=max_monos, t_max=1, sg_ratio=pct_s,
+                                                             random_seed=(random_seed + i))
                                                          for i in range(num_repeats)])
             else:
-                results = [run_kmc(n_max=max_monos, t_final=1, rates=GOOD_RXN_RATES, initial_state=initial_state,
-                                   initial_events=initial_events, sg_ratio=pct_s, random_seed=(random_seed + i))
-                           for i in range(num_repeats)]
+                results = [run_kmc(GOOD_RXN_RATES, initial_state, initial_events, n_max=max_monos, t_max=1,
+                                   sg_ratio=pct_s, random_seed=(random_seed + i)) for i in range(num_repeats)]
             add_rates_result_list.append(results)
 
         av_bo4_bonds, std_bo4_bonds = get_avg_bo4_bonds(num_rates, add_rates_result_list, num_repeats, num_jobs)
@@ -702,9 +698,8 @@ class TestVisualization(unittest.TestCase):
         initial_monomers = create_initial_monomers(pct_s, monomer_draw)
         initial_events = create_initial_events(monomer_draw, pct_s, GOOD_RXN_RATES)
         initial_state = create_initial_state(initial_events, initial_monomers)
-        # since GROW is not added to events, no additional monomers will be added
-        result = run_kmc(t_final=20, rates=GOOD_RXN_RATES, initial_state=initial_state,
-                         initial_events=sorted(initial_events), random_seed=10, dynamics=True)
+        # since GROW is not added to events, no additional monomers will be added (sg_ratio is thus not needed)
+        result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=20, random_seed=10, dynamics=True)
         # With dynamics, the MONO_LIST will be a list of lists:
         #    the inner list is the usual MONO_LIST, but here is it saved for every time step
         expected_num_t_steps = 140
