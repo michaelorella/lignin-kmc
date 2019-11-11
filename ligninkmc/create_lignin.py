@@ -14,7 +14,7 @@ from common_wrangler.common import (warning, process_cfg, MAIN_SEC, GOOD_RET, IN
 from ligninkmc.analysis import adj_analysis_to_stdout, analyze_adj_matrix
 from ligninkmc.event import Event
 from ligninkmc.monomer import Monomer
-from ligninkmc.kineticMonteCarlo import run_kmc
+from ligninkmc.kmc_functions import run_kmc
 from ligninkmc.kmc_common import (E_A_KCAL_MOL, E_A_J_PART, TEMP, INI_MONOS, MAX_MONOS, SIM_TIME, AFFECTED, GROW,
                                   DEF_E_A_KCAL_MOL, OX, MONOMER, DIMER, LIGNIN_SUBUNITS, SG_RATIO,
                                   ADJ_MATRIX, RANDOM_SEED)
@@ -226,7 +226,7 @@ def main(argv=None):
         result = run_kmc(n_max=cfg[MAX_MONOS], t_final=cfg[SIM_TIME], rates=rxn_rates, initial_state=initial_state,
                          initial_events=initial_events, sg_ratio=cfg[SG_RATIO])
         # show results
-        summary = analyze_adj_matrix(adjacency=result[ADJ_MATRIX])
+        summary = analyze_adj_matrix(result[ADJ_MATRIX])
         adj_analysis_to_stdout(summary)
     except InvalidDataError as e:
         warning(e)

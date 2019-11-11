@@ -2,16 +2,7 @@
 # coding=utf-8
 
 """
-The above code is the traditional use case for running the kmc code, assuming that there are rates for the individual
-events. Below is the use case for analyzing the results obtained from a single simulation of lignification.
-
-adj = res['adjacency_matrix']
-mons = res['monomers']
-t = res['time']
-analysis = kmc.analyze_adj_matrix( adjacency = adj , nodes = mons )
-
-{'Chain Lengths': ______ ,'Bonds': _______ ,'RCF Yields': ________ ,'RCF Bonds': _______}
-
+Functions for analyzing results of created lignin, such as chain lengths and bond types.
 """
 
 import scipy.sparse as sp
@@ -25,7 +16,7 @@ from ligninkmc.kmc_common import (AO4, B1, B1_ALT, B5, BB, BO4, C5C5, C5O4, CHAI
 ################################################################################
 
 
-def find_fragments(adj=None):
+def find_fragments(adj):
     """
     Implementation of a modified depth first search on the adjacency matrix provided to identify isolated graphs within
     the superstructure. This allows us to easily track the number of isolated fragments and the size of each of these
@@ -86,7 +77,7 @@ def find_fragments(adj=None):
     return connected_fragments
 
 
-def fragment_size(frags=None):
+def fragment_size(frags):
     """
     A rigorous way to analyze_adj_matrix the size of fragments that have been identified using the find_fragments(adj)
     tool. Makes a dictionary of monomer identities mapped to the length of the fragment that contains them.
@@ -116,7 +107,7 @@ def fragment_size(frags=None):
     return sizes
 
 
-def break_bond_type(adj=None, bond_type=None):
+def break_bond_type(adj, bond_type):
     """
     Function for removing all of a certain type of bond from the adjacency matrix. This is primarily used for the
     analysis at the end of the simulations when in silico RCF should occur. The update happens via conditional removal
@@ -145,12 +136,12 @@ def break_bond_type(adj=None, bond_type=None):
      [0, 0, 0, 0, 0],
      [0, 0, 0, 0, 0]]
 
-    :param adj: dock_matrix, the adjacency matrix for the lignin polymer that has been simulated, and needs
+    :param adj: dok_matrix, the adjacency matrix for the lignin polymer that has been simulated, and needs
         certain bonds removed
     :param bond_type: str, the string containing the bond type that should be broken. These are the standard
         nomenclature, except for B1_ALT, which removes the previous bond between the beta position and another monomer
         on the monomer that is bound through 1
-    :return:
+    :return: dok_matrix, new adjacency matrix after bonds were broken
     """
     # Copy the matrix into a new matrix
     new_adj = adj.todok(copy=True)
@@ -272,7 +263,7 @@ def count_oligomer_yields(adj):
     """
     # Figure out what is still connected by using the determineCycles function, and look at the length of each
     # connected piece
-    oligomers = find_fragments(adj=adj)
+    oligomers = find_fragments(adj)
     olig_len_counter = Counter(map(len, oligomers))
     return dict(olig_len_counter)
 
@@ -291,12 +282,12 @@ def calc_monos_per_olig(adj):
     return olig_monos_dict
 
 
-def analyze_adj_matrix(adjacency=None):
+def analyze_adj_matrix(adjacency):
     """
     Performs the analysis for a single simulation to extract the relevant macroscopic properties, such as both the
     simulated frequency of different oligomer sizes and the number of each different type of bond before and after in
-    silico RCF. The specific code to handle each of these properties is written in the countBonds(adj) and
-    countYields(adj) specifically.
+    silico RCF. The specific code to handle each of these properties is written in the count_bonds(adj) and
+    count_oligomer_yields(adj) specifically.
 
     > a = sp.dok_matrix([[0, 0, 0, 0, 0],
     >                    [0, 0, 0, 0, 0],
@@ -309,25 +300,24 @@ def analyze_adj_matrix(adjacency=None):
      'RCF Bonds': output from count_bonds(a)}
 
     :param adjacency: scipy dok_matrix  -- the adjacency matrix for the lignin polymer that has been simulated
-    :return: A dictionary of keywords to the desired result - e.g. Chain Lengths, RCF Yields, Bonds, and RCF Bonds
+    :return: A dictionary of results: Chain Lengths, RCF Yields, Bonds, and RCF Bonds
     """
 
     # Remove any excess b1 bonds from the matrix, e.g. bonds that should be
     # broken during synthesis
-    adjacency = break_bond_type(adj=adjacency, bond_type=B1_ALT)
+    adjacency = break_bond_type(adjacency, B1_ALT)
 
     # Examine the initial polymers before any bonds are broken
-    yields = count_oligomer_yields(adj=adjacency)
-    bond_distributions = count_bonds(adj=adjacency)
+    yields = count_oligomer_yields(adjacency)
+    bond_distributions = count_bonds(adjacency)
 
     # Simulate the RCF process at complete conversion by breaking all of the
     # alkyl C-O bonds that were formed during the reaction
-    rcf_adj = break_bond_type(adj=break_bond_type(adj=break_bond_type(adj=adjacency, bond_type=BO4), bond_type=AO4),
-                              bond_type=C5O4)
+    rcf_adj = break_bond_type(break_bond_type(break_bond_type(adjacency, BO4), AO4), C5O4)
 
     # Now count the bonds and yields remaining
-    rcf_yields = count_oligomer_yields(adj=rcf_adj)
-    rcf_bonds = count_bonds(adj=rcf_adj)
+    rcf_yields = count_oligomer_yields(rcf_adj)
+    rcf_bonds = count_bonds(rcf_adj)
 
     # sort results for reliably repeatable (and more readable) output
     sorted_yields = OrderedDict()

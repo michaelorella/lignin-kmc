@@ -14,7 +14,7 @@ from ligninkmc import Monomer
 from ligninkmc.analysis import (analyze_adj_matrix, count_bonds, count_oligomer_yields, calc_monos_per_olig,
                                 break_bond_type, adj_analysis_to_stdout, find_fragments, fragment_size,
                                 get_bond_type_v_time_dict)
-from ligninkmc.kineticMonteCarlo import run_kmc
+from ligninkmc.kmc_functions import run_kmc
 from ligninkmc.visualization import generate_mol, gen_psfgen
 from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, create_initial_monomers,
                                      create_initial_events, create_initial_state, DEF_INI_RATE)
@@ -435,7 +435,7 @@ class TestAnalyzeKMC(unittest.TestCase):
 
     def testKMCResultSummary(self):
         result = create_sample_kmc_result()
-        summary = analyze_adj_matrix(adjacency=result[ADJ_MATRIX])
+        summary = analyze_adj_matrix(result[ADJ_MATRIX])
         self.assertTrue(summary[CHAIN_LEN] == {10: 1})
         self.assertTrue(summary[BONDS] == {BO4: 3, B1: 0, BB: 0, B5: 6, C5C5: 0, AO4: 0, C5O4: 0})
         self.assertTrue(summary[RCF_YIELDS] == {2: 2, 1: 1, 5: 1})
@@ -443,7 +443,7 @@ class TestAnalyzeKMC(unittest.TestCase):
 
     def testKMCResultSummaryDescription(self):
         result = create_sample_kmc_result()
-        summary = analyze_adj_matrix(adjacency=result[ADJ_MATRIX])
+        summary = analyze_adj_matrix(result[ADJ_MATRIX])
         adj_analysis_to_stdout(summary)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n       1 oligomer(s) of chain length 10"
         good_bond_summary = "composed of the following bond types and number:\n     55:    0    5O4:    0    " \
@@ -460,7 +460,7 @@ class TestAnalyzeKMC(unittest.TestCase):
 
     def testKMCShortSimResultSummaryDescription(self):
         result = create_sample_kmc_result(final_time=SHORT_TIME)
-        summary = analyze_adj_matrix(adjacency=result[ADJ_MATRIX])
+        summary = analyze_adj_matrix(result[ADJ_MATRIX])
         adj_analysis_to_stdout(summary)
         good_chain_summary = "Lignin KMC created 3 monomers, which formed:\n       1 trimer(s) (chain length 3)"
         good_bond_summary = "composed of the following bond types and number:\n     55:    0    5O4:    0    " \
@@ -477,7 +477,7 @@ class TestAnalyzeKMC(unittest.TestCase):
 
     def testKMCShortSimManyMonosResultSummaryDescription(self):
         result = create_sample_kmc_result(final_time=SHORT_TIME, num_initial_monos=20, max_monos=40)
-        summary = analyze_adj_matrix(adjacency=result[ADJ_MATRIX])
+        summary = analyze_adj_matrix(result[ADJ_MATRIX])
         adj_analysis_to_stdout(summary)
         good_chain_summary = "Lignin KMC created 20 monomers, which formed:\n       6 monomer(s) (chain length 1)\n" \
                              "       1 dimer(s) (chain length 2)\n       1 trimer(s) (chain length 3)\n"\
@@ -501,10 +501,10 @@ def get_avg_bo4_bonds(num_opts, result_list, num_repeats, num_jobs=None):
         opt_results = result_list[i]
         cur_adjs = [opt_results[j][ADJ_MATRIX] for j in range(num_repeats)]
         if num_jobs:
-            analysis.append(par.Parallel(n_jobs=num_jobs)(par.delayed(analyze_adj_matrix)(adjacency=cur_adjs[j])
+            analysis.append(par.Parallel(n_jobs=num_jobs)(par.delayed(analyze_adj_matrix)(cur_adjs[j])
                                                           for j in range(num_repeats)))
         else:
-            analysis.append([analyze_adj_matrix(adjacency=cur_adjs[j]) for j in range(num_repeats)])
+            analysis.append([analyze_adj_matrix(cur_adjs[j]) for j in range(num_repeats)])
 
     bo4_bonds = [[analysis[j][i][BONDS][BO4]/sum(analysis[j][i][BONDS].values())
                   for i in range(num_repeats)] for j in range(num_opts)]

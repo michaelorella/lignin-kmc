@@ -1,8 +1,13 @@
 # lignin-KMC
-The official source for kinetic Monte Carlo polymerization packages developed to understand native lignin 
-polymerization. Predict desired lignin structures from first principle energetic calculations. Using this code, you can 
-output either predicted properties from an ensemble of lignin structures, or the molfile for a single simulation. 
-Currently the code-base supports caffeoyl alcohol (C), sinapyl alcohol (S), and coniferyl alcohol (G).
+The official source for kinetic Monte Carlo polymerization packages developed to model lignin biosynthesis from first 
+principle energetic calculations. Using this code, you can output either predicted properties (e.g. oligomer length 
+and bond composition) from an ensemble of lignin structures, or the molfile for a single simulation. 
+Currently the package simulates lignin polymerization of guaiacyl (G) and syringyl (S) monolignols (in a specified 
+ratio), or from caffeoyl (C) monolignols (only).
+
+Further details are available in the manuscript ["Lignin-KMC: A Toolkit for Simulating Lignin 
+Biosynthesis"](https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.9b03534). Please cite this paper if you use this 
+package.
 
 Code Style: Python standard
 
@@ -14,24 +19,31 @@ make quantitative predictions within this framework.
 
 # Use
 
-The following sections contain information on how to use lignin-KMC. lignin-KMC was developed and tested in a Windows 
-10 environment, but should function anywhere that Python is installed.
+The following sections contain information on how to use lignin-KMC.
 
 ## Framework
-This project runs on Python 3.6 with the following packages installed:
-- SciPy 1.1.0
-- NumPy 1.15.1
-- MatPlotLib 2.2.2
-- JobLib 0.12.2
-- rdKit 2018.03.4.0
+This project runs on Python ≥3.6 with the following packages installed:
+- SciPy
+- NumPy
+- MatPlotLib
+- JobLib
+- rdKit
+- common-wrangler
 
 ## Installation
 For users with no Python experience, a helpful guide to installing Python via miniconda or anaconda can be found 
 [here](https://conda.io/docs/user-guide/install/index.html). Once Python has been installed, you will need to use 
 [conda commands](https://conda.io/docs/user-guide/tasks/manage-environments.html) to install the dependencies listed 
-above. [RDKit](https://www.rdkit.org/docs/Install.html) must be installed from the `rdkit` channel (using the -c flag). 
+above. [RDKit](https://www.rdkit.org/docs/Install.html) must be installed from the `rdkit` channel (using the -c flag).
+[common-wrangler](https://pypi.org/project/common-wrangler/) can be installed using pip (`pip install common-wrangler`).
 
-Navigate to the directory where you would like the local copy of the source code to exist, and then clone the entire 
+### Basic Use
+
+
+
+### Developer Use
+
+Navigate to the directory where you would like the local copy of the source code to exist, and then clone the 
 repository using:
 ```
 git clone https://github.com/michaelorella/lignin-kmc
@@ -42,12 +54,6 @@ with the versions tested. To create your own environment mirroring this one, run
 (or Anaconda Prompt on Windows):
 ```
 conda env create -f environment.yml
-```
-
-An alternative to get the most recent packages (this is not tested and therefore less stable):
-```
-conda create -c rdkit -n lignin_kmc rdkit=2018.03.4.0 python=3.6.6 scipy=1.1.0 numpy=1.15.1 matplotlib=2.2.2 
-joblib=0.12.2 jupyter=1.0.0
 ```
 
 Once the environment has been created, you can install the lignin-KMC module using a Python `import` statement. The 
@@ -62,62 +68,24 @@ Type "help", "copyright", "credits" or "license" for more information.
 >>> import ligninkmc as kmc
 ```
 
-Congratulations! Lignin-KMC is now installed! With this basic installation, you will have access to the functions 
-`run`, `generateMol`, `moltosvg`, and `analyze` and the classes `Monomer` and `Event`.
+Congratulations! Lignin-KMC is now installed! With this basic installation, you will have access to the function 
+(such as `run_kmc`, `generate_mol`, and `analyze_adj_matrix`) and the classes `Monomer` and `Event`.
 
 ## Examples
 For these examples, I will assume that the rates have already been obtained and have been input as a 3-dimensional 
-dictionary (bond type, monomer types, oligomer sizes) to transition state energies (relative to the reactant energies) 
-measured in Joules. For more complete examples including the definition of the energies, see the files 
-`~/Lignin Polymerization Notebook.ipynb` and `~/Example.ipynb`. 
-
-The first step of these simulations is to initialize monomers and events that will start the simulation. For this 
-simple example, we will make all S-type lignin with 5 monomers. There will be no possibility of adding monomers to the 
-simulation as time goes on. Finally, the only events at the start are oxidations of the monolignol. This information is 
-then compiled by the `run` function in the module that executes the Gillespie algorithm on the *in silico* lignin 
-state. The output from the simulation is a single dictionary data structure that contains a list of the monomer objects 
-in their state at the end of the simulation, the adjacency matrix that describes connectivity between the monomers, and 
-the times at which events were executed.
-```
->>> mons = [ kmc.Monomer ( 1 , i ) for i in range(5) ]
->>> startEvs = [ kmc.Event ( 'ox' , [i] , rates['ox'][1]['monomer'] ) for i in range(5) ]
->>> state = { i : { 'mons' : mons[i] , 'affected' : {startEvents[i]} } for i in range(5) }
->>> events = { startEvents[i] for i in range(5) }
->>> events.add( kmc.Event( 'grow' , [ ] , rate = 0 , bond = 1 ) )
->>> res = kmc.run( tFinal = 1e9 , rates = rates, initialState = state, initialEvents = events)
-
-{'monomers': _____ , 'adjacency_matrix': _______ , 'time': ______ }
-```
-Once this output has been obtained, it is more helpful to extract meaningful information from the data structure. This 
-can be done using the same `kmc` module that ran the simulation, as shown below.
-```
->>> adj = res['adjacency_matrix']
->>> mons = res['monomers']
->>> t = res['time']
->>> analysis = kmc.analyze( adjacency = adj , nodes = mons )
-
-{'Chain Lengths': ______ ,'Bonds': _______ ,'RCF Yields': ________ ,'RCF Bonds': _______}
-```
-Another way to analyze your simulation result instead of examining the measurable properties would be to use the `vis` 
-module to convert the simulation output to a single molfile that can then be manipulated with RDKit into different 
-output styles for further analysis. An example of this is shown below:
-```
->>> block = vis.generateMol(res['adjacency_matrix'],res['monomers'])
->>> from rdkit import Chem
->>> molecule = Chem.MolFromMolBlock(block)
->>> Chem.MolToMolFile(molecule,'./molfile_example.mol')
->>> Chem.MolToSmiles(molecule)
-```
+dictionary (bond type, monomer types, oligomer sizes) to transition state free energy barriers or reaction rates at 
+the temperature of interest. For examples (from the definition of the energy barrier dictionary to the simulation of 
+lignin biosynthesis), see `~/LigninPolymerizationNotebook.ipynb` and `~/Example.ipynb`. 
 
 ## API Reference
 
-### Monomer.py
+### monomer.py
 
 #### CLASSES
 
 __Monomer__(type, index)
-- type = {0,1,2} = a switch that indicates whether the monomer is G = 0, S = 1, or C = 2. Extensions to include more 
-  monomers would need to expand this definition
+- type = {0, 1, 2} = a switch that indicates whether the monomer is G = 0, S = 1, or C = 2. Extensions to include more 
+  monomers would be needed to expand this definition
 - index = Z+ = a number that should be unique for all monomers in a simulation. This is returned as the hash value and 
   is the tie in to the adjacency matrix
 
@@ -126,86 +94,77 @@ monomer type.
 
 #### FUNCTIONS
 
-### Event.py
+### event.py
 
 #### CLASSES
 
 __Event__(key, index, rate, bond)
-- key = str = name of the event that is taking place (e.g. '5o4','ox',etc.)
-- index = [Z+,Z+] = list of indices to the monomers that are affected by this event
-- rate = R+ = the rate of the event that is occuring (units consistent with time units in simulation, but otherwise 
-  meaningless)
+- key = str = name of the event that is taking place (e.g. '5o4', 'ox', etc.)
+- index = [Z+, Z+] = list of indices to the monomers that are affected by this event
+- rate = R+ = the rate of the event that is occurring (units consistent with time units in simulation)
 - bond = [Z+,Z+] = list of changes that need to be made to the adjacency matrix to perform the event
 
 The class that is used to define events, which can be unpacked by the `run` function to execute the events occurring in 
 the simulation.
 
-#### FUNCTIONS
 
-### Analysis.py
-
-#### CLASSES
+### analysis.py
 
 #### FUNCTIONS
 
-__findFragments__(adj = None)
-- adj = DOK_Matrix = NxN sparse matrix in the dictionary of keys format
-- return = {{},{},...,{}} = set of sets of connected components within the adjacency matrix 
+__find_fragments__(adj)
+- adj = dok_matrix = NxN sparse matrix in the dictionary of keys format
+- return = [{},{},...,{}] = list of sets of connected components within the adjacency matrix 
 
 Identifies connected component subgraphs of the supergraph `adj`, which can be used to determine yields or identify 
 whether two monomers are connected.
 
-__fragmentSize__(frags = None)
-- frags = {{},{},...,{}} = set of sets returned from `findFragments`
+__fragment_size__(frags)
+- frags = [{},{},...,{}] = list of sets as returned from `find_fragments`
 - return = dict() = dictionary mapping all of the indices in frags to the length of the fragment they were contained in
 
 Gets the sizes for all of the monomers in the simulation
 
-__breakBond__(adj, bondType)
-- adj = DOK_Matrix = adjacency matrix
-- bondType = str = the bond that should be broken
-- return = DOK_Matrix = new adjacency matrix after bonds were broken
+__break_bond_type__(adj, bondType)
+- adj = scipy dok_matrix = adjacency matrix
+- bond_type = str = the bond that should be broken
+- return = dok_matrix = new adjacency matrix after bonds were broken
 
 Modifies the adjacency matrix to reflect certain bonds specified by `bondType` being broken. This is used primarily 
 when we are evaluating the effect that reductive cleavage treatment would have on the simulated lignin. As of now, 
 all bonds of a given type are removed without discrimination.
 
-__countBonds__(adj)
-- adj = DOK_Matrix = adjacency matrix
+__count_bonds__(adj)
+- adj = dok_matrix = adjacency matrix
 - return = dict() = a dictionary containing all bond strings mapped to the number of times they occur within `adj`
 
 Used for evaluating the frequency of different linkages within a simulated lignin
 
-__countYields__(adj = None)
-- adj = DOK_Matrix = adjacency matrix
-- return = Counter() = maps the size of an oligomer to the number of occurrences within the adjacency matrix
+__count_oligomer_yields__(adj)
+- adj = dok_matrix = adjacency matrix
+- return = dict = maps the size of an oligomer to the number of occurrences within the adjacency matrix
 
-Used to count the yields of monomers, dimers, etc. when the simulation is complete
+Used to count the yields of monomers, dimers, etc., when the simulation is complete
 
-__analyze__(adj = None, nodes = None)
-- adj = DOK_Matrix = adjacency matrix
-- nodes = [Monomer,Monomer,...,Monomer] = list of monomers in the simulation
+__analyze_adj_matrix__(adjacency)
+- adjacency = dok_matrix = adjacency matrix
 - return = dict() = maps different measurable quantities to their values predicted from the simulation
 
-Aggregates all of the analysis that we would want to do into one simple function. At the end of every simulation, we 
-can then directly analyze the simulation output to identify the original chain lengths, original bond distributions, 
-and these same properties post ether bond cleavage.
+Aggregates analysis of oligomer length and bond types, and these same properties post C-O bond cleavage.
 
-### KineticMonteCarlo.py
-
-#### CLASSES
+### kmc_functions.py
 
 #### FUNCTIONS
 
-__quickFragSize__(monomer = None)
+__quick_frag_size__(monomer)
 - monomer = Monomer = instance of monomer object that we want to check
 - return = str = 'monomer' or 'dimer' 
 
 Uses the open positions attribute of the monomer object to determine whether there is anything connected to this monomer yet
 
-__updateEvents__(monomers = None, adj = None, lastEvent = None, events = {}, rateVec = None, r = None, maxMon = 500)
+__updateEvents__(monomers, adj, lastEvent = None, events = {}, rateVec = None, r = None, maxMon = 500)
 - monomers = dict() = maps the index of the monomer to the object and the events that a change to this index would effect
-- adj = DOK_Matrix = adjacency matrix
+- adj = dok_matrix = adjacency matrix
 - lastEvent = Event = the previous event that occurred
 - events = dict() = map the hash value of each event to the unique event - this is all of the possible events at the 
   current state after the method is run
@@ -222,7 +181,7 @@ __doEvent__(event = None, state = None, adj = None)
 - event = Event = the event that was chosen to be performed
 - state = dict() = the dictionary mapping monomer indices to the monomer object and events that would be changed by a 
   change to the monomer
-- adj = DOK_Matrix = adjacency matrix
+- adj = dok_matrix = adjacency matrix
 
 Updates the monomers and adjacency matrix to reflect the execution of the chosen event
 
@@ -245,7 +204,7 @@ monomers are changed and linked to simulate the growth of lignin *in planta*.
 #### FUNCTIONS
 
 __generateMol__(adj,nodeList)
-- adj = DOK_Matrix = adjacency matrix
+- adj = dok_matrix = adjacency matrix
 - nodeList = [Monomer,Monomer,...,Monomer] = list of monomers output from the simulation
 - return = str = molfile contents
 

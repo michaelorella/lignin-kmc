@@ -2,9 +2,9 @@
 # coding=utf-8
 
 # lignin subunits (phenylpropanoids)
-G = 'guaiacol'  # (coniferyl)
-S = 'syringyl'  # (sinapyl)
-C = 'caffeoyl'
+G = 'guaiacol'  # (coniferyl alcohol)
+S = 'syringyl'  # (sinapyl alcohol)
+C = 'caffeoyl'  # (caffeyl alcohol)
 H = 'p-hydroxyphenyl'
 S4 = 'S4'
 G4 = 'G4'

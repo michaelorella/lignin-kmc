@@ -3,23 +3,9 @@
 
 """
 Written:        2018-06-06 Michael Orella
-Last Edited:    2019-11-01 by Heather Mayes
+Last Edited:    2019-11-11 by Heather Mayes
 
-Code base for simulating the in planta polymerization of monolignols through generic Gillepsie algorithm adaptations.
-Monolignols can be handled as either coniferyl alcohol, sinapyl alcohol, or caffeoyl alcohol, however extensions should
-be easy given implementation choices. Within the module, there are two classes - monomers and events - code for
-analyzing the results of a simulation and for running an individual simulation. Use cases for the module are shown
-below.
-
-import ligninkmc as kmc
-mons = [ kmc.Monomer ( 1 , i ) for i in range(5) ]
-startEvs = [ kmc.Event ( 'ox' , [i] , rates['ox'][1]['monomer'] ) for i in range(5) ]
-state = { mons[i] : {startEvents[i]} for i in range(5) }
-events = { startEvents[i] for i in range(5) }
-events.add( kmc.Event(GROW, [ ], rate =0, bond=1))
-res = kmc.run_kmc(tFinal = 1e9, rates=rates, initialState=state, initialEvents=events)
-
-{'monomers': _____ , 'adjacency_matrix': _______ , TIME: ______ }
+Code base for simulating the in planta polymerization of monolignols through Gillepsie algorithm adaptations.
 """
 
 import scipy.sparse as sp
@@ -33,10 +19,10 @@ from ligninkmc.kmc_common import (AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q, GROW,
                                   ADJ_MATRIX, MONO_LIST)
 
 
-def quick_frag_size(monomer=None):
+def quick_frag_size(monomer):
     """
     An easy check on a specific monomer to tell if it is a monomer or involved in a dimer. This is used over the
-    detailed fragmentSize(frags) calculation in the simulation of lignification for performance benefits. However,
+    detailed fragment_size(frags) calculation in the simulation of lignification for performance benefits. However,
     extensions beyond dimers would be difficult, if it is found that there are significant impacts on chain
     length > dimer
 
@@ -53,7 +39,7 @@ def quick_frag_size(monomer=None):
     return DIMER
 
 
-def update_events(monomers=None, adj=None, last_event=None, events=None, rate_vec=None, r=None, max_mon=500):
+def update_events(monomers, adj, last_event=None, events=None, rate_vec=None, r=None, max_mon=500):
     """
     The meat of the implementation for lignification specific KMC. This method determines what the possible events are
     in a given state, where the state is the current simulation state. Most of the additional parameters in this method
@@ -99,7 +85,6 @@ def update_events(monomers=None, adj=None, last_event=None, events=None, rate_ve
         le_hash = hash(last_event)
         del (events[le_hash])
         del (rate_vec[le_hash])
-        # csr_adj = adj.to_csr(copy=True)
 
         # Make sure to keep track of which partners have been "cleaned" already - i.e. what monomers have already had
         #     all of the old events removed
@@ -148,7 +133,7 @@ def update_events(monomers=None, adj=None, last_event=None, events=None, rate_ve
 
             for rxn_event in new_event_list:
                 if rxn_event and rxn_event[1] == 1:  # Unimolecular reaction event
-                    size = quick_frag_size(monomer=mon)
+                    size = quick_frag_size(mon)
 
                     rate = rxn_event[2][mon.type][size] / cur_n
 
@@ -170,7 +155,7 @@ def update_events(monomers=None, adj=None, last_event=None, events=None, rate_ve
                         back = [partner.identity, mon.identity]
 
                         # Add the bond from one monomer to the other in the default config
-                        size = (quick_frag_size(monomer=mon), quick_frag_size(monomer=partner))
+                        size = (quick_frag_size(mon), quick_frag_size(partner))
                         # # Here to show that now 2+/2+ can make beta-O4 monomers
                         # if size == (DIMER, DIMER):
                         #     if rxn_event[0] == BO4:
@@ -202,7 +187,6 @@ def update_events(monomers=None, adj=None, last_event=None, events=None, rate_ve
                                 try:
                                     rate = rxn_event[2][(partner.type, mon.type)][(size[1], size[0])] / (cur_n ** 2)
                                 except KeyError:
-                                    # adj.max_print = adj.nnz
                                     raise InvalidDataError(f"Error on determining the rate for rxn_event type "
                                                            f"{rxn_event[0]}, bonding index {mon.identity} to "
                                                            f"{partner.identity}")
