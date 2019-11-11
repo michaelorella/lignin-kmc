@@ -171,6 +171,10 @@ def update_events(monomers=None, adj=None, last_event=None, events=None, rate_ve
 
                         # Add the bond from one monomer to the other in the default config
                         size = (quick_frag_size(monomer=mon), quick_frag_size(monomer=partner))
+                        # # Here to show that now 2+/2+ can make beta-O4 monomers
+                        # if size == (DIMER, DIMER):
+                        #     if rxn_event[0] == BO4:
+                        #         print("well how about that!")
                         if bond[0] in mon.open and bond[1] in partner.open:
                             try:
                                 rate = rxn_event[2][(mon.type, partner.type)][size] / (cur_n ** 2)
@@ -223,8 +227,7 @@ def update_events(monomers=None, adj=None, last_event=None, events=None, rate_ve
     else:
         cur_n, _ = adj.get_shape()
 
-        # If the system has grown to the maximum size, make sure to delete the
-        # event for adding more monomers
+        # If the system has grown to the maximum size, delete the event for adding more monomers
         if cur_n >= max_mon:
             le_hash = hash(last_event)
             del (events[le_hash])

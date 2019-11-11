@@ -13,3 +13,5 @@ ligninkmc/__pycache__/
 /.eggs/
 Lignin Polymerization Notebook.ipynb
 temp*
+/updated_PlottingResults.ipynb
+plots/
