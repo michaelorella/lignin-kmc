@@ -32,9 +32,14 @@ This project runs on Python ≥3.6 with the following packages installed:
 
 ## Installation
 For users with no Python experience, a helpful guide to installing Python via miniconda or anaconda can be found 
-[here](https://conda.io/docs/user-guide/install/index.html). Once Python has been installed, you will need to use 
-[conda commands](https://conda.io/docs/user-guide/tasks/manage-environments.html) to install the dependencies listed 
-above. [RDKit](https://www.rdkit.org/docs/Install.html) must be installed from the `rdkit` channel (using the -c flag).
+[here](https://conda.io/docs/user-guide/install/index.html). 
+
+Once Python has been installed, you will need install [RDKit](https://www.rdkit.org/docs/Install.html) using conda. It 
+will install any missing required dependencies when it does so.
+
+You can then install [lignin-kmc]() using  pip (`pip install lignin-kmc`). Additional dependencies will again be 
+installed as required.
+
 [common-wrangler](https://pypi.org/project/common-wrangler/) can be installed using pip (`pip install common-wrangler`).
 
 ### Basic Use
