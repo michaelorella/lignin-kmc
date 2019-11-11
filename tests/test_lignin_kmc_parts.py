@@ -9,8 +9,8 @@ from rdkit.Chem import MolFromMolBlock
 from rdkit.Chem.AllChem import Compute2DCoords
 from rdkit.Chem.Draw import MolToFile
 from common_wrangler.common import InvalidDataError, capture_stdout, silent_remove, diff_lines
-from ligninkmc import Event
-from ligninkmc import Monomer
+from ligninkmc.event import Event
+from ligninkmc.monomer import Monomer
 from ligninkmc.analysis import (analyze_adj_matrix, count_bonds, count_oligomer_yields, calc_monos_per_olig,
                                 break_bond_type, adj_analysis_to_stdout, find_fragments, fragment_size,
                                 get_bond_type_v_time_dict)
