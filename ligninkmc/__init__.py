@@ -1,7 +1,16 @@
-from ligninkmc.kmc_functions import run_kmc
-from ligninkmc.analysis import analyze_adj_matrix
-from ligninkmc.event import Event
-from ligninkmc.monomer import Monomer
+"""
+tools for simulating lignin biosynthesis using kinetic Monte Carlo
+"""
+
+# Handle versioneer
+from ._version import get_versions
+versions = get_versions()
+__version__ = versions['version']
+__git_revision__ = versions['full-revisionid']
+del get_versions, versions
+
+__author__ = 'Heather B Mayes'
+__email__ = 'hmayes@hmayes.com'
 
 try:
     from ligninkmc.visualization import (generate_mol)

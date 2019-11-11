@@ -10,10 +10,9 @@ import numpy as np
 from configparser import ConfigParser
 from common_wrangler.common import (warning, process_cfg, MAIN_SEC, GOOD_RET, INPUT_ERROR, IO_ERROR, KB, H,
                                     KCAL_MOL_TO_J_PART, InvalidDataError, INVALID_DATA)
-
-from ligninkmc.analysis import adj_analysis_to_stdout, analyze_adj_matrix
 from ligninkmc import Event
 from ligninkmc import Monomer
+from ligninkmc.analysis import adj_analysis_to_stdout, analyze_adj_matrix
 from ligninkmc.kmc_functions import run_kmc
 from ligninkmc.kmc_common import (E_A_KCAL_MOL, E_A_J_PART, TEMP, INI_MONOS, MAX_MONOS, SIM_TIME, AFFECTED, GROW,
                                   DEF_E_A_KCAL_MOL, OX, MONOMER, DIMER, LIGNIN_SUBUNITS, SG_RATIO,
