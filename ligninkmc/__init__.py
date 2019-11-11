@@ -11,9 +11,3 @@ del get_versions, versions
 
 __author__ = 'Heather B Mayes'
 __email__ = 'hmayes@hmayes.com'
-
-try:
-    from ligninkmc.visualization import (generate_mol)
-except Exception as e:
-    print(e)
-    print("\nRDKit is likely not installed correctly. Visualization methods will be unavailable.")
