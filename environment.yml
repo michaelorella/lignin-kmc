@@ -11,5 +11,4 @@ dependencies:
   - rdkit=2018.03.4.0
   - joblib=0.12.2
   - networkx=2.3
-  - common-wrangler=0.2.1
 prefix: lignin_kmc
