@@ -531,7 +531,7 @@ def generate_graph_representation(adj, node_list):
             cmap=nodemap, vmin=0, vmax=2, edge_cmap=edgemap, edge_vmin=0, edge_vmax=8)
     plt.savefig("test.png")
 
-    :param adj:
+    :param adj: dok_matrix
     :param node_list:
     :return:
     """
