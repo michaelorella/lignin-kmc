@@ -5,15 +5,15 @@ import unittest
 
 import joblib as par
 import numpy as np
-from common_wrangler.common import silent_remove, diff_lines
+from common_wrangler.common import silent_remove, diff_lines, InvalidDataError
 from rdkit.Chem import MolFromMolBlock
 from rdkit.Chem.AllChem import Compute2DCoords
 from rdkit.Chem.Draw import MolToFile
-from ligninkmc.analysis import (get_bond_type_v_time_dict)
+from ligninkmc.analysis import (get_bond_type_v_time_dict, analyze_adj_matrix)
 from ligninkmc.create_lignin import (create_initial_monomers,
                                      create_initial_events, create_initial_state)
 from ligninkmc.event import Event
-from ligninkmc.kmc_common import (C5O4, C5C5, B5, BB, BO4, AO4, B1, GROW, TIME, MONO_LIST, ADJ_MATRIX)
+from ligninkmc.kmc_common import (C5O4, C5C5, B5, BB, BO4, AO4, B1, GROW, TIME, MONO_LIST, ADJ_MATRIX, BONDS)
 from ligninkmc.kmc_functions import run_kmc
 from ligninkmc.visualization import generate_mol, gen_psfgen
 from test_lignin_kmc_parts import (create_sample_kmc_result, create_sample_kmc_result_c_lignin, GOOD_RXN_RATES,
@@ -33,6 +33,7 @@ SUB_DATA_DIR = os.path.join(DATA_DIR, 'run_kmc')
 # Output files #
 PNG_10MER = os.path.join(SUB_DATA_DIR, 'test_10mer.png')
 PNG_C_LIGNIN = os.path.join(SUB_DATA_DIR, 'test_c_lignin.png')
+PNG_B1 = os.path.join(SUB_DATA_DIR, 'test_b1.png')
 
 TCL_FNAME = "psfgen.tcl"
 TCL_FILE_LOC = os.path.join(SUB_DATA_DIR, TCL_FNAME)
@@ -253,7 +254,7 @@ class TestVisualization(unittest.TestCase):
         self.assertEqual(bond_type_sum_dict, good_bond_type_sum_dict)
 
         good_olig_len_sum_dict = {1: 3039, 2: 172, 3: 24, 4: 116, 5: 25, 6: 72, 7: 91, 8: 80, 9: 819, 10: 70, 11: 88,
-                                  12: 24, 13: 78, 14: 28, 15: 90, 16: 192, 17: 0, 18: 0, 19: 0, 20: 0, 21: 0, 22:0,
+                                  12: 24, 13: 78, 14: 28, 15: 90, 16: 192, 17: 0, 18: 0, 19: 0, 20: 0, 21: 0, 22: 0,
                                   23: 0, 24: 0, 25: 0, 26: 52, 27: 135, 28: 0, 29: 58, 30: 90, 31: 217, 32: 0, 33: 0,
                                   34: 0, 35: 0, 36: 0, 37: 0, 38: 0, 39: 0, 40: 240}
         olig_len_sum_dict = {}
@@ -264,3 +265,91 @@ class TestVisualization(unittest.TestCase):
 
         good_sum_sum_list = 1362
         self.assertEqual(sum(sum_list), good_sum_sum_list)
+
+    # def testFishingForB1Bond(self):
+    #     # Here, all the monomers are available at the beginning of teh simulation
+    #     try:
+    #         for sg_ratio in [0.1, 1., 5., 10.]:
+    #             ini_num_monos = 200
+    #             max_num_monos = 400
+    #         pct_s = sg_ratio / (1 + sg_ratio)
+    #         # num_monos = 200
+    #         np.random.seed(1)
+    #         monomer_draw = np.random.rand(ini_num_monos)
+    #         initial_monomers = create_initial_monomers(pct_s, monomer_draw)
+    #         initial_events = create_initial_events(monomer_draw, pct_s, GOOD_RXN_RATES)
+    #         initial_state = create_initial_state(initial_events, initial_monomers)
+    #         initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE, bond=sg_ratio))
+    #         result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=0.02, random_seed=1,
+    #                          sg_ratio=sg_ratio, n_max=max_num_monos)
+    #         adj_result = analyze_adj_matrix(result[ADJ_MATRIX])
+    #         if adj_result[BONDS][B1] > 0:
+    #             print(f"Woot! sg{sg_ratio}")
+    #         # self.assertTrue(len(result[MONO_LIST]) == num_monos)
+    #         # gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
+    #         # self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
+    #     finally:
+    #         # silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
+    #         pass
+
+    def testB1BondGenMol(self):
+        # Here, all the monomers are available at the beginning of teh simulation
+        try:
+            sg_ratio = 10.
+            pct_s = sg_ratio / (1 + sg_ratio)
+            num_monos = 200
+            np.random.seed(1)
+            monomer_draw = np.random.rand(num_monos)
+            initial_monomers = create_initial_monomers(pct_s, monomer_draw)
+            initial_events = create_initial_events(monomer_draw, pct_s, GOOD_RXN_RATES)
+            initial_state = create_initial_state(initial_events, initial_monomers)
+            # initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE, bond=sg_ratio))
+            result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=0.02, random_seed=1,
+                             sg_ratio=sg_ratio)
+            adj_result = analyze_adj_matrix(result[ADJ_MATRIX])
+            if adj_result[BONDS][B1] > 0:
+                print(f"Woot! sg={sg_ratio}")
+
+            silent_remove(PNG_B1)
+            nodes = result[MONO_LIST]
+            adj = result[ADJ_MATRIX]
+            block = generate_mol(adj, nodes)
+            self.assertFalse("I thought I'd fail!")
+            mol = MolFromMolBlock(block)
+            Compute2DCoords(mol)
+            MolToFile(mol, PNG_B1, size=(1300, 300))
+            self.assertTrue(os.path.isfile(PNG_B1))
+
+            self.assertTrue(len(result[MONO_LIST]) == num_monos)
+            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
+            self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
+        except InvalidDataError as e:
+            print(e.args[0])
+            self.assertTrue("This program cannot currently display" in e.args[0])
+            silent_remove(PNG_B1, disable=DISABLE_REMOVE)
+            pass
+
+    # def testB1BondGenPSF(self):
+    #     # Here, all the monomers are available at the beginning of teh simulation
+    #     try:
+    #         sg_ratio = 10.
+    #         pct_s = sg_ratio / (1 + sg_ratio)
+    #         num_monos = 200
+    #         np.random.seed(1)
+    #         monomer_draw = np.random.rand(num_monos)
+    #         initial_monomers = create_initial_monomers(pct_s, monomer_draw)
+    #         initial_events = create_initial_events(monomer_draw, pct_s, GOOD_RXN_RATES)
+    #         initial_state = create_initial_state(initial_events, initial_monomers)
+    #         # initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE, bond=sg_ratio))
+    #         result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=0.02, random_seed=1,
+    #                          sg_ratio=sg_ratio)
+    #         adj_result = analyze_adj_matrix(result[ADJ_MATRIX])
+    #         if adj_result[BONDS][B1] > 0:
+    #             print(f"Woot! sg={sg_ratio}")
+    #         gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
+    #         # self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
+    #     except InvalidDataError as e:
+    #         print(e.args[0])
+    #         self.assertTrue("This program cannot currently display" in e.args[0])
+    #         silent_remove(PNG_B1, disable=DISABLE_REMOVE)
+    #         pass

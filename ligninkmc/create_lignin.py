@@ -25,7 +25,7 @@ DEF_MAX_MONOS = 10  # number of monomers
 DEF_SIM_TIME = 1  # simulation time in seconds
 DEF_SG = 1
 DEF_INI_MONOS = 2
-DEF_INI_RATE = 1e4
+DEF_ADD_RATE = 1e4
 DEF_RANDOM_SEED = None
 
 DEF_VAL = 'default_value'
@@ -219,7 +219,7 @@ def main(argv=None):
         # which are necessary to start the simulation. The final pieces of information needed to run_kmc the simulation
         # are the maximum number of monomers that should be studied and the final simulation time.
         initial_state = create_initial_state(initial_events, initial_monomers)
-        initial_events.append(Event(GROW, [], rate=DEF_INI_RATE, bond=cfg[SG_RATIO]))
+        initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE, bond=cfg[SG_RATIO]))
 
         # begin simulation
         result = run_kmc(rxn_rates, initial_state, initial_events, n_max=cfg[MAX_MONOS], t_max=cfg[SIM_TIME],

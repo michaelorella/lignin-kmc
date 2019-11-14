@@ -10,7 +10,7 @@ from ligninkmc.analysis import (analyze_adj_matrix, count_bonds, count_oligomer_
                                 break_bond_type, adj_analysis_to_stdout, find_fragments, fragment_size)
 from ligninkmc.kmc_functions import run_kmc
 from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, create_initial_monomers,
-                                     create_initial_events, create_initial_state, DEF_INI_RATE)
+                                     create_initial_events, create_initial_state, DEF_ADD_RATE)
 from ligninkmc.kmc_common import (C5O4, OX, Q, C5C5, B5, BB, BO4, AO4, B1,
                                   MON_MON, MON_DIM, DIM_DIM, DIM_MON, MONOMER, DIMER, GROW, TIME, MONO_LIST,
                                   ADJ_MATRIX, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_A_KCAL_MOL,
@@ -114,7 +114,7 @@ def create_sample_kmc_result(max_time=1., num_initial_monos=3, max_monos=10, sg_
     initial_state = create_initial_state(initial_events, initial_monomers)
     # new to test
     events = {initial_events[i] for i in range(num_initial_monos)}
-    events.add(Event(GROW, [], rate=DEF_INI_RATE))
+    events.add(Event(GROW, [], rate=DEF_ADD_RATE))
     # make random seed and sort events for testing reliability
     np.random.seed(10)
     result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(events), n_max=max_monos, t_max=max_time,
@@ -128,7 +128,7 @@ def create_sample_kmc_result_c_lignin():
     # noinspection PyTypeChecker
     initial_events = [Event(OX, [i], GOOD_RXN_RATES[OX][2][MONOMER]) for i in range(num_monos)]
     initial_state = create_initial_state(initial_events, initial_monomers)
-    initial_events.append(Event(GROW, [], rate=DEF_INI_RATE))
+    initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE))
     result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), n_max=12, t_max=2,
                      random_seed=10)
     return result
@@ -251,7 +251,7 @@ class TestRunKMC(unittest.TestCase):
         initial_events = create_initial_events(monomer_draw, initial_sg_ratio, GOOD_RXN_RATES)
         initial_state = create_initial_state(initial_events, initial_monomers)
         events = {initial_events[i] for i in range(num_initial_monos)}
-        events.add(Event(GROW, [], rate=DEF_INI_RATE))
+        events.add(Event(GROW, [], rate=DEF_ADD_RATE))
         try:
             run_kmc(GOOD_RXN_RATES, initial_state, sorted(events), n_max=20, t_max=1, random_seed=10)
             self.assertFalse("Should not arrive here; An error should have be raised")

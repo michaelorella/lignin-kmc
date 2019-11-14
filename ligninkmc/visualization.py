@@ -4,7 +4,7 @@
 import re
 from rdkit.Chem.Draw.MolDrawing import DrawingOptions
 from ligninkmc.kmc_common import (G, S, C, S4, G4, G7, ATOMS, BONDS)
-from common_wrangler.common import (InvalidDataError, create_out_fname)
+from common_wrangler.common import (InvalidDataError, create_out_fname, warning)
 
 DrawingOptions.bondLineWidth = 1.2
 S7 = 'S7'
@@ -354,6 +354,9 @@ def generate_mol(adj, node_list):
         # 1 ) Disconnect the original 1 -> A bond that existed from the not beta monomer
         # 2 ) Convert the new primary alcohol to an aldehyde
         if sorted(bond_loc) == [1, 8]:
+            # TODO: make sure all B1 bonds are correctly forms
+            warning("There are problems in how this program currently builds molecule with B1 bonds. Carefully "
+                    "check any output.")
             index_for_one = int(not beta[tuple(bond_loc)])
             # Convert the alpha alcohol on one's tail to an aldehyde
             alpha_idx = mono_start_idx_atom[mono_indices[index_for_one]
@@ -369,17 +372,21 @@ def generate_mol(adj, node_list):
                 bound_atoms = re.split(' +', possibility)[4:]
                 others.extend([int(x) for x in bound_atoms if int(x) != alpha_idx])
 
+            # TODO: Fix the section below--it does not work; for now, do not allow this functionality
             # The oxygen atom should have the greatest index of the atoms bound to the alpha position because it
             #     was added last
-            oxygen_atom_index = max(others)
-            bonds = re.sub(f'1 {alpha_idx} {oxygen_atom_index}',
-                           f'2 {alpha_idx} {oxygen_atom_index}', temp).splitlines(keepends=True)
+            try:
+                oxygen_atom_index = max(others)
+                bonds = re.sub(f'1 {alpha_idx} {oxygen_atom_index}',
+                               f'2 {alpha_idx} {oxygen_atom_index}', temp).splitlines(keepends=True)
 
-            # Find where the index for the bond is and remove it from the array
-            alpha_ring_bond_index = mono_start_idx_bond[mono_indices[index_for_one]
-                                                        ] + alpha_ring_location - removed[BONDS]
-            del (bonds[alpha_ring_bond_index])
-            removed[BONDS] += 1
+                # Find where the index for the bond is and remove it from the array
+                alpha_ring_bond_index = mono_start_idx_bond[mono_indices[index_for_one]
+                                                            ] + alpha_ring_location - removed[BONDS]
+                del (bonds[alpha_ring_bond_index])
+                removed[BONDS] += 1
+            except ValueError:
+                raise InvalidDataError("This program cannot currently display this beta-1 bond. Sorry!")
 
     mol_bond_blocks = ''.join(bonds)
     mol_atom_blocks = ''.join(atoms)

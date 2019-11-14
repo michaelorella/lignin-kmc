@@ -269,6 +269,8 @@ def do_event(event, state, adj, sg_ratio=None):
     """
 
     indices = event.index
+    # if event.key == B1:
+    #     print("hey there!")
     monomers = [state[i][MONOMER] for i in state]
     if len(indices) == 2:  # Doing bimolecular reaction, need to adjust adj
 
