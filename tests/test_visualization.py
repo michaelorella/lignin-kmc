@@ -4,8 +4,6 @@ import os
 import unittest
 
 import joblib as par
-import matplotlib.pyplot as plt
-import networkx as nx
 import numpy as np
 from common_wrangler.common import silent_remove, diff_lines
 from rdkit.Chem import MolFromMolBlock
@@ -17,7 +15,6 @@ from ligninkmc.create_lignin import (create_initial_monomers,
 from ligninkmc.event import Event
 from ligninkmc.kmc_common import (C5O4, C5C5, B5, BB, BO4, AO4, B1, GROW, TIME, MONO_LIST, ADJ_MATRIX)
 from ligninkmc.kmc_functions import run_kmc
-from ligninkmc.visualization import generate_graph_representation
 from ligninkmc.visualization import generate_mol, gen_psfgen
 from test_lignin_kmc_parts import (create_sample_kmc_result, create_sample_kmc_result_c_lignin, GOOD_RXN_RATES,
                                    get_avg_bo4_bonds)
@@ -162,8 +159,8 @@ class TestVisualization(unittest.TestCase):
 
         av_bo4_bonds, std_bo4_bonds = get_avg_bo4_bonds(num_sg_opts, sg_result_list, num_repeats, num_jobs)
 
-        good_av_bo4 = [0.369551282051282, 0.6275655354602723, 0.7924836601307189]
-        good_std_bo4 = [0.04336646245367748, 0.04148252892416798, 0.03911342876988829]
+        good_av_bo4 = [0.367914979757085, 0.6071676071676072, 0.8086248012718601]
+        good_std_bo4 = [0.08053381253372409, 0.053749806023653764, 0.04681682380692262]
         self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))
         self.assertTrue(np.allclose(std_bo4_bonds, good_std_bo4))
 
@@ -216,8 +213,8 @@ class TestVisualization(unittest.TestCase):
 
         av_bo4_bonds, std_bo4_bonds = get_avg_bo4_bonds(num_rates, add_rates_result_list, num_repeats, num_jobs)
 
-        good_av_bo4 = [0.3519924098671727, 0.15933528836754643, 0.43202764976958524]
-        good_std_bo4 = [0.17148021343411038, 0.1168981315424912, 0.25275090383382787]
+        good_av_bo4 = [0.3519924098671727, 0.16935483870967744, 0.3665034562211981]
+        good_std_bo4 = [0.17148021343411038, 0.11490166813528231, 0.28749156158816536]
         self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))
         self.assertTrue(np.allclose(std_bo4_bonds, good_std_bo4))
 
@@ -235,7 +232,7 @@ class TestVisualization(unittest.TestCase):
         result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=20, random_seed=10, dynamics=True)
         # With dynamics, the MONO_LIST will be a list of lists:
         #    the inner list is the usual MONO_LIST, but here is it saved for every time step
-        expected_num_t_steps = 140
+        expected_num_t_steps = 145
         self.assertTrue(len(result[MONO_LIST]) == expected_num_t_steps)
         self.assertTrue(len(result[MONO_LIST][-1]) == num_monos)
 
@@ -243,62 +240,27 @@ class TestVisualization(unittest.TestCase):
         #                      instead of list of timesteps with [[key: val, ...], ... ]
         t_steps = result[TIME]
         adj_list = result[ADJ_MATRIX]
-        good_num_timesteps = 140
-        self.assertEqual(len(t_steps), good_num_timesteps)
+        self.assertEqual(len(t_steps), expected_num_t_steps)
 
         bond_type_dict, olig_len_dict, sum_list = get_bond_type_v_time_dict(adj_list, sum_len_larger_than=10)
 
         # test results by checking sums
-        good_bond_type_sum_dict = {BO4: 1111, B1: 0, BB: 358, B5: 705, C5C5: 0, AO4: 0, C5O4: 112}
+        good_bond_type_sum_dict = {BO4: 1334, B1: 0, BB: 378, B5: 582, C5C5: 0, AO4: 0, C5O4: 145}
         bond_type_sum_dict = {}
         for bond_type, val_list in bond_type_dict.items():
-            self.assertEqual(len(val_list), good_num_timesteps)
+            self.assertEqual(len(val_list), expected_num_t_steps)
             bond_type_sum_dict[bond_type] = sum(val_list)
         self.assertEqual(bond_type_sum_dict, good_bond_type_sum_dict)
 
-        good_olig_len_sum_dict = {1: 2984, 2: 168, 3: 24, 4: 88, 5: 20, 6: 72, 7: 42, 8: 80, 9: 810, 10: 40, 11: 121,
-                                  12: 504, 13: 39, 14: 28, 15: 75, 16: 96, 17: 0, 18: 36, 19: 247, 20: 0, 21: 126}
+        good_olig_len_sum_dict = {1: 3039, 2: 172, 3: 24, 4: 116, 5: 25, 6: 72, 7: 91, 8: 80, 9: 819, 10: 70, 11: 88,
+                                  12: 24, 13: 78, 14: 28, 15: 90, 16: 192, 17: 0, 18: 0, 19: 0, 20: 0, 21: 0, 22:0,
+                                  23: 0, 24: 0, 25: 0, 26: 52, 27: 135, 28: 0, 29: 58, 30: 90, 31: 217, 32: 0, 33: 0,
+                                  34: 0, 35: 0, 36: 0, 37: 0, 38: 0, 39: 0, 40: 240}
         olig_len_sum_dict = {}
         for olig_len, val_list in olig_len_dict.items():
-            self.assertEqual(len(val_list), good_num_timesteps)
+            self.assertEqual(len(val_list), expected_num_t_steps)
             olig_len_sum_dict[olig_len] = sum(val_list)
         self.assertEqual(olig_len_sum_dict, good_olig_len_sum_dict)
 
-        good_sum_sum_list = 1312
+        good_sum_sum_list = 1362
         self.assertEqual(sum(sum_list), good_sum_sum_list)
-
-    def testGraphRepresentation(self):
-        result = create_sample_kmc_result(max_time=1., num_initial_monos=3, max_monos=10, sg_ratio=1.)
-        graph_rep = generate_graph_representation(result[ADJ_MATRIX], result[MONO_LIST])
-        pos = nx.nx_agraph.graphviz_layout(graph_rep)
-        nodes = graph_rep.nodes()
-        nodecolors = [graph_rep.node[n]['t'] for n in nodes]
-        edges = graph_rep.edges()
-        edgecolors = [graph_rep[u][v]['l'] for u, v in edges]
-        ncolors = ['skyblue', 'yellowgreen', 'r']
-        labels = ['graph_rep', 'S', 'C']
-
-        for node_color in set(nodecolors):
-            node_list = list(np.nonzero(np.array(nodecolors) == node_color)[0])
-            nx.draw_networkx_nodes(graph_rep, pos=pos, nodelist=node_list, node_color=ncolors[node_color],
-                                   label=labels[node_color], with_labels=True)
-        # edgemap = plt.get_cmap('Set1')
-        # nodemap = plt.get_cmap('tab10')
-        # nx.draw_networkx(graph_rep, pos=pos, edges=edges, node_color=nodecolors, edge_color=edgecolors,
-        #               cmap=nodemap, vmin=0, vmax=2, edge_cmap=edgemap, edge_vmin=0, edge_vmax=8, with_labels=True)
-        edge_colors = ['k', 'steelblue', 'dodgerblue', 'lime', 'aqua', 'darkorange', 'orange', 'wheat', 'red']
-        edge_labels = ['$\\beta$O4', '$\\beta$5', '55', '$\\alpha$O4', '4O5', '$\\beta$1', '$\\beta$1\'',
-                       '$\\beta$1\'\'', '$\\beta\\beta$']
-        edges = list(edges)
-        for edge_color in set(edgecolors):
-            edge_list = []
-            for edge in (np.nonzero(np.array(edgecolors) == edge_color)[0]):
-                edge_list.append(edges[edge])
-            plt.plot([],[],color=edge_colors[edge_color],label=edge_labels[edge_color])
-            nx.draw_networkx_edges(graph_rep, pos=pos, edgelist=edge_list, edge_color=edge_colors[edge_color],
-                                   label=edge_labels[edge_color])
-        plt.legend(fontsize=14, frameon=False)
-        plt.axis('off')
-        plt.tight_layout()
-        plt.savefig("lignindemo.png")
-        plt.savefig("lignindemo.svg")

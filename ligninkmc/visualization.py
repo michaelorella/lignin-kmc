@@ -2,8 +2,6 @@
 # coding=utf-8
 
 import re
-import networkx as nx
-import scipy.sparse as sp
 from rdkit.Chem.Draw.MolDrawing import DrawingOptions
 from ligninkmc.kmc_common import (G, S, C, S4, G4, G7, ATOMS, BONDS)
 from common_wrangler.common import (InvalidDataError, create_out_fname)
@@ -504,88 +502,3 @@ def gen_psfgen(orig_adj, monomers, fname="psfgen.tcl", segname="L", toppar_dir="
                                        f"{monomers[bond_matrix_tuple[0]].type} and "
                                        f"{monomers[bond_matrix_tuple[1]].type}")
         f.write(f"regenerate angles dihedrals\nwritepsf {segname}.psf")
-
-
-def generate_graph_representation(adj, node_list):
-    """
-    Creates a directed graph in NetworkX for a simplified representation of the lignin topology.
-    In general, the graph edges point *from* interactions at C4 *to* their respective linkage sites.
-    In exceptional cases (5-5, B-B linkages), both edges are created.
-
-    Nodes express their monomer identity in the "t" field, and the edges are keyed according to linkage in the
-    "l" field.
-
-    An example script using matplotlib to draw the representation:
-
-    import matplotlib.pyplot as plt
-    import networkx as nx
-    dir_graph = generateGraphRepresentation(l['adjacency_matrix'], l['monomers'])
-    pos = nx.nx_agraph.graphviz_layout(dir_graph)
-    nodes = dir_graph.nodes()
-    nodecolors = [dir_graph.node[n]['t'] for n in nodes]
-    edges = dir_graph.edges()
-    edgecolors = [dir_graph[u][v]['l'] for u,v in edges]
-    edgemap = plt.get_cmap('Set1')
-    nodemap = plt.get_cmap('tab10')
-    nx.draw_networkx(dir_graph, pos=pos, edges=edges, node_color=nodecolors, edge_color=edgecolors,
-            cmap=nodemap, vmin=0, vmax=2, edge_cmap=edgemap, edge_vmin=0, edge_vmax=8)
-    plt.savefig("test.png")
-
-    :param adj: dok_matrix
-    :param node_list:
-    :return:
-    """
-
-    dir_graph = nx.DiGraph()  # Directional graph so we can easily see a bit of structure within the graph.
-    for i, mon in enumerate(node_list):
-        dir_graph.add_node(i, t=mon.type)
-    adj = adj.copy()
-    # Since B-1 linkages actually involve three monomers, we signal that the beta-O-4 linkage required for B-1 is
-    #     broken by flipping the sign.
-    for row in (adj == 1).nonzero()[0]:
-        col = (adj.getrow(row) == 8).nonzero()[1]
-        if len(col):
-            col = col[0]
-            adj[(row, col)] *= -1
-    for key in sp.tril(adj).todok().keys():
-        alt_key = (key[1], key[0])
-        bond_loc1 = int(adj[key])
-        bond_loc2 = int(adj[alt_key])
-        if bond_loc1 == 8 and bond_loc2 == 4:  # Beta-O-4 linkage
-            dir_graph.add_edge(key[1], key[0], length=0)
-        elif bond_loc1 == 4 and bond_loc2 == 8:  # Reverse beta-O-4 linkage
-            dir_graph.add_edge(key[0], key[1], length=0)
-        elif bond_loc1 == 8 and bond_loc2 == 5:  # B5 linkage
-            dir_graph.add_edge(key[1], key[0], length=1)
-        elif bond_loc1 == 5 and bond_loc2 == 8:  # Reverse B5 linkage
-            dir_graph.add_edge(key[0], key[1], length=1)
-        elif bond_loc1 == 5 and bond_loc2 == 5:  # 55 linkage
-            dir_graph.add_edge(key[1], key[0], length=2)
-            dir_graph.add_edge(key[0], key[1], length=2)
-        elif bond_loc1 == 7 and bond_loc2 == 4:  # alpha-O-4 linkage
-            dir_graph.add_edge(key[1], key[0], length=3)
-        elif bond_loc1 == 4 and bond_loc2 == 7:  # Reverse alpha-O-4 linkage
-            dir_graph.add_edge(key[0], key[1], length=3)
-        elif bond_loc1 == 4 and bond_loc2 == 5:  # 4O5 linkage
-            dir_graph.add_edge(key[0], key[1], length=4)
-        elif bond_loc1 == 5 and bond_loc2 == 4:  # Reverse 4O5 linkage
-            dir_graph.add_edge(key[1], key[0], length=4)
-        elif bond_loc1 == 8 and bond_loc2 == 1:  # Beta-1 linkage
-            dir_graph.add_edge(key[1], key[0], length=5)
-        elif bond_loc1 == 1 and bond_loc2 == 8:  # Reverse beta-1 linkage
-            dir_graph.add_edge(key[0], key[1], length=5)
-        elif bond_loc1 == -8 and bond_loc2 == 4:  # Beta-1 linkage remnant
-            dir_graph.add_edge(key[1], key[1], length=6)
-        elif bond_loc2 == -8 and bond_loc1 == 4:  # Reverse beta-1 remnant
-            dir_graph.add_edge(key[0], key[0], length=6)
-        elif bond_loc1 == -8 and bond_loc2 == 1:  # Beta-1 linkage remnant (C1 variant)
-            dir_graph.add_edge(key[1], key[1], length=7)
-        elif bond_loc2 == -8 and bond_loc1 == 1:  # Reverse beta-1 remnant. (C1 variant)
-            dir_graph.add_edge(key[0], key[0], length=7)
-        elif bond_loc1 == 8 and bond_loc2 == 8:  # beta-beta linkage
-            dir_graph.add_edge(key[0], key[1], length=8)
-            dir_graph.add_edge(key[1], key[0], length=8)
-        else:
-            raise InvalidDataError(f"Error when generating graph representation, on key: {key}, "
-                                   f"bond_loc1: {bond_loc1}, bond_loc2: {bond_loc2}")
-    return dir_graph
