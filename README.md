@@ -31,28 +31,29 @@ This project runs on Python ≥3.6 with the following packages installed:
 - common-wrangler
 
 ## Installation
-For users with no Python experience, a helpful guide to installing Python via miniconda or anaconda can be found 
+
+- For users with no Python experience, a helpful guide to installing Python via miniconda or anaconda can be found 
 [here](https://conda.io/docs/user-guide/install/index.html). 
 
-Once Python has been installed, you will need install [RDKit](https://www.rdkit.org/docs/Install.html) using conda. To 
-install it in a new environment, run:
-`conda create -c rdkit -n my-rdkit-env rdkit`
+- Once Python has been installed, you will need install [RDKit](https://www.rdkit.org/docs/Install.html) using conda. 
+  -  To install it in a new environment, run: `conda create -c rdkit -n lignin-kmc rdkit`, followed by 
+     `conda activate lignin-kmc` 
+  -  If you already have an environment created and want to add rdkit to that environment, instead run: 
+     `conda install -c conda-forge rdkit`
 
-If you already have an environment created and want to add rdkit to that environment, instead run:
- `conda install -c conda-forge rdkit`
- then:
- `conda activate my-rdkit-env` 
- 
- In either case, Conda will install any missing required dependencies when it does so, and thus this may take a few 
+-  In either case, Conda will install any missing required dependencies when it does so, and thus this may take a few 
  minutes.
-
-You can then install [lignin-kmc](https://pypi.org/project/common-wrangler/) using  pip (`pip install lignin-kmc`). 
+ 
+- If you do not already have a `$HOME/.local/bin` directory, create one now, before installing lignin-kmc.
+ 
+-  You can then install [lignin-kmc](https://pypi.org/project/common-wrangler/) using  pip (`pip install lignin-kmc`). 
 Additional dependencies will again be installed as required.
 
-[common-wrangler](https://pypi.org/project/common-wrangler/) can be installed using pip (`pip install common-wrangler`).
+### Command-Line Use
 
-### Basic Use
+Lignin-KMC is populated with default variables that make it as easy to run as:
 
+`create`
 
 
 ### Developer Use
@@ -172,7 +173,7 @@ Aggregates analysis of oligomer length and bond types, and these same properties
 
 __quick_frag_size__(monomer)
 - monomer = Monomer = instance of monomer object that we want to check
-- return = str = 'monomer' or 'dimer' 
+- return = str = 'monomer' or 'oligomer' 
 
 Uses the open positions attribute of the monomer object to determine whether there is anything connected to this monomer yet
 

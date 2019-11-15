@@ -12,6 +12,12 @@ S7 = 'S7'
 
 # noinspection PyTypeChecker
 def generate_mol(adj, node_list):
+    """
+    Based on standard molfile format https://www.daylight.com/meetings/mug05/Kappler/ctfile.pdf
+    :param adj:
+    :param node_list:
+    :return:
+    """
     # define dictionary for atoms within each monomer
     atom_blocks = {G: ('C 0 0 0 0 \n' +  # 1
                        'C 0 0 0 0 \n' +  # 2
@@ -508,4 +514,4 @@ def gen_psfgen(orig_adj, monomers, fname="psfgen.tcl", segname="L", toppar_dir="
                                        f"bond locations: {bond_loc1} and {bond_loc2}, monomer types: "
                                        f"{monomers[bond_matrix_tuple[0]].type} and "
                                        f"{monomers[bond_matrix_tuple[1]].type}")
-        f.write(f"regenerate angles dihedrals\nwritepsf {segname}.psf")
+        f.write(f"regenerate angles dihedrals\nwritepsf {segname}.psf\n")

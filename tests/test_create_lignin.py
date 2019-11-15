@@ -3,10 +3,8 @@
 import logging
 import os
 import unittest
-
-from common_wrangler.common import capture_stderr, capture_stdout
-
 from ligninkmc.create_lignin import main
+from common_wrangler.common import capture_stderr, capture_stdout
 
 __author__ = 'hmayes'
 
@@ -62,18 +60,17 @@ class TestCreateLigninNoOutput(unittest.TestCase):
 class TestCreateLigninNormalUse(unittest.TestCase):
     def testDefArgs(self):
         test_input = ["-r", "10"]
-        main(test_input)
+        # main(test_input)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n" \
-                             "       1 dimer(s) (chain length 2)\n" \
-                             "       1 oligomer(s) of chain length 8"
+                             "       1 oligomer(s) of chain length 10"
         good_bond_summary = "composed of the following bond types and number:\n     " \
-                            "55:    0    5O4:    2    AO4:    0     B1:    1     B5:    2     BB:    1    BO4:    2"
+                            "55:    0    5O4:    1    AO4:    0     B1:    0     B5:    3     BB:    0    BO4:    5"
         good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n" \
-                                 "       2 monomer(s) (chain length 1)\n" \
-                                 "       4 dimer(s) (chain length 2)"
-        good_rcf_bond_summary = "with following remaining bond types and number:\n" \
-                                "     55:    0    5O4:    0    AO4:    0     B1:    1     B5:    2     " \
-                                "BB:    1    BO4:    0"
+                                 "       4 monomer(s) (chain length 1)\n" \
+                                 "       3 dimer(s) (chain length 2)"
+        good_rcf_bond_summary = "with the following remaining bond types and number:\n" \
+                                "     55:    0    5O4:    0    AO4:    0     B1:    0     B5:    3     " \
+                                "BB:    0    BO4:    0"
         with capture_stdout(main, test_input) as output:
             self.assertTrue(good_chain_summary in output)
             self.assertTrue(good_bond_summary in output)
@@ -84,14 +81,15 @@ class TestCreateLigninNormalUse(unittest.TestCase):
         test_input = ["-c", SMALL_INI, "-r", "11"]
         # main(test_input)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n" \
-                             "       1 oligomer(s) of chain length 10"
+                             "       1 dimer(s) (chain length 2)\n       1 oligomer(s) of chain length 8"
         good_bond_summary = "composed of the following bond types and number:\n     " \
-                            "55:    0    5O4:    0    AO4:    0     B1:    0     B5:    2     BB:    1    BO4:    6"
+                            "55:    0    5O4:    0    AO4:    0     B1:    1     B5:    2     BB:    1    BO4:    4"
         good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n" \
-                                 "       4 monomer(s) (chain length 1)\n" \
-                                 "       3 dimer(s) (chain length 2)"
-        good_rcf_bond_summary = "with following remaining bond types and number:\n     " \
-                                "55:    0    5O4:    0    AO4:    0     B1:    0     B5:    2     BB:    1" \
+                                 "       3 monomer(s) (chain length 1)\n" \
+                                 "       2 dimer(s) (chain length 2)\n" \
+                                 "       1 trimer(s) (chain length 3)"
+        good_rcf_bond_summary = "with the following remaining bond types and number:\n     " \
+                                "55:    0    5O4:    0    AO4:    0     B1:    1     B5:    2     BB:    1" \
                                 "    BO4:    0"
         with capture_stdout(main, test_input) as output:
             self.assertTrue(good_chain_summary in output)
