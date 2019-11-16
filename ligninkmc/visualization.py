@@ -2,6 +2,7 @@
 # coding=utf-8
 
 import re
+from collections import OrderedDict
 from rdkit.Chem.Draw.MolDrawing import DrawingOptions
 from ligninkmc.kmc_common import (G, S, C, S4, G4, G7, ATOMS, BONDS)
 from common_wrangler.common import (InvalidDataError, create_out_fname, warning)
@@ -455,7 +456,24 @@ def gen_psfgen(orig_adj, monomers, fname="psfgen.tcl", segname="L", toppar_dir="
             resid = monomer.identity + 1
             res_name = resnames[monomer.type]
             f.write(f"    residue {resid} {res_name}\n")
+            # print(monomer)
         f.write(f"}}\n")
+
+        # # step through in a consistent order; may be a more elegant way, but this works
+        # adj_dict = dict(adj)
+        # adj_keys = list(adj_dict.keys())
+        # adj_keys.sort()
+        # new_adj_dict = OrderedDict()
+        # for adj_key in adj_keys:
+        #     val = adj_dict[adj_key]
+        #     # Since B-1 linkages involve three monomers, signal that the previous beta-O-4/B-1 linkage required
+        #     #     for B-1 is broken by flipping the sign.
+        #     if val == 1:
+        #         val *= -1
+        #     new_adj_dict[adj_key] = val
+        # print("finished keys")
+        #
+        # # print("yo yo")
         # Since B-1 linkages actually involve three monomers, we signal that the previous beta-O-4/B-1 linkage required
         #     for B-1 is broken by flipping the sign.
         for row in (adj == 1).nonzero()[0]:
@@ -463,6 +481,8 @@ def gen_psfgen(orig_adj, monomers, fname="psfgen.tcl", segname="L", toppar_dir="
             if len(col):
                 col = col[0]
                 adj[(row, col)] *= -1
+        #         # print(row, col)
+        # print("what what")
         for bond_matrix_tuple in adj.keys():
             # The adjacency matrix keys are always a tuple (of 2, row & col); sometimes they are equal to each other
             #    (e.g. oxidation)

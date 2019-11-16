@@ -16,3 +16,4 @@ temp*
 /updated_PlottingResults.ipynb
 plots/
 .tox
+/update.sh
