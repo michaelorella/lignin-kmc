@@ -10,6 +10,7 @@ Code base for simulating the in planta polymerization of monolignols through Gil
 
 import copy
 import numpy as np
+from collections import OrderedDict
 from scipy.sparse import dok_matrix
 from common_wrangler.common import InvalidDataError
 from ligninkmc.kmc_common import (Event, Monomer, AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q, GROW, TIME, OLIGOMER,
@@ -191,6 +192,13 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
                 ev_hash = hash(event)
                 event_dict[ev_hash] = event
                 rate_vec[ev_hash] = event.rate
+                # todo testing here
+                # if ev_hash < 500:
+                #     key_as_num = sum([ord(x) % 32 for x in event.key])
+                #     hand_hash = key_as_num + sum(event.index) * 10 + int(event.rate * 100)
+                #     print(f"event_hash: {ev_hash}, key: {event.key} ({key_as_num}), id: {event.index}, "
+                #           f"rate: {int(event.rate * 100)}, hand_hash: {hand_hash}")
+                #     print("yep")
         # END LOOP OVER MONOMERS THAT WERE AFFECTED BY LAST EVENT
     else:
         cur_n, _ = adj.get_shape()
@@ -302,7 +310,6 @@ def do_event(event, state, adj, sg_ratio=None, random_seed=None):
         # Decided to break bond between alpha and ring position later (i.e. after all synthesis occurred) when a B1
         # bond is formed This is primarily to make it easier to see what the fragment that needs to break is for
         # visualization purposes
-
         mon0.connectedTo.update(mon1.connectedTo)
         for mon in monomers:
             if mon.identity in mon0.connectedTo:
@@ -340,6 +347,8 @@ def do_event(event, state, adj, sg_ratio=None, random_seed=None):
                     else:
                         rand_num = np.random.rand()
                     mon_type = int(rand_num < pct)
+                    # todo remove print
+                    # print("choice: mon_type: ", mon_type)
                 except TypeError:
                     if sg_ratio is None:
                         sg_note = " the default value 'None'."
@@ -362,7 +371,7 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
     :param rate_dict:  dict   -- contains the reaction rate of each of the possible event_dict
     :param initial_state: dict  -- The dictionary mapping the index of each monomer to a dictionary with the monomer
         and the set of event_dict that a change to this monomer would impact
-    :param initial_events: dictionary -- The dictionary mapping event hash values to those event_dict
+    :param initial_events: list of dicts dictionary -- The dictionary mapping event hash values to those event_dict
     :param n_max:   int   -- The maximum number of monomers in the simulation
     :param t_max: float -- The final simulation time (units depend on units of rates)
     :param dynamics: boolean -- if True, will keep values for every time step
@@ -378,11 +387,11 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
     adj = dok_matrix((num_monos, num_monos))
     t = [0, ]
 
-    # Calculate the rates of all of the event_dict available at the current state
-    r_vec = {}
+    # Calculate the rates of all of the event_dict available at the current state; ordered dict for consistency
+    r_vec = OrderedDict()
 
     # Build the dictionary of event_dict
-    event_dict = {}
+    event_dict = OrderedDict()
     for event in initial_events:
         event_hash = hash(event)
         r_vec[event_hash] = event.rate / num_monos
@@ -398,8 +407,12 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
     # Run the Gillespie algorithm
     while t[-1] < t_max and len(event_dict) > 0:
         # Find the total rate for all of the possible event_dict and choose which event to do
+        # Less direct conversion of r_vec to lists (keys in hashes, vals in all_rates) for consistency
         hashes = list(r_vec.keys())
-        all_rates = list(r_vec.values())
+        hashes.sort()
+        all_rates = []
+        for r_vec_key in hashes:
+            all_rates.append(r_vec[r_vec_key])
         r_tot = np.sum(all_rates)
 
         if random_seed:
@@ -413,6 +426,9 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
         # See how much time has passed before this event happened
         dt = (1 / r_tot) * np.log(1 / rand_num)
         t.extend(t[-1] + dt)
+        # # # TODO remove print
+        # print(hashes)
+        # print(j, dt)
 
         # Do the event and update the state
         do_event(event, cur_state, adj, sg_ratio, random_seed=random_seed)

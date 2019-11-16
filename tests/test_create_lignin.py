@@ -62,15 +62,15 @@ class TestCreateLigninNormalUse(unittest.TestCase):
         test_input = ["-r", "10"]
         # main(test_input)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n" \
-                             "       1 oligomer(s) of chain length 10"
-        good_bond_summary = "composed of the following bond types and number:\n     " \
-                            "55:    0    5O4:    1    AO4:    0     B1:    0     B5:    3     BB:    0    BO4:    5"
+                             "       1 trimer(s) (chain length 3)\n       1 oligomer(s) of chain length 7"
+        good_bond_summary = "composed of the following bond types and number:\n " \
+                            "    55:    0    5O4:    1    AO4:    0     B1:    0     B5:    2     BB:    1    BO4:    4"
         good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n" \
                                  "       4 monomer(s) (chain length 1)\n" \
                                  "       3 dimer(s) (chain length 2)"
-        good_rcf_bond_summary = "with the following remaining bond types and number:\n" \
-                                "     55:    0    5O4:    0    AO4:    0     B1:    0     B5:    3     " \
-                                "BB:    0    BO4:    0"
+        good_rcf_bond_summary = "with the following remaining bond types and number:\n     " \
+                                "55:    0    5O4:    0    AO4:    0     B1:    0     B5:    2     " \
+                                "BB:    1    BO4:    0"
         with capture_stdout(main, test_input) as output:
             self.assertTrue(good_chain_summary in output)
             self.assertTrue(good_bond_summary in output)
@@ -81,15 +81,14 @@ class TestCreateLigninNormalUse(unittest.TestCase):
         test_input = ["-c", SMALL_INI, "-r", "11"]
         # main(test_input)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n" \
-                             "       1 dimer(s) (chain length 2)\n       1 oligomer(s) of chain length 8"
+                             "       1 oligomer(s) of chain length 10"
         good_bond_summary = "composed of the following bond types and number:\n     " \
-                            "55:    0    5O4:    0    AO4:    0     B1:    1     B5:    2     BB:    1    BO4:    4"
+                            "55:    0    5O4:    0    AO4:    0     B1:    0     B5:    2     BB:    1    BO4:    6"
         good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n" \
-                                 "       3 monomer(s) (chain length 1)\n" \
-                                 "       2 dimer(s) (chain length 2)\n" \
-                                 "       1 trimer(s) (chain length 3)"
+                                 "       4 monomer(s) (chain length 1)\n" \
+                                 "       3 dimer(s) (chain length 2)"
         good_rcf_bond_summary = "with the following remaining bond types and number:\n     " \
-                                "55:    0    5O4:    0    AO4:    0     B1:    1     B5:    2     BB:    1" \
+                                "55:    0    5O4:    0    AO4:    0     B1:    0     B5:    2     BB:    1" \
                                 "    BO4:    0"
         with capture_stdout(main, test_input) as output:
             self.assertTrue(good_chain_summary in output)
