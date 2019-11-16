@@ -598,39 +598,32 @@ class TestVisualization(unittest.TestCase):
     def testB1BondGenMol(self):
         # Here, all the monomers are available at the beginning of the simulation
         try:
-            # sg_ratio = 10.
             np.random.seed(1)
-            mono_type_list = [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                              1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                              1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                              1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                              1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                              0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1,
-                              1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                              1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                              1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                              1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1,
-                              1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1,
-                              1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ]
-            for last_mon in range(20, len(mono_type_list)):
-                num_monos = len(mono_type_list[0:last_mon])
-                print(num_monos)
-                initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(mono_type_list[0:last_mon])]
-                initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
-                initial_state = create_initial_state(initial_events, initial_monomers)
-                result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=0.02, random_seed=1)
-                silent_remove(PNG_B1)
-                nodes = result[MONO_LIST]
-                adj = result[ADJ_MATRIX]
-                block = generate_mol(adj, nodes)
+            mono_type_list = [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                              1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                              1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                              1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
+                              1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                              1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(mono_type_list)]
+            initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
+            initial_state = create_initial_state(initial_events, initial_monomers)
+            result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=0.02, random_seed=1)
+            silent_remove(PNG_B1)
+            nodes = result[MONO_LIST]
+            adj = result[ADJ_MATRIX]
+            block = generate_mol(adj, nodes)
+            # Here, trying to catch bug in B1 bond representation. Test will be updated when bug is fixed.
             self.assertFalse("I thought I'd fail!")
+            # After bug is fixed, add checks for correct generate_mol output
+            # Below not needed for testing functionality; for showing image to visually check
             mol = MolFromMolBlock(block)
             Compute2DCoords(mol)
-            MolToFile(mol, PNG_B1, size=(1300, 300))
+            MolToFile(mol, PNG_B1, size=(2000, 1200))
             self.assertTrue(os.path.isfile(PNG_B1))
-
-            self.assertTrue(len(result[MONO_LIST]) == num_monos)
+            # If desired, also check generated psfgen (may not help coverage... to be seen...)
             gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
+            # If kept, create and check new "good" file
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
         except InvalidDataError as e:
             print(e.args[0])
@@ -663,9 +656,7 @@ class TestVisualization(unittest.TestCase):
 
     def testDynamics(self):
         # Tests procedures in the Dynamics.ipynb
-        sg_ratio = 1
-        pct_s = sg_ratio / (1 + sg_ratio)
-        # minimize number of random calls during testing
+        # minimize number of random calls during testing (here, set monomer type distribution)
         monomer_type_list = [0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0,
                              0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0]
         num_monos = len(monomer_type_list)
@@ -676,37 +667,35 @@ class TestVisualization(unittest.TestCase):
         result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=20, random_seed=10, dynamics=True)
         # With dynamics, the MONO_LIST will be a list of monomer lists:
         #    the inner list is the usual MONO_LIST, but here is it saved for every time step
-        expected_num_t_steps = 138
+        t_steps = result[TIME]
+        expected_num_t_steps = 150
+        self.assertEqual(len(t_steps), expected_num_t_steps)
         self.assertTrue(len(result[MONO_LIST]) == expected_num_t_steps)
         self.assertTrue(len(result[MONO_LIST][-1]) == num_monos)
-
         # want dict[key: [], ...] where the inner list is values by timestep
         #                      instead of list of timesteps with [[key: val, ...], ... ]
-        t_steps = result[TIME]
         adj_list = result[ADJ_MATRIX]
-        self.assertEqual(len(t_steps), expected_num_t_steps)
-
         bond_type_dict, olig_len_dict, sum_list = get_bond_type_v_time_dict(adj_list, sum_len_larger_than=10)
 
         # test results by checking sums
-        good_bond_type_sum_dict = {BO4: 684, B1: 0, BB: 553, B5: 594, C5C5: 62, AO4: 0, C5O4: 347}
+        good_bond_type_sum_dict = {BO4: 1891, B1: 0, BB: 620, B5: 0, C5C5: 0, AO4: 0, C5O4: 188}
         bond_type_sum_dict = {}
         for bond_type, val_list in bond_type_dict.items():
             self.assertEqual(len(val_list), expected_num_t_steps)
             bond_type_sum_dict[bond_type] = sum(val_list)
         self.assertEqual(bond_type_sum_dict, good_bond_type_sum_dict)
 
-        good_olig_len_sum_dict = {1: 2944, 2: 450, 3: 69, 4: 40, 5: 10, 6: 0, 7: 7, 8: 0, 9: 90, 10: 0, 11: 0,
-                                  12: 24, 13: 13, 14: 0, 15: 0, 16: 0, 17: 0, 18: 90, 19: 19, 20: 20, 21: 21, 22: 22,
-                                  23: 46, 24: 216, 25: 0, 26: 0, 27: 0, 28: 56, 29: 87, 30: 60, 31: 62, 32: 96, 33: 66,
-                                  34: 272, 35: 140, 36: 216, 37: 0, 38: 304, 39: 0, 40: 80}
+        good_olig_len_sum_dict = {1: 2594, 2: 548, 3: 249, 4: 508, 5: 490, 6: 372, 7: 147, 8: 64, 9: 0, 10: 0,
+                                  11: 0, 12: 0, 13: 0, 14: 56, 15: 0, 16: 0, 17: 0, 18: 72, 19: 0, 20: 0, 21: 0,
+                                  22: 0, 23: 0, 24: 0, 25: 100, 26: 0, 27: 0, 28: 0, 29: 0, 30: 120, 31: 0, 32: 0,
+                                  33: 0, 34: 0, 35: 0, 36: 144, 37: 0, 38: 456, 39: 0, 40: 80}
         olig_len_sum_dict = {}
         for olig_len, val_list in olig_len_dict.items():
             self.assertEqual(len(val_list), expected_num_t_steps)
             olig_len_sum_dict[olig_len] = sum(val_list)
         self.assertEqual(olig_len_sum_dict, good_olig_len_sum_dict)
 
-        good_sum_sum_list = 1910
+        good_sum_sum_list = 1028
         self.assertEqual(sum(sum_list), good_sum_sum_list)
 
     # The next two tests are commented out because they do not increase coverage; they worked at the time they

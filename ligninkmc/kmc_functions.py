@@ -192,13 +192,6 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
                 ev_hash = hash(event)
                 event_dict[ev_hash] = event
                 rate_vec[ev_hash] = event.rate
-                # todo testing here
-                # if ev_hash < 500:
-                #     key_as_num = sum([ord(x) % 32 for x in event.key])
-                #     hand_hash = key_as_num + sum(event.index) * 10 + int(event.rate * 100)
-                #     print(f"event_hash: {ev_hash}, key: {event.key} ({key_as_num}), id: {event.index}, "
-                #           f"rate: {int(event.rate * 100)}, hand_hash: {hand_hash}")
-                #     print("yep")
         # END LOOP OVER MONOMERS THAT WERE AFFECTED BY LAST EVENT
     else:
         cur_n, _ = adj.get_shape()
@@ -347,8 +340,6 @@ def do_event(event, state, adj, sg_ratio=None, random_seed=None):
                     else:
                         rand_num = np.random.rand()
                     mon_type = int(rand_num < pct)
-                    # todo remove print
-                    # print("choice: mon_type: ", mon_type)
                 except TypeError:
                     if sg_ratio is None:
                         sg_note = " the default value 'None'."
@@ -426,9 +417,6 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
         # See how much time has passed before this event happened
         dt = (1 / r_tot) * np.log(1 / rand_num)
         t.extend(t[-1] + dt)
-        # # # TODO remove print
-        # print(hashes)
-        # print(j, dt)
 
         # Do the event and update the state
         do_event(event, cur_state, adj, sg_ratio, random_seed=random_seed)
