@@ -815,33 +815,31 @@ class TestVisualization(unittest.TestCase):
     #     self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))
     #     self.assertTrue(np.allclose(std_bo4_bonds, good_std_bo4))
 
-    # def testNoGrowth(self):
-    #     # Here, all the monomers are available at the beginning of the simulation
-    #     # Increases coverage of gen_psfgen
-    #     try:
-    #         # minimize random calls by providing set list of monomer types
-    #         initial_mono_type_list = [1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1,
-    #                                   1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0,
-    #                                   1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0,
-    #                                   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0,
-    #                                   0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1,
-    #                                   1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1,
-    #                                   1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1,
-    #                                   1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1]
-    #         num_monos = len(initial_mono_type_list)
-    #         initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(initial_mono_type_list)]
-    #         initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
-    #         initial_state = create_initial_state(initial_events, initial_monomers)
-    #         # since GROW is not added to event_dict, no additional monomers will be added
-    #         np.random.seed(10)
-    #         result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=2, random_seed=10)
-    #         # quick tests for run_kmc differences
-    #         self.assertTrue(len(result[TIME]) == 758)
-    #         self.assertAlmostEqual(result[TIME][-1], 0.012197147390421766)
-    #         self.assertTrue(len(result[MONO_LIST]) == num_monos)
-    #         # the actually function we want to test here
-    #         gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
-    #         self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
-    #     finally:
-    #         # silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
-    #         pass
+    def testNoGrowth(self):
+        # Here, all the monomers are available at the beginning of the simulation
+        # Increases coverage of gen_psfgen
+        try:
+            # minimize random calls by providing set list of monomer types
+            initial_mono_type_list = [1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1,
+                                      1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0,
+                                      1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0,
+                                      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0,
+                                      0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1,
+                                      1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1,
+                                      1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, ]
+            num_monos = len(initial_mono_type_list)
+            initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(initial_mono_type_list)]
+            initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
+            initial_state = create_initial_state(initial_events, initial_monomers)
+            # since GROW is not added to event_dict, no additional monomers will be added
+            result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=2, random_seed=10)
+            # quick tests for run_kmc differences
+            self.assertTrue(len(result[TIME]) == 674)
+            self.assertAlmostEqual(result[TIME][-1], 1.295926885239862)
+            self.assertTrue(len(result[MONO_LIST]) == num_monos)
+            # the function we want to test here is below
+            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
+            self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
+        finally:
+            silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
+            pass
