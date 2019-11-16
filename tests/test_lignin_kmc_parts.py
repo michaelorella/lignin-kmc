@@ -807,9 +807,7 @@ class TestVisualization(unittest.TestCase):
         # Here, all the monomers are available at the beginning of the simulation
         # Increases coverage of gen_psfgen
         try:
-            sg_ratio = 2.5
-            pct_s = sg_ratio / (1 + sg_ratio)
-            # minimize random calls
+            # minimize random calls by providing set list of monomer types
             initial_mono_type_list = [1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1,
                                       1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0,
                                       1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0,
@@ -824,13 +822,14 @@ class TestVisualization(unittest.TestCase):
             initial_state = create_initial_state(initial_events, initial_monomers)
             # since GROW is not added to event_dict, no additional monomers will be added
             np.random.seed(10)
-            result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=2, random_seed=10,
-                             sg_ratio=sg_ratio)
-            print(len(result[TIME]), result[TIME][-1])
+            result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=2, random_seed=10)
+            # quick tests for run_kmc differences
+            self.assertTrue(len(result[TIME]) == 758)
+            self.assertAlmostEqual(result[TIME][-1], 0.012197147390421766)
             self.assertTrue(len(result[MONO_LIST]) == num_monos)
-    #         # gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
-    #         # self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
-    #         self.assertTrue(False)
+            # the actually function we want to test here
+            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
+            self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
         finally:
             # silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
             pass

@@ -481,8 +481,6 @@ def gen_psfgen(orig_adj, monomers, fname="psfgen.tcl", segname="L", toppar_dir="
             if len(col):
                 col = col[0]
                 adj[(row, col)] *= -1
-        #         # print(row, col)
-        # print("what what")
         for bond_matrix_tuple in adj.keys():
             # The adjacency matrix keys are always a tuple (of 2, row & col); sometimes they are equal to each other
             #    (e.g. oxidation)
