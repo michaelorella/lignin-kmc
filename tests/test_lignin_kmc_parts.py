@@ -18,7 +18,7 @@ from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, create_initial_monome
 from ligninkmc.kmc_common import (Event, Monomer, C5O4, OX, Q, C5C5, B5, BB, BO4, AO4, B1,
                                   MON_MON, MON_OLI, OLI_OLI, OLI_MON, MONOMER, OLIGOMER, GROW, TIME, MONO_LIST,
                                   ADJ_MATRIX, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_A_KCAL_MOL,
-                                  MAX_NUM_DECIMAL)
+                                  MAX_NUM_DECIMAL, round_sig_figs)
 from ligninkmc.kmc_functions import run_kmc
 from ligninkmc.visualization import (generate_mol, gen_psfgen)
 
@@ -59,42 +59,42 @@ MONO_DRAW_3 = [0.48772, 0.15174, 0.7886]
 MONO_DRAW_20 = [0.48772, 0.15174, 0.7886, 0.48772, 0.15174, 0.7886, 0.48772, 0.15174, 0.7886, 0.48772, 0.15174, 0.7886,
                 0.48772, 0.15174, 0.7886, 0.48772, 0.15174, 0.7886, 0.48772, 0.15174]
 
-GOOD_RXN_RATES = {C5O4: {(0, 0): {MON_MON: 38335.59721483720, MON_OLI: 123.4195937155435, OLI_MON: 123.4195937155435,
-                                  OLI_OLI: 3698609451.841636},
-                         (1, 0): {MON_MON: 63606.84175294998, MON_OLI: 123.4195937155435, OLI_MON: 123.4195937155435,
-                                  OLI_OLI: 3698609451.841636},
-                         (2, 2): {MON_MON: 11762.46929017706, MON_OLI: 11762.469290177061,
-                                  OLI_MON: 11762.46929017706, OLI_OLI: 11762.469290177061}},
-                  C5C5: {(0, 0): {MON_MON: 4272.6301891208580, MON_OLI: 22.82331807203557, OLI_MON: 22.8233180720356,
-                                  OLI_OLI: 10182201166.021704},
-                         (2, 2): {MON_MON: 105537.166803781, MON_OLI: 105537.166803781,
-                                  OLI_MON: 105537.166803781, OLI_OLI: 105537.166803781}},
-                  B5: {(0, 0): {MON_MON: 577740233.38188150, MON_OLI: 348201801.4313151, OLI_MON: 348201801.4313151,
-                                OLI_OLI: 348201801.43131510},
-                       (0, 1): {MON_MON: 577740233.38188150, MON_OLI: 348201801.4313151, OLI_MON: 348201801.4313151,
-                                OLI_OLI: 348201801.43131510},
-                       (2, 2): {MON_MON: 251507997491.63364, MON_OLI: 348201801.4313151,
-                                OLI_MON: 348201801.43131510, OLI_OLI: 348201801.4313151}},
-                  BB: {(0, 0): {MON_MON: 958592907.60731790, MON_OLI: 958592907.6073179, OLI_MON: 958592907.6073179,
-                                OLI_OLI: 958592907.60731790},
-                       (1, 0): {MON_MON: 106838377.21810664, MON_OLI: 106838377.2181066, OLI_MON: 106838377.2181066,
-                                OLI_OLI: 106838377.21810664},
-                       (1, 1): {MON_MON: 958592907.60731790, MON_OLI: 958592907.6073179, OLI_MON: 958592907.6073179,
-                                OLI_OLI: 958592907.60731790},
-                       (0, 1): {MON_MON: 106838377.21810664, MON_OLI: 106838377.2181066, OLI_MON: 106838377.2181066,
-                                OLI_OLI: 106838377.21810664},
-                       (2, 2): {MON_MON: 32781102.221982773, MON_OLI: 32781102.22198277, OLI_MON: 32781102.22198277,
-                                OLI_OLI: 32781102.221982773}},
-                  BO4: {(0, 0): {MON_MON: 149736731.43118873, MON_OLI: 177267402.7946005, OLI_MON: 177267402.7946005,
-                                 OLI_OLI: 177267402.79460046},
-                        (1, 0): {MON_MON: 1327129.8749824178, MON_OLI: 177267402.7946005, OLI_MON: 177267402.7946005,
-                                 OLI_OLI: 177267402.79460046},
-                        (0, 1): {MON_MON: 1860006.6271960390, MON_OLI: 177267402.7946005, OLI_MON: 177267402.7946005,
-                                 OLI_OLI: 177267402.79460046},
-                        (1, 1): {MON_MON: 407201.80544143200, MON_OLI: 147913.0515942363, OLI_MON: 147913.0515942363,
-                                 OLI_OLI: 147913.05159423634},
-                        (2, 2): {MON_MON: 1590507825.8720958, MON_OLI: 692396712512.5765, OLI_MON: 692396712512.5765,
-                                 OLI_OLI: 692396712512.5765}},
+GOOD_RXN_RATES = {C5O4: {(0, 0): {MON_MON: 38335.5972148372, MON_OLI: 123.419593715543, OLI_MON: 123.419593715543,
+                                  OLI_OLI: 3698609451.84164},
+                         (1, 0): {MON_MON: 63606.8417529500, MON_OLI: 123.419593715543, OLI_MON: 123.419593715543,
+                                  OLI_OLI: 3698609451.84164},
+                         (2, 2): {MON_MON: 11762.4692901771, MON_OLI: 11762.4692901771, OLI_MON: 11762.4692901771,
+                                  OLI_OLI: 11762.4692901771}},
+                  C5C5: {(0, 0): {MON_MON: 4272.63018912086, MON_OLI: 22.8233180720356, OLI_MON: 22.8233180720356,
+                                  OLI_OLI: 10182201166.0217},
+                         (2, 2): {MON_MON: 105537.166803781, MON_OLI: 105537.166803781, OLI_MON: 105537.166803781,
+                                  OLI_OLI: 105537.166803781}},
+                  B5: {(0, 0): {MON_MON: 577740233.381881, MON_OLI: 348201801.431315, OLI_MON: 348201801.431315,
+                                OLI_OLI: 348201801.431315},
+                       (0, 1): {MON_MON: 577740233.381881, MON_OLI: 348201801.431315, OLI_MON: 348201801.431315,
+                                OLI_OLI: 348201801.431315},
+                       (2, 2): {MON_MON: 251507997491.634, MON_OLI: 348201801.431315, OLI_MON: 348201801.431315,
+                                OLI_OLI: 348201801.431315}},
+                  BB: {(0, 0): {MON_MON: 958592907.607318, MON_OLI: 958592907.607318, OLI_MON: 958592907.607318,
+                                OLI_OLI: 958592907.607318},
+                       (1, 0): {MON_MON: 106838377.218107, MON_OLI: 106838377.218107, OLI_MON: 106838377.218107,
+                                OLI_OLI: 106838377.218107},
+                       (0, 1): {MON_MON: 106838377.218107, MON_OLI: 106838377.218107, OLI_MON: 106838377.218107,
+                                OLI_OLI: 106838377.218107},
+                       (1, 1): {MON_MON: 958592907.607318, MON_OLI: 958592907.607318, OLI_MON: 958592907.607318,
+                                OLI_OLI: 958592907.607318},
+                       (2, 2): {MON_MON: 32781102.2219828, MON_OLI: 32781102.2219828, OLI_MON: 32781102.2219828,
+                                OLI_OLI: 32781102.2219828}},
+                  BO4: {(0, 0): {MON_MON: 149736731.431189, MON_OLI: 177267402.79460, OLI_MON: 177267402.794600,
+                                 OLI_OLI: 177267402.794600},
+                        (1, 0): {MON_MON: 1327129.87498242, MON_OLI: 177267402.79460, OLI_MON: 177267402.794600,
+                                 OLI_OLI: 177267402.794600},
+                        (0, 1): {MON_MON: 1860006.62719604, MON_OLI: 177267402.79460, OLI_MON: 177267402.794600,
+                                 OLI_OLI: 177267402.794600},
+                        (1, 1): {MON_MON: 407201.805441432, MON_OLI: 147913.051594236, OLI_MON: 147913.051594236,
+                                 OLI_OLI: 147913.051594236},
+                        (2, 2): {MON_MON: 1590507825.87210, MON_OLI: 692396712512.577, OLI_MON: 692396712512.577,
+                                 OLI_OLI: 692396712512.577}},
                   AO4: {(0, 0): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
                                  OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265},
                         (1, 0): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
@@ -105,17 +105,18 @@ GOOD_RXN_RATES = {C5O4: {(0, 0): {MON_MON: 38335.59721483720, MON_OLI: 123.41959
                                  OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265},
                         (2, 2): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
                                  OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265}},
-                  B1: {(0, 0): {MON_OLI: 570703.7954648494, OLI_MON: 570703.7954648494, OLI_OLI: 570703.7954648494},
-                       (1, 0): {MON_OLI: 16485.40300715421, OLI_MON: 16485.40300715421, OLI_OLI: 16485.40300715421},
-                       (0, 1): {MON_OLI: 89146.62342075957, OLI_MON: 89146.62342075957, OLI_OLI: 89146.62342075957},
-                       (1, 1): {MON_OLI: 11762.46929017706, OLI_MON: 11762.46929017706, OLI_OLI: 11762.46929017706},
-                       (2, 2): {MON_OLI: 570703.7954648494, OLI_MON: 570703.7954648494, OLI_OLI: 570703.7954648494}},
-                  OX: {0: {MONOMER: 1360057059567.5383, OLIGOMER: 149736731.43118873},
-                       1: {MONOMER: 2256621533195.0864, OLIGOMER: 151582896154.44305},
-                       2: {MONOMER: 1360057059567.5383, OLIGOMER: 1360057059567.5383}},
-                  Q: {0: {MONOMER: 45383.99955642, OLIGOMER: 45383.99955642},
-                      1: {MONOMER: 16485.40300715, OLIGOMER: 16485.40300715},
-                      2: {MONOMER: 45383.99955642, OLIGOMER: 45383.99955642}}}
+                  B1: {(0, 0): {MON_OLI: 570703.795464849, OLI_MON: 570703.795464849, OLI_OLI: 570703.795464849},
+                       (1, 0): {MON_OLI: 16485.4030071542, OLI_MON: 16485.4030071542, OLI_OLI: 16485.4030071542},
+                       (0, 1): {MON_OLI: 89146.6234207596, OLI_MON: 89146.6234207596, OLI_OLI: 89146.6234207596},
+                       (1, 1): {MON_OLI: 11762.4692901771, OLI_MON: 11762.4692901771, OLI_OLI: 11762.4692901771},
+                       (2, 2): {MON_OLI: 570703.795464849, OLI_MON: 570703.795464849, OLI_OLI: 570703.795464849}},
+                  OX: {0: {MONOMER: 1360057059567.54, OLIGOMER: 149736731.431189},
+                       1: {MONOMER: 2256621533195.09, OLIGOMER: 151582896154.443},
+                       2: {MONOMER: 1360057059567.54, OLIGOMER: 1360057059567.54}},
+                  Q: {0: {MONOMER: 45383.9995564285, OLIGOMER: 45383.9995564285},
+                      1: {MONOMER: 16485.4030071542, OLIGOMER: 16485.4030071542},
+                      2: {MONOMER: 45383.9995564285, OLIGOMER: 45383.9995564285}}
+                  }
 
 ADJ2 = dok_matrix([[0, 4, 0, 0, 0],
                    [8, 0, 0, 0, 0],
@@ -187,6 +188,12 @@ class TestCalcRates(unittest.TestCase):
     """
     def test_calc_rates_from_kcal_mol(self):
         rxn_rates = calc_rates(DEF_TEMP, ea_kcal_mol_dict=DEF_E_A_KCAL_MOL)
+        # todo: delete
+        # for rxn_type in rxn_rates:
+        #     for substrate in GOOD_RXN_RATES[rxn_type]:
+        #         for substrate_type in GOOD_RXN_RATES[rxn_type][substrate]:
+        #             new_rxn_rate = round_sig_figs(rxn_rates[rxn_type][substrate][substrate_type], sig_figs=15)
+        #             rxn_rates[rxn_type][substrate][substrate_type] = new_rxn_rate
         # check size, then values via nested loops instead of dealing with almost equal dicts
         self.assertTrue(len(rxn_rates) == len(GOOD_RXN_RATES))
         rxn_type, substrate, substrate_type = None, None, None  # to make IDE happy
@@ -303,21 +310,21 @@ class TestRunKMC(unittest.TestCase):
 
     def testSampleRunKMC(self):
         result = create_sample_kmc_result()
-        self.assertTrue(len(result[TIME]) == 45)
-        self.assertAlmostEqual(result[TIME][-1], 0.00042127409774805836)
+        self.assertTrue(len(result[TIME]) == 42)
+        self.assertAlmostEqual(result[TIME][-1], 0.0025685372895478957)
         self.assertTrue(len(result[MONO_LIST]) == 10)
-        self.assertTrue(str(result[MONO_LIST][-1]) == '9: coniferyl alcohol is connected to '
+        self.assertTrue(str(result[MONO_LIST][-1]) == '9: sinapyl alcohol is connected to '
                                                       '{0, 1, 2, 3, 4, 5, 6, 7, 8, 9} and active at position 4')
-        good_dok_keys = [(2, 0), (0, 2), (2, 1), (1, 2), (0, 3), (3, 0), (1, 4), (4, 1), (4, 5), (5, 4), (5, 6),
-                         (6, 5), (6, 7), (7, 6), (7, 8), (8, 7), (8, 9), (9, 8)]
-        good_dok_vals = [8.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 8.0]
+        good_dok_keys = [(0, 1), (1, 0), (1, 2), (2, 1), (2, 3), (3, 2), (3, 4), (4, 3), (5, 4), (4, 5), (5, 6),
+                         (6, 5), (7, 8), (8, 7), (0, 8), (8, 0), (8, 9), (9, 8)]
+        good_dok_vals = [8.0, 8.0, 4.0, 8.0, 4.0, 8.0, 5.0, 8.0, 8.0, 5.0, 4.0, 8.0, 8.0, 8.0, 4.0, 5.0, 4.0, 8.0]
         self.assertTrue(list(result[ADJ_MATRIX].keys()) == good_dok_keys)
         self.assertTrue(list(result[ADJ_MATRIX].values()) == good_dok_vals)
 
     def testSampleRunKMCCLignin(self):
         result = create_sample_kmc_result_c_lignin()
         self.assertTrue(len(result[TIME]) == 45)
-        self.assertAlmostEqual(result[TIME][-1], 0.0005193025082191715)
+        self.assertAlmostEqual(result[TIME][-1], 0.002274158825206313)
         self.assertTrue(len(result[MONO_LIST]) == 12)
         self.assertTrue(str(result[MONO_LIST][-1]) == '11: caffeoyl alcohol is connected to '
                                                       '{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11} and active at position 4')
@@ -453,21 +460,21 @@ class TestAnalyzeKMC(unittest.TestCase):
         result = create_sample_kmc_result()
         summary = analyze_adj_matrix(result[ADJ_MATRIX])
         self.assertTrue(summary[CHAIN_LEN] == {10: 1})
-        self.assertTrue(summary[BONDS] == {C5C5: 0, C5O4: 0, AO4: 0, B1: 0, BB: 1, B5: 0, BO4: 8})
-        self.assertTrue(summary[RCF_YIELDS] == {1: 8, 2: 1})
-        self.assertTrue(summary[RCF_BONDS] == {C5C5: 0, C5O4: 0, AO4: 0, BO4: 0, B1: 0, BB: 1, B5: 0})
+        self.assertTrue(summary[BONDS] == {C5C5: 0, C5O4: 1, AO4: 0, B1: 0, BB: 2, B5: 2, BO4: 4})
+        self.assertTrue(summary[RCF_YIELDS] == {1: 3, 2: 2, 3: 1})
+        self.assertTrue(summary[RCF_BONDS] == {C5C5: 0, C5O4: 0, AO4: 0, B1: 0, BB: 2, B5: 2, BO4: 0})
 
     def testKMCResultSummaryDescription(self):
         result = create_sample_kmc_result()
         summary = analyze_adj_matrix(result[ADJ_MATRIX])
         # adj_analysis_to_stdout(summary)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n       1 oligomer(s) of chain length 10"
-        good_bond_summary = "composed of the following bond types and number:\n     55:    0    5O4:    0" \
-                            "    AO4:    0     B1:    0     B5:    0     BB:    1    BO4:    8"
-        good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n       8 monomer(s) (chain length " \
-                                 "1)\n       1 dimer(s) (chain length 2)"
+        good_bond_summary = "composed of the following bond types and number:\n     55:    0    5O4:    1" \
+                            "    AO4:    0     B1:    0     B5:    2     BB:    2    BO4:    4"
+        good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n       3 monomer(s) (chain length " \
+                                 "1)\n       2 dimer(s) (chain length 2)\n       1 trimer(s) (chain length 3)"
         good_rcf_bond_summary = "with the following remaining bond types and number:\n     55:    0    5O4:    0    " \
-                                "AO4:    0     B1:    0     B5:    0     BB:    1    BO4:    0"
+                                "AO4:    0     B1:    0     B5:    2     BB:    2    BO4:    0"
         with capture_stdout(adj_analysis_to_stdout, summary) as output:
             self.assertTrue(good_chain_summary in output)
             self.assertTrue(good_bond_summary in output)
@@ -496,14 +503,14 @@ class TestAnalyzeKMC(unittest.TestCase):
         result = create_sample_kmc_result(max_time=SHORT_TIME, num_initial_monos=20, max_monos=40)
         summary = analyze_adj_matrix(result[ADJ_MATRIX])
         # adj_analysis_to_stdout(summary)
-        good_chain_summary = "Lignin KMC created 20 monomers, which formed:\n       4 monomer(s) (chain length 1)\n" \
-                             "       2 dimer(s) (chain length 2)\n       4 trimer(s) (chain length 3)"
+        good_chain_summary = "Lignin KMC created 20 monomers, which formed:\n       5 monomer(s) (chain length 1)\n" \
+                             "       3 dimer(s) (chain length 2)\n       3 trimer(s) (chain length 3)"
         good_bond_summary = "composed of the following bond types and number:\n     55:    0    5O4:    0" \
-                            "    AO4:    0     B1:    0     B5:    0     BB:    5    BO4:    5"
-        good_rcf_olig_summary = "Breaking C-O bonds to simulate RCF results in:\n      10 monomer(s) (chain length 1)" \
-                                "\n       5 dimer(s) (chain length 2)"
+                            "    AO4:    0     B1:    0     B5:    2     BB:    4    BO4:    3"
+        good_rcf_olig_summary = "Breaking C-O bonds to simulate RCF results in:\n       8 monomer(s) (chain length 1)" \
+                                "\n       6 dimer(s) (chain length 2)"
         good_rcf_bond_summary = "with the following remaining bond types and number:\n     55:    0    5O4:    0    " \
-                                "AO4:    0     B1:    0     B5:    0     BB:    5    BO4:    0"
+                                "AO4:    0     B1:    0     B5:    2     BB:    4    BO4:    0"
         with capture_stdout(adj_analysis_to_stdout, summary) as output:
             self.assertTrue(good_chain_summary in output)
             self.assertTrue(good_bond_summary in output)
@@ -595,41 +602,48 @@ class TestVisualization(unittest.TestCase):
     #         # silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
     #         pass
 
-    def testB1BondGenMol(self):
-        # Here, all the monomers are available at the beginning of the simulation
-        try:
-            np.random.seed(1)
-            mono_type_list = [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                              1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                              1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                              1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
-                              1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                              1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-            initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(mono_type_list)]
-            initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
-            initial_state = create_initial_state(initial_events, initial_monomers)
-            result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=0.02, random_seed=1)
-            silent_remove(PNG_B1)
-            nodes = result[MONO_LIST]
-            adj = result[ADJ_MATRIX]
-            block = generate_mol(adj, nodes)
-            # Here, trying to catch bug in B1 bond representation. Test will be updated when bug is fixed.
-            self.assertFalse("I thought I'd fail!")
-            # After bug is fixed, add checks for correct generate_mol output
-            # Below not needed for testing functionality; for showing image to visually check
-            mol = MolFromMolBlock(block)
-            Compute2DCoords(mol)
-            MolToFile(mol, PNG_B1, size=(2000, 1200))
-            self.assertTrue(os.path.isfile(PNG_B1))
-            # If desired, also check generated psfgen (may not help coverage... to be seen...)
-            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
-            # If kept, create and check new "good" file
-            self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
-        except InvalidDataError as e:
-            print(e.args[0])
-            self.assertTrue("This program cannot currently display" in e.args[0])
-            silent_remove(PNG_B1, disable=DISABLE_REMOVE)
-            pass
+    # def testB1BondGenMol(self):
+    #     # Here, all the monomers are available at the beginning of the simulation; set type list for reproducibility
+    #     full_mono_type_list = [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    #                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1,
+    #                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    #                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    #                            1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    #                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    #                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
+    #                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    #                            1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    #                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    #                            1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ]
+    #     try:
+    #         for seed in range(20):
+    #             for num_monos in range(10, len(mono_type_list)):
+    #                 mono_type_list = full_mono_type_list[0: num_monos]
+    #                 initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(mono_type_list)]
+    #                 initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
+    #                 initial_state = create_initial_state(initial_events, initial_monomers)
+    #                 result = run_kmc(GOOD_RXN_RATES, initial_state, initial_events, t_max=0.02, random_seed=seed)
+    #                 silent_remove(PNG_B1)
+    #                 nodes = result[MONO_LIST]
+    #                 adj = result[ADJ_MATRIX]
+    #                 block = generate_mol(adj, nodes)
+    #         # Here, trying to catch bug in B1 bond representation. Test will be updated when bug is fixed.
+    #         self.assertFalse("I thought I'd fail!")
+    #         # After bug is fixed, add checks for correct generate_mol output
+    #         # Below not needed for testing functionality; for showing image to visually check
+    #         mol = MolFromMolBlock(block)
+    #         Compute2DCoords(mol)
+    #         MolToFile(mol, PNG_B1, size=(2000, 1200))
+    #         self.assertTrue(os.path.isfile(PNG_B1))
+    #         # If desired, also check generated psfgen (may not help coverage... to be seen...)
+    #         gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
+    #         # If kept, create and check new "good" file
+    #         self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
+    #     except InvalidDataError as e:
+    #         print(e.args[0])
+    #         self.assertTrue("This program cannot currently display" in e.args[0])
+    #         silent_remove(PNG_B1, disable=DISABLE_REMOVE)
+    #         pass
 
     # def testB1BondGenPSF(self):
     #     # Only adds one line of coverage
@@ -657,18 +671,17 @@ class TestVisualization(unittest.TestCase):
     def testDynamics(self):
         # Tests procedures in the Dynamics.ipynb
         # minimize number of random calls during testing (here, set monomer type distribution)
-        monomer_type_list = [0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0,
-                             0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0]
+        monomer_type_list = [0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, ]
         num_monos = len(monomer_type_list)
         initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(monomer_type_list)]
         initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
         initial_state = create_initial_state(initial_events, initial_monomers)
         # since GROW is not added to event_dict, no additional monomers will be added (sg_ratio is thus not needed)
-        result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=20, random_seed=10, dynamics=True)
+        result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), random_seed=10, dynamics=True)
         # With dynamics, the MONO_LIST will be a list of monomer lists:
         #    the inner list is the usual MONO_LIST, but here is it saved for every time step
         t_steps = result[TIME]
-        expected_num_t_steps = 150
+        expected_num_t_steps = 100
         self.assertEqual(len(t_steps), expected_num_t_steps)
         self.assertTrue(len(result[MONO_LIST]) == expected_num_t_steps)
         self.assertTrue(len(result[MONO_LIST][-1]) == num_monos)
@@ -678,24 +691,23 @@ class TestVisualization(unittest.TestCase):
         bond_type_dict, olig_len_dict, sum_list = get_bond_type_v_time_dict(adj_list, sum_len_larger_than=10)
 
         # test results by checking sums
-        good_bond_type_sum_dict = {BO4: 1891, B1: 0, BB: 620, B5: 0, C5C5: 0, AO4: 0, C5O4: 188}
+        good_bond_type_sum_dict = {BO4: 486, B1: 0, BB: 303, B5: 187, C5C5: 0, AO4: 0, C5O4: 219}
         bond_type_sum_dict = {}
         for bond_type, val_list in bond_type_dict.items():
             self.assertEqual(len(val_list), expected_num_t_steps)
             bond_type_sum_dict[bond_type] = sum(val_list)
         self.assertEqual(bond_type_sum_dict, good_bond_type_sum_dict)
 
-        good_olig_len_sum_dict = {1: 2594, 2: 548, 3: 249, 4: 508, 5: 490, 6: 372, 7: 147, 8: 64, 9: 0, 10: 0,
-                                  11: 0, 12: 0, 13: 0, 14: 56, 15: 0, 16: 0, 17: 0, 18: 72, 19: 0, 20: 0, 21: 0,
-                                  22: 0, 23: 0, 24: 0, 25: 100, 26: 0, 27: 0, 28: 0, 29: 0, 30: 120, 31: 0, 32: 0,
-                                  33: 0, 34: 0, 35: 0, 36: 144, 37: 0, 38: 456, 39: 0, 40: 80}
+        good_olig_len_sum_dict = {1: 1404, 2: 148, 3: 30, 4: 124, 5: 170, 6: 0, 7: 14, 8: 80, 9: 72, 10: 0, 11: 0,
+                                  12: 0, 13: 0, 14: 0, 15: 0, 16: 0, 17: 34, 18: 54, 19: 0, 20: 40, 21: 63, 22: 66,
+                                  23: 69, 24: 96, 25: 0, 26: 0, 27: 0, 28: 336}
         olig_len_sum_dict = {}
         for olig_len, val_list in olig_len_dict.items():
             self.assertEqual(len(val_list), expected_num_t_steps)
             olig_len_sum_dict[olig_len] = sum(val_list)
         self.assertEqual(olig_len_sum_dict, good_olig_len_sum_dict)
 
-        good_sum_sum_list = 1028
+        good_sum_sum_list = 758
         self.assertEqual(sum(sum_list), good_sum_sum_list)
 
     # The next two tests are commented out because they do not increase coverage; they worked at the time they
@@ -803,33 +815,33 @@ class TestVisualization(unittest.TestCase):
     #     self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))
     #     self.assertTrue(np.allclose(std_bo4_bonds, good_std_bo4))
 
-    def testNoGrowth(self):
-        # Here, all the monomers are available at the beginning of the simulation
-        # Increases coverage of gen_psfgen
-        try:
-            # minimize random calls by providing set list of monomer types
-            initial_mono_type_list = [1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1,
-                                      1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0,
-                                      1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0,
-                                      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0,
-                                      0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1,
-                                      1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1,
-                                      1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1,
-                                      1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1]
-            num_monos = len(initial_mono_type_list)
-            initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(initial_mono_type_list)]
-            initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
-            initial_state = create_initial_state(initial_events, initial_monomers)
-            # since GROW is not added to event_dict, no additional monomers will be added
-            np.random.seed(10)
-            result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=2, random_seed=10)
-            # quick tests for run_kmc differences
-            self.assertTrue(len(result[TIME]) == 758)
-            self.assertAlmostEqual(result[TIME][-1], 0.012197147390421766)
-            self.assertTrue(len(result[MONO_LIST]) == num_monos)
-            # the actually function we want to test here
-            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
-            self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
-        finally:
-            # silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
-            pass
+    # def testNoGrowth(self):
+    #     # Here, all the monomers are available at the beginning of the simulation
+    #     # Increases coverage of gen_psfgen
+    #     try:
+    #         # minimize random calls by providing set list of monomer types
+    #         initial_mono_type_list = [1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1,
+    #                                   1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0,
+    #                                   1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0,
+    #                                   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0,
+    #                                   0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1,
+    #                                   1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1,
+    #                                   1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1,
+    #                                   1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1]
+    #         num_monos = len(initial_mono_type_list)
+    #         initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(initial_mono_type_list)]
+    #         initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
+    #         initial_state = create_initial_state(initial_events, initial_monomers)
+    #         # since GROW is not added to event_dict, no additional monomers will be added
+    #         np.random.seed(10)
+    #         result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=2, random_seed=10)
+    #         # quick tests for run_kmc differences
+    #         self.assertTrue(len(result[TIME]) == 758)
+    #         self.assertAlmostEqual(result[TIME][-1], 0.012197147390421766)
+    #         self.assertTrue(len(result[MONO_LIST]) == num_monos)
+    #         # the actually function we want to test here
+    #         gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
+    #         self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
+    #     finally:
+    #         # silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
+    #         pass

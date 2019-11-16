@@ -17,7 +17,7 @@ from ligninkmc.kmc_functions import run_kmc
 from ligninkmc.kmc_common import (Event, Monomer, E_A_KCAL_MOL, E_A_J_PART, TEMP, INI_MONOS, MAX_MONOS, SIM_TIME,
                                   AFFECTED, GROW, DEF_E_A_KCAL_MOL, OX, MONOMER, OLIGOMER, LIGNIN_SUBUNITS,
                                   SG_RATIO, ADJ_MATRIX, RANDOM_SEED, AO4, B1, B1_ALT, B5, BB, BO4, C5C5, C5O4,
-                                  CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL)
+                                  CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL, round_sig_figs)
 
 # Defaults #
 
@@ -599,8 +599,9 @@ def calc_rates(temp, ea_j_part_dict=None, ea_kcal_mol_dict=None):
         for substrate in ea_j_part_dict[rxn_type]:
             rxn_rates[rxn_type][substrate] = {}
             for substrate_type in ea_j_part_dict[rxn_type][substrate]:
+                # rounding to reduce difference due to solely to platform running package
                 rate = KB * temp / H * np.exp(-ea_j_part_dict[rxn_type][substrate][substrate_type] / KB / temp)
-                rxn_rates[rxn_type][substrate][substrate_type] = rate
+                rxn_rates[rxn_type][substrate][substrate_type] = round_sig_figs(rate, sig_figs=15)
     return rxn_rates
 
 

@@ -14,7 +14,7 @@ from collections import OrderedDict
 from scipy.sparse import dok_matrix
 from common_wrangler.common import InvalidDataError
 from ligninkmc.kmc_common import (Event, Monomer, AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q, GROW, TIME, OLIGOMER,
-                                  MONOMER, AFFECTED, ADJ_MATRIX, MONO_LIST, MAX_NUM_DECIMAL)
+                                  MONOMER, AFFECTED, ADJ_MATRIX, MONO_LIST, MAX_NUM_DECIMAL, round_sig_figs)
 
 
 def quick_frag_size(monomer):
@@ -335,7 +335,8 @@ def do_event(event, state, adj, sg_ratio=None, random_seed=None):
                 try:
                     pct = sg_ratio / (1 + sg_ratio)
                     if random_seed:
-                        np.random.seed(random_seed)
+                        # to prevent the same choice every iteration, add a changing integer
+                        np.random.seed(random_seed + current_size)
                         rand_num = np.around(np.random.rand(), MAX_NUM_DECIMAL)
                     else:
                         rand_num = np.random.rand()
@@ -396,6 +397,8 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
         mon_list = []
 
     # Run the Gillespie algorithm
+    i = 0
+    time_list = []
     while t[-1] < t_max and len(event_dict) > 0:
         # Find the total rate for all of the possible event_dict and choose which event to do
         # Less direct conversion of r_vec to lists (keys in hashes, vals in all_rates) for consistency
@@ -406,17 +409,32 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
             all_rates.append(r_vec[r_vec_key])
         r_tot = np.sum(all_rates)
 
+        # # todo
+        # while i < 260:
+        #     # print(hashes)
+        #     print(all_rates)
+        #     i += 1
+
         if random_seed:
-            np.random.seed(random_seed)
+            # don't want same dt for every iteration, so add to seed with each iteration
+            np.random.seed(random_seed + len(t))
             # don't let machine precision change the dt on different platforms
-            rand_num = np.around(np.random.rand(1), MAX_NUM_DECIMAL)
+            rand_num = np.around(np.random.rand(), MAX_NUM_DECIMAL)
         else:
-            rand_num = np.random.rand(1)
+            rand_num = np.random.rand()
         j = np.random.choice(hashes, p=all_rates / r_tot)
         event = event_dict[j]
-        # See how much time has passed before this event happened
-        dt = (1 / r_tot) * np.log(1 / rand_num)
-        t.extend(t[-1] + dt)
+        # See how much time has passed before this event happened; rounding to reduce platform dependency
+        dt = round_sig_figs((1 / r_tot) * np.log(1 / rand_num))
+        t.append(t[-1] + dt)
+        # todo
+        # # todo
+        # if i < 260:
+        #     # print(hashes)
+        #     print(rand_num)
+        # # time_list.append(dt[0])
+        # # print(j)
+        # i += 1
 
         # Do the event and update the state
         do_event(event, cur_state, adj, sg_ratio, random_seed=random_seed)
@@ -428,6 +446,9 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
         # Check the new state for what events are possible
         update_events(cur_state, adj, event, event_dict, r_vec, rate_dict, max_mon=n_max)
 
+    # todo
+    # for dt in time_list:
+    #     print(dt)
     if dynamics:
         return {TIME: t, MONO_LIST: mon_list, ADJ_MATRIX: adj_list}
 

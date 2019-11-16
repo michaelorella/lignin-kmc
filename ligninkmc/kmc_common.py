@@ -280,3 +280,10 @@ class Monomer:
 
     def __hash__(self):
         return self.identity
+
+
+def round_sig_figs(num, sig_figs=6):
+    # uses built-in function, since generally faster
+    num_str = float(f'{num:.{sig_figs}g}')
+    return num_str
+
