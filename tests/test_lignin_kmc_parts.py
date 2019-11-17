@@ -545,11 +545,8 @@ class TestVisualization(unittest.TestCase):
             pass
 
     def testMakePSFGENCLignin(self):
-        # Only adds 3 lines to coverage... oh well!
+        # Only adds 3 lines to coverage... oh well! At least it's quick.
         try:
-            # for seed in range(1, 20):
-            #     for monos in range(7, 60):
-            #         print(f"seed: {seed}, monos: {monos}")
             seed = 1
             monos = 7
             silent_remove(TCL_FILE_LOC)
@@ -579,31 +576,6 @@ class TestVisualization(unittest.TestCase):
             # silent_remove(C_LIGNIN_PNG, disable=DISABLE_REMOVE)
             silent_remove(C_LIGNIN_MOL_OUT, disable=DISABLE_REMOVE)
             pass
-
-    # def testFishingForB1Bond(self):
-    #     try:
-    #         for sg_ratio in [0.1, 1., 5., 10.]:
-    #             ini_num_monos = 200
-    #             max_num_monos = 400
-    #         pct_s = sg_ratio / (1 + sg_ratio)
-    #         # num_monos = 200
-    #         np.random.seed(1)
-    #         monomer_draw = np.around(np.random.rand(ini_num_monos), MAX_NUM_DECIMAL)
-    #         initial_monomers = create_initial_monomers(pct_s, monomer_draw)
-    #         initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
-    #         initial_state = create_initial_state(initial_events, initial_monomers)
-    #         initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE, bond=sg_ratio))
-    #         result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=0.02, random_seed=1,
-    #                          sg_ratio=sg_ratio, n_max=max_num_monos)
-    #         adj_result = analyze_adj_matrix(result[ADJ_MATRIX])
-    #         if adj_result[BONDS][B1] > 0:
-    #             print(f"Woot! sg{sg_ratio}")
-    #         # self.assertTrue(len(result[MONO_LIST]) == num_monos)
-    #         # gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
-    #         # self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
-    #     finally:
-    #         # silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
-    #         pass
 
     # def testB1BondGenMol(self):
     #     # Here, all the monomers are available at the beginning of the simulation; set type list for reproducibility
@@ -713,56 +685,53 @@ class TestVisualization(unittest.TestCase):
         good_sum_sum_list = 758
         self.assertEqual(sum(sum_list), good_sum_sum_list)
 
-    # The next two tests are commented out because they do not increase coverage; they worked at the time they
-    #    were commented out
-    # def testIniRates(self):
-    #     # Note: this test did not increase coverage. Added to help debug notebook; does not need to be
-    #     #    part of test suite
-    #     run_multi = True
-    #     if run_multi:
-    #         fun = par.delayed(run_kmc)
-    #         num_jobs = 4
-    #     else:
-    #         fun = None
-    #         num_jobs = None
-    #     # Set the percentage of S
-    #     sg_ratio = 1.1
-    #     pct_s = sg_ratio / (1 + sg_ratio)
-    #
-    #     # minimize random calls
-    #     monomer_type_list = [1, 0]
-    #     num_monos = len(monomer_type_list)
-    #     initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(monomer_type_list)]
-    #     max_monos = 32
-    #     num_repeats = 4
-    #     initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
-    #     # FYI: np.logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0)[source]
-    #     num_rates = 3
-    #     add_rates = np.logspace(4, 12, num_rates)
-    #     add_rates_result_list = []
-    #
-    #     # will add to random seed in the iterations to insure using a different seed for each repeat
-    #     random_seed = 10
-    #
-    #     for add_rate in add_rates:
-    #         initial_state = create_initial_state(initial_events, initial_monomers)
-    #         initial_events.append(Event(GROW, [], rate=add_rate, bond=sg_ratio))
-    #         if run_multi:
-    #             results = par.Parallel(n_jobs=num_jobs)([fun(GOOD_RXN_RATES, initial_state, initial_events,
-    #                                                          n_max=max_monos, t_max=1, sg_ratio=pct_s,
-    #                                                          random_seed=(random_seed + i))
-    #                                                      for i in range(num_repeats)])
-    #         else:
-    #             results = [run_kmc(GOOD_RXN_RATES, initial_state, initial_events, n_max=max_monos, t_max=1,
-    #                                sg_ratio=pct_s, random_seed=(random_seed + i)) for i in range(num_repeats)]
-    #         add_rates_result_list.append(results)
-    #
-    #     av_bo4_bonds, std_bo4_bonds = get_avg_bo4_bonds(num_rates, add_rates_result_list, num_repeats)
-    #
-    #     good_av_bo4 = [0.33030913978494625, 0.08088235294117646, 0.45909090909090905]
-    #     good_std_bo4 = [0.2538835383496112, 0.038207003108137, 0.3332885644867385]
-    #     self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))
-    #     self.assertTrue(np.allclose(std_bo4_bonds, good_std_bo4))
+    def testIniRates(self):
+        # Note: this test did not increase coverage. Added to help debug notebook.
+        run_multi = True
+        if run_multi:
+            fun = par.delayed(run_kmc)
+            num_jobs = 4
+        else:
+            fun = None
+            num_jobs = None
+        # Set the percentage of S
+        sg_ratio = 1.1
+        pct_s = sg_ratio / (1 + sg_ratio)
+
+        # minimize random calls
+        monomer_type_list = [1, 0]
+        num_monos = len(monomer_type_list)
+        initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(monomer_type_list)]
+        max_monos = 32
+        num_repeats = 4
+        initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
+        # FYI: np.logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0)[source]
+        num_rates = 3
+        add_rates = np.logspace(4, 12, num_rates)
+        add_rates_result_list = []
+
+        # will add to random seed in the iterations to insure using a different seed for each repeat
+        random_seed = 2
+
+        for add_rate in add_rates:
+            initial_state = create_initial_state(initial_events, initial_monomers)
+            initial_events.append(Event(GROW, [], rate=add_rate, bond=sg_ratio))
+            if run_multi:
+                results = par.Parallel(n_jobs=num_jobs)([fun(GOOD_RXN_RATES, initial_state, initial_events,
+                                                             n_max=max_monos, t_max=1, sg_ratio=pct_s,
+                                                             random_seed=(random_seed + i))
+                                                         for i in range(num_repeats)])
+            else:
+                results = [run_kmc(GOOD_RXN_RATES, initial_state, initial_events, n_max=max_monos, t_max=1,
+                                   sg_ratio=pct_s, random_seed=(random_seed + i)) for i in range(num_repeats)]
+            add_rates_result_list.append(results)
+
+        av_bo4_bonds, std_bo4_bonds = get_avg_bo4_bonds(num_rates, add_rates_result_list, num_repeats)
+
+        good_av_bo4 = [0.5564516129032258, 0.2375, 0.22593582887700536]
+        good_std_bo4 = [0.02674697411576938, 0.030935921676911452, 0.035703503563198374]
+        self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))
+        self.assertTrue(np.allclose(std_bo4_bonds, good_std_bo4))
 
     # def testMultiProc(self):
     #     # Note: this test did not increase coverage. Added to help debug notebook; does not need to be
