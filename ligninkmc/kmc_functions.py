@@ -397,8 +397,6 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
         mon_list = []
 
     # Run the Gillespie algorithm
-    i = 0
-    time_list = []
     while t[-1] < t_max and len(event_dict) > 0:
         # Find the total rate for all of the possible event_dict and choose which event to do
         # Less direct conversion of r_vec to lists (keys in hashes, vals in all_rates) for consistency
@@ -408,12 +406,6 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
         for r_vec_key in hashes:
             all_rates.append(r_vec[r_vec_key])
         r_tot = np.sum(all_rates)
-
-        # # todo
-        # while i < 260:
-        #     # print(hashes)
-        #     print(all_rates)
-        #     i += 1
 
         if random_seed:
             # don't want same dt for every iteration, so add to seed with each iteration

@@ -156,13 +156,13 @@ def create_sample_kmc_result(max_time=1., num_initial_monos=3, max_monos=10, sg_
     return result
 
 
-def create_sample_kmc_result_c_lignin(num_monos=2, max_monos=12):
+def create_sample_kmc_result_c_lignin(num_monos=2, max_monos=12, seed=10):
     initial_monomers = [Monomer(2, i) for i in range(num_monos)]
     # noinspection PyTypeChecker
     initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
     initial_state = create_initial_state(initial_events, initial_monomers)
     initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE))
-    result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), n_max=max_monos, t_max=2, random_seed=10)
+    result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), n_max=max_monos, t_max=2, random_seed=seed)
     return result
 
 
@@ -544,21 +544,24 @@ class TestVisualization(unittest.TestCase):
             silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
             pass
 
-    # def testMakePSFGENCLignin(self):
-    #     # Only adds three lines to coverage... oh well!
-    #     try:
-    #         silent_remove(TCL_FILE_LOC)
-    #         result = create_sample_kmc_result_c_lignin(num_monos=120, max_monos=240)
-    #         good_last_time = 0.48400289541505354
-    #         self.assertAlmostEqual(result[TIME][-1], good_last_time)
-    #         temp = result[ADJ_MATRIX]
-    #         temp = result[MONO_LIST]
-    #         gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", toppar_dir=None,
-    #                    out_dir=SUB_DATA_DIR)
-    #     #     self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_C_LIGNIN_OUT))
-    #     finally:
-    #         # silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
-    #         pass
+    def testMakePSFGENCLignin(self):
+        # Only adds 3 lines to coverage... oh well!
+        try:
+            # for seed in range(1, 20):
+            #     for monos in range(7, 60):
+            #         print(f"seed: {seed}, monos: {monos}")
+            seed = 1
+            monos = 7
+            silent_remove(TCL_FILE_LOC)
+            result = create_sample_kmc_result_c_lignin(num_monos=monos, max_monos=monos*2, seed=seed)
+            good_last_time = 0.0034410593070561706
+            self.assertAlmostEqual(result[TIME][-1], good_last_time)
+            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", toppar_dir=None,
+                       out_dir=SUB_DATA_DIR)
+            self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_C_LIGNIN_OUT))
+        finally:
+            silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
+            pass
 
     def testGenMolCLignin(self):
         # Only testing parts of this package; printing block to ease checking output
