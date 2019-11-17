@@ -733,59 +733,58 @@ class TestVisualization(unittest.TestCase):
         self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))
         self.assertTrue(np.allclose(std_bo4_bonds, good_std_bo4))
 
-    # def testMultiProc(self):
-    #     # Note: this test did not increase coverage. Added to help debug notebook; does not need to be
-    #     #    part of test suite
-    #     # Checking how much the joblib parallelization helped: with 200 monos and 4 sg_options, n_jobs=4:
-    #     #     with run_multi: Ran 1 test in 30.875s
-    #     #     without run_multi: Ran 1 test in 85.104s
-    #     run_multi = True
-    #     if run_multi:
-    #         fun = par.delayed(run_kmc)
-    #         num_jobs = 4
-    #     else:
-    #         fun = None
-    #         num_jobs = None
-    #     sg_opts = [0.1, 2.33, 10]
-    #     num_sg_opts = len(sg_opts)
-    #     num_repeats = 4
-    #     # minimize random numbers
-    #     monomer_draw = [0.77132064, 0.02075195, 0.63364823, 0.74880388, 0.49850701, 0.22479665,
-    #                     0.19806286, 0.76053071, 0.16911084, 0.08833981, 0.68535982, 0.95339335,
-    #                     0.00394827, 0.51219226, 0.81262096, 0.61252607, 0.72175532, 0.29187607,
-    #                     0.91777412, 0.71457578, 0.54254437, 0.14217005, 0.37334076]
-    #     num_monos = len(monomer_draw)
-    #
-    #     sg_result_list = []
-    #
-    #     # will add to random seed in the iterations to insure using a different seed for each repeat
-    #     random_seed = 10
-    #     for sg_ratio in sg_opts:
-    #         # Set the percentage of S
-    #         pct_s = sg_ratio / (1 + sg_ratio)
-    #
-    #         # Make choices about what kinds of monomers there are and create them
-    #         # make the seed sg_ratio so doesn't use the same seed for each iteration
-    #         initial_monomers = create_initial_monomers(pct_s, monomer_draw)
-    #
-    #         # Initialize the monomers, event_dict, and state
-    #         initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
-    #         initial_state = create_initial_state(initial_events, initial_monomers)
-    #
-    #         if run_multi:
-    #             results = par.Parallel(n_jobs=num_jobs)([fun(GOOD_RXN_RATES, initial_state, initial_events,
-    #                                                          n_max=num_monos, t_max=1, random_seed=(random_seed + i))
-    #                                                      for i in range(num_repeats)])
-    #         else:
-    #             results = [run_kmc(GOOD_RXN_RATES, initial_state, initial_events, n_max=num_monos, t_max=1,
-    #                                random_seed=(random_seed + i)) for i in range(num_repeats)]
-    #         sg_result_list.append(results)
-    #
-    #     av_bo4_bonds, std_bo4_bonds = get_avg_bo4_bonds(num_sg_opts, sg_result_list, num_repeats)
-    #     good_av_bo4 = [0.3295454545454546, 0.48684210526315785, 0.5840482026143791]
-    #     good_std_bo4 = [0.08728574713487056, 0.013157894736842118, 0.10899990146729571]
-    #     self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))
-    #     self.assertTrue(np.allclose(std_bo4_bonds, good_std_bo4))
+    def testMultiProc(self):
+        # Note: this test did not increase coverage. Added to help debug notebook.
+        # Checking how much the joblib parallelization helped: with 200 monos and 4 sg_options, n_jobs=4:
+        #     with run_multi: Ran 1 test in 30.875s
+        #     without run_multi: Ran 1 test in 85.104s
+        run_multi = True
+        if run_multi:
+            fun = par.delayed(run_kmc)
+            num_jobs = 4
+        else:
+            fun = None
+            num_jobs = None
+        sg_opts = [0.1, 2.33, 10]
+        num_sg_opts = len(sg_opts)
+        num_repeats = 4
+        # minimize random number use; here don't set distribution because iterating sg_ratio
+        monomer_draw = [0.77132064, 0.02075195, 0.63364823, 0.74880388, 0.49850701, 0.22479665,
+                        0.19806286, 0.76053071, 0.16911084, 0.08833981, 0.68535982, 0.95339335,
+                        0.00394827, 0.51219226, 0.81262096, 0.61252607, 0.72175532, 0.29187607,
+                        0.91777412, 0.71457578, 0.54254437, 0.14217005, 0.37334076]
+        num_monos = len(monomer_draw)
+
+        sg_result_list = []
+
+        # will add to random seed in the iterations to insure using a different seed for each repeat
+        random_seed = 10
+        for sg_ratio in sg_opts:
+            # Set the percentage of S
+            pct_s = sg_ratio / (1 + sg_ratio)
+
+            # Make choices about what kinds of monomers there are and create them
+            # make the seed sg_ratio so doesn't use the same seed for each iteration
+            initial_monomers = create_initial_monomers(pct_s, monomer_draw)
+
+            # Initialize the monomers, event_dict, and state
+            initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
+            initial_state = create_initial_state(initial_events, initial_monomers)
+
+            if run_multi:
+                results = par.Parallel(n_jobs=num_jobs)([fun(GOOD_RXN_RATES, initial_state, initial_events,
+                                                             n_max=num_monos, t_max=1, random_seed=(random_seed + i))
+                                                         for i in range(num_repeats)])
+            else:
+                results = [run_kmc(GOOD_RXN_RATES, initial_state, initial_events, n_max=num_monos, t_max=1,
+                                   random_seed=(random_seed + i)) for i in range(num_repeats)]
+            sg_result_list.append(results)
+
+        av_bo4_bonds, std_bo4_bonds = get_avg_bo4_bonds(num_sg_opts, sg_result_list, num_repeats)
+        good_av_bo4 = [0.2924901185770751, 0.5082251082251082, 0.6099071207430341]
+        good_std_bo4 = [0.026031501723951567, 0.05822530938667193, 0.05987331147310749]
+        self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))
+        self.assertTrue(np.allclose(std_bo4_bonds, good_std_bo4))
 
     def testNoGrowth(self):
         # Here, all the monomers are available at the beginning of the simulation
