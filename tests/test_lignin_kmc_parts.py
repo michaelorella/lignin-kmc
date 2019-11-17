@@ -188,13 +188,6 @@ class TestCalcRates(unittest.TestCase):
     """
     def test_calc_rates_from_kcal_mol(self):
         rxn_rates = calc_rates(DEF_TEMP, ea_kcal_mol_dict=DEF_E_A_KCAL_MOL)
-        # todo: delete
-        # for rxn_type in rxn_rates:
-        #     for substrate in GOOD_RXN_RATES[rxn_type]:
-        #         for substrate_type in GOOD_RXN_RATES[rxn_type][substrate]:
-        #             new_rxn_rate = round_sig_figs(rxn_rates[rxn_type][substrate][substrate_type], sig_figs=15)
-        #             rxn_rates[rxn_type][substrate][substrate_type] = new_rxn_rate
-        # check size, then values via nested loops instead of dealing with almost equal dicts
         self.assertTrue(len(rxn_rates) == len(GOOD_RXN_RATES))
         rxn_type, substrate, substrate_type = None, None, None  # to make IDE happy
         try:

@@ -419,14 +419,6 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
         # See how much time has passed before this event happened; rounding to reduce platform dependency
         dt = round_sig_figs((1 / r_tot) * np.log(1 / rand_num))
         t.append(t[-1] + dt)
-        # todo
-        # # todo
-        # if i < 260:
-        #     # print(hashes)
-        #     print(rand_num)
-        # # time_list.append(dt[0])
-        # # print(j)
-        # i += 1
 
         # Do the event and update the state
         do_event(event, cur_state, adj, sg_ratio, random_seed=random_seed)
@@ -438,9 +430,6 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
         # Check the new state for what events are possible
         update_events(cur_state, adj, event, event_dict, r_vec, rate_dict, max_mon=n_max)
 
-    # todo
-    # for dt in time_list:
-    #     print(dt)
     if dynamics:
         return {TIME: t, MONO_LIST: mon_list, ADJ_MATRIX: adj_list}
 
