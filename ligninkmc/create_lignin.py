@@ -5,37 +5,69 @@
 Launches steps required to build lignin
 """
 import argparse
+import os
 import sys
 import numpy as np
 from scipy import triu
 from scipy.sparse import dok_matrix
 from collections import (defaultdict, Counter, OrderedDict)
 from configparser import ConfigParser
+from rdkit.Chem import (MolToSmiles, MolFromMolBlock)
+from rdkit.Chem.AllChem import Compute2DCoords
+from rdkit.Chem.Draw import MolToFile
+from rdkit.Chem.rdmolfiles import (MolToPDBFile, SDWriter)
 from common_wrangler.common import (warning, process_cfg, MAIN_SEC, GOOD_RET, INPUT_ERROR, IO_ERROR, KB, H,
-                                    KCAL_MOL_TO_J_PART, InvalidDataError, INVALID_DATA)
+                                    KCAL_MOL_TO_J_PART, InvalidDataError, INVALID_DATA, OUT_DIR, make_dir,
+                                    create_out_fname, str_to_file)
+from ligninkmc import __version__
 from ligninkmc.kmc_functions import run_kmc
+from ligninkmc.visualization import generate_mol
 from ligninkmc.kmc_common import (Event, Monomer, E_A_KCAL_MOL, E_A_J_PART, TEMP, INI_MONOS, MAX_MONOS, SIM_TIME,
                                   AFFECTED, GROW, DEF_E_A_KCAL_MOL, OX, MONOMER, OLIGOMER, LIGNIN_SUBUNITS,
                                   SG_RATIO, ADJ_MATRIX, RANDOM_SEED, AO4, B1, B1_ALT, B5, BB, BO4, C5C5, C5O4,
-                                  CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL, round_sig_figs)
+                                  CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL, round_sig_figs, MONO_LIST)
+
+# Config keys #
+CONFIG_KEY = 'config_key'
+OUT_FORMAT_LIST = 'output_format_list'
+BASENAME = 'outfile_basename'
+IMAGE_SIZE = 'image_size'
+SAVE_PDB = 'pdb'
+SAVE_PNG = 'png'
+SAVE_SDF = 'sdf'
+SAVE_SMI = 'smi'
+SAVE_SVG = 'svg'
+OUT_TYPE_LIST = [SAVE_PDB, SAVE_PNG, SAVE_SDF, SAVE_SMI, SAVE_SVG]
+OUT_TYPE_STR = "', '".join(OUT_TYPE_LIST)
+SAVE_FILES = 'save_files_boolean'
+SAVE_PDB = 'pdb'
+SAVE_PNG = 'png'
+SAVE_SDF = 'sdf'
+SAVE_SMI = 'smi'
+SAVE_SVG = 'svg'
 
 # Defaults #
-
 DEF_TEMP = 298.15  # K
 DEF_MAX_MONOS = 10  # number of monomers
 DEF_SIM_TIME = 1  # simulation time in seconds
 DEF_SG = 1
 DEF_INI_MONOS = 2
 DEF_ADD_RATE = 1e4
-DEF_RANDOM_SEED = None
+DEF_IMAGE_SIZE = (1200, 300)
+DEF_BASENAME = 'lignin-kmc-out'
 
 DEF_VAL = 'default_value'
-CONFIG_KEY = 'config_key'
-DEF_CFG_VALS = {TEMP: DEF_TEMP, E_A_KCAL_MOL: DEF_E_A_KCAL_MOL, E_A_J_PART: None, SG_RATIO: DEF_SG,
-                MAX_MONOS: DEF_MAX_MONOS, SIM_TIME: DEF_SIM_TIME, INI_MONOS: DEF_INI_MONOS,
-                RANDOM_SEED: DEF_RANDOM_SEED,
+DEF_CFG_VALS = {OUT_DIR: None, OUT_FORMAT_LIST: None, INI_MONOS: DEF_INI_MONOS, SIM_TIME: DEF_SIM_TIME,
+                MAX_MONOS: DEF_MAX_MONOS, BASENAME: DEF_BASENAME, IMAGE_SIZE: DEF_IMAGE_SIZE,
+                SG_RATIO: DEF_SG, TEMP: DEF_TEMP, RANDOM_SEED: None,
+                E_A_KCAL_MOL: DEF_E_A_KCAL_MOL, E_A_J_PART: None, SAVE_FILES: False,
+                SAVE_PDB: False, SAVE_PNG: False, SAVE_SDF: False, SAVE_SMI: False, SAVE_SVG: False,
                 }
+
 REQ_KEYS = {}
+
+OPENING_MSG = f"Running Lignin-KMC version {__version__}. " \
+              f"Please cite: https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.9b03534\n"
 
 
 ################################################################################
@@ -496,6 +528,35 @@ def read_cfg(f_loc, cfg_proc=process_cfg):
     return main_proc
 
 
+def check_if_files_to_be_saved(config):
+    # determine if any files will be created and saved
+    if config[OUT_FORMAT_LIST]:
+        out_format_list = config[OUT_FORMAT_LIST]
+        # remove any periods
+        out_format_list.replace(".", "")
+        # todo: check that splits on both space and comma
+        format_list = config[OUT_FORMAT_LIST].split(', ')
+    else:
+        format_list = []
+    if config[BASENAME]:
+        # todo: check out_path (if is empty if just a base name; if a path, check that path exists
+        out_path, base_name = os.path.split(config[BASENAME])
+        if out_path:
+            make_dir(out_path)
+        base, ext = os.path.splitext(base_name)
+        # todo: check ext works
+        if ext in OUT_TYPE_LIST:
+            format_list.append(ext)
+    if len(format_list) > 0:
+        for format_type in format_list:
+            if format_type in OUT_TYPE_LIST:
+                config[SAVE_FILES] = True
+                config[format_type] = True
+            else:
+                raise InvalidDataError(f"Invalid extension in provided '{BASENAME}': '{config[BASENAME]}'.\n"
+                                       f"    Currently supported types are: '{OUT_TYPE_STR}'")
+
+
 def parse_cmdline(argv=None):
     """
     Returns the parsed argument list and return code.
@@ -516,51 +577,73 @@ def parse_cmdline(argv=None):
                                                  f"may specify values, which should be specified as a dict of dict "
                                                  f"of dicts in a \n  specified configuration file (specified with '-c')"
                                                  f" using the '{E_A_KCAL_MOL}' or '{E_A_J_PART}'\n  parameters with "
-                                                 f"corresponding units (kcal/mol or joules/particle, respectively).\n"
-                                                 f"  The format is (bond_type: monomer(s) involved: units involved: "
-                                                 f"ea_vals), for example:\n      "
+                                                 f"corresponding units (kcal/mol or joules/particle, respectively), in "
+                                                 f"a configuration file \n  (see '-c'). The format is (bond_type: "
+                                                 f"monomer(s) involved: units involved: ea_vals), for example:\n      "
                                                  f"ea_dict = {{{OX}: {{0: {{{MONOMER}: 0.9, {OLIGOMER}: 6.3}}, "
                                                  f"1: ""{{{MONOMER}: 0.6, {OLIGOMER}: " f"2.2}}}}, ...}}\n  "
                                                  f"where 0: {LIGNIN_SUBUNITS[0]}, 1: {LIGNIN_SUBUNITS[1]}, "
-                                                 f"2: {LIGNIN_SUBUNITS[2]}.",
+                                                 f"2: {LIGNIN_SUBUNITS[2]}. The default output is a SMILES string "
+                                                 f"printed to standard out.\n\n  All command-line options may "
+                                                 f"alternatively be specified in a configuration file. Command-line "
+                                                 f"(non-default) \n  selections will override configuration file "
+                                                 f"specifications.",
                                      formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-c", "--config", help="The location of the configuration file in ini format. This file "
-                                               "can be used to overwrite default \nvalues such as for energies.",
+    parser.add_argument("-c", "--config", help="The location of the configuration file in the 'ini' format. This file "
+                                               "can be used to \noverwrite default values such as for energies.",
                         default=None, type=read_cfg)
+    parser.add_argument("-d", "--out_dir", help="The directory where output files will be saved. The default is "
+                                                "the current directory.", default=DEF_CFG_VALS[OUT_DIR])
+    parser.add_argument("-f", "--output_format_list", help="The type(s) of output format to be saved. Provide as a "
+                                                           "space- or comma-separated list. \nThe currently supported "
+                                                           f"types are: '{OUT_TYPE_STR}'. \nA base name for the saved "
+                                                           f"files can be provided with the '-o' option. Otherwise, "
+                                                           f"the \nbase name will be '{DEF_BASENAME}'.",
+                        default=DEF_CFG_VALS[OUT_FORMAT_LIST])
     parser.add_argument("-i", "--initial_num_monomers", help=f"The initial number of monomers to be included in the "
                                                              f"simulation. The default is {DEF_INI_MONOS}.",
-                        default=DEF_INI_MONOS)
+                        default=DEF_CFG_VALS[INI_MONOS])
     parser.add_argument("-l", "--length_simulation", help=f"The length of simulation (simulation time) in seconds. The "
                                                           f"default is {DEF_SIM_TIME} s.", default=DEF_SIM_TIME)
     parser.add_argument("-m", "--max_num_monomers", help=f"The maximum number of monomers to be studied. The default "
                                                          f"value is {DEF_MAX_MONOS}.", default=DEF_MAX_MONOS)
+    parser.add_argument("-o", "--output_basename", help="The basename for output file(s). If an extension is provided, "
+                                                        "it will determine \nthe type of output. Multiple output "
+                                                        "formats can be selected with the '-f' option. \nThe default "
+                                                        "format type is '.smi' (SMILES). Currently supported output"
+                                                        f"types are: \n'{OUT_TYPE_STR}'.", default=DEF_BASENAME)
+    parser.add_argument("-s", "--image_size", help=f"The output size of svg or png files in pixels (provide two "
+                                                   f"integers). The default \nis {DEF_IMAGE_SIZE} pixels.",
+                        default=DEF_IMAGE_SIZE)
     parser.add_argument("-sg", "--sg_ratio", help=f"The S:G (guaiacol:syringyl) ratio. "
                                                   f"The default is {DEF_SG}.", default=DEF_SG)
     parser.add_argument("-t", "--temperature_in_k", help=f"The temperature (in K) at which to model lignin "
                                                          f"biosynthesis. The default is {DEF_TEMP} K.",
                         default=DEF_TEMP)
-    parser.add_argument("-r", "--random_seed", help="Random seed value to be used for testing.", default=None)
+    parser.add_argument("-r", "--random_seed", help="A non-zero integer to be used as a seed value for testing.",
+                        default=DEF_CFG_VALS[RANDOM_SEED])
 
     args = None
     try:
         args = parser.parse_args(argv)
+        # dict below to map config input and defaults to command-line input
+        conf_arg_dict = {OUT_DIR: args.out_dir,
+                         OUT_FORMAT_LIST: args.output_format_list,
+                         INI_MONOS: args.initial_num_monomers,
+                         SIM_TIME: args.length_simulation,
+                         MAX_MONOS: args.max_num_monomers,
+                         BASENAME: args.output_basename,
+                         IMAGE_SIZE: args.image_size,
+                         SG_RATIO: args.sg_ratio,
+                         TEMP: args.temperature_in_k,
+                         RANDOM_SEED: args.random_seed,
+                         }
         if args.config is None:
-            args.config = {INI_MONOS: args.initial_num_monomers, SIM_TIME: args.length_simulation,
-                           MAX_MONOS: args.max_num_monomers, SG_RATIO: args.sg_ratio,
-                           TEMP: args.temperature_in_k, RANDOM_SEED: args.random_seed,
-                           E_A_KCAL_MOL: DEF_E_A_KCAL_MOL, E_A_J_PART: None}
-        else:
-            arg_def_dict = {args.initial_num_monomers: {DEF_VAL: DEF_INI_MONOS, CONFIG_KEY: INI_MONOS},
-                            args.length_simulation: {DEF_VAL: DEF_SIM_TIME, CONFIG_KEY: SIM_TIME},
-                            args.max_num_monomers: {DEF_VAL: DEF_MAX_MONOS, CONFIG_KEY: MAX_MONOS},
-                            args.sg_ratio: {DEF_VAL: DEF_SG, CONFIG_KEY: SG_RATIO},
-                            args.temperature_in_k: {DEF_VAL: DEF_TEMP, CONFIG_KEY: TEMP},
-                            args.random_seed: {DEF_VAL: DEF_RANDOM_SEED, CONFIG_KEY: RANDOM_SEED}}
-            for arg_val, arg_dict in arg_def_dict.items():
-                config_key = arg_dict[CONFIG_KEY]
-                def_val = arg_dict[DEF_VAL]
-                if arg_val != def_val:
-                    args.config[config_key] = arg_val
+            args.config = DEF_CFG_VALS
+        # Now overwrite any config values with command-line arguments, only if those values are not the default
+        for config_key, arg_val in conf_arg_dict.items():
+            if not (arg_val == DEF_CFG_VALS[config_key]):
+                args.config[config_key] = arg_val
 
     except (KeyError, IOError, SystemExit) as e:
         if hasattr(e, 'code') and e.code == 0:
@@ -640,6 +723,31 @@ def create_initial_state(initial_events, initial_monomers):
     return {i: {MONOMER: initial_monomers[i], AFFECTED: {initial_events[i]}} for i in range(len(initial_monomers))}
 
 
+def produce_output(result, cfg):
+    # Default out is SMILES
+    block = generate_mol(result[ADJ_MATRIX], result[MONO_LIST])
+    mol = MolFromMolBlock(block)
+    smi_str = MolToSmiles(mol)
+    # if SMI is to be saved, don't output to stdout
+    if cfg[SAVE_SMI]:
+        fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=SAVE_SMI)
+        str_to_file(smi_str, fname)
+    else:
+        print("\nSMILES representation: \n", MolToSmiles(mol))
+    if cfg[SAVE_PDB] or cfg[SAVE_PNG] or cfg[SAVE_SDF] or cfg[SAVE_SVG]:
+        Compute2DCoords(mol)
+        for save_type in [SAVE_PDB, SAVE_PNG, SAVE_SDF, SAVE_SVG]:
+            if cfg[save_type]:
+                fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=save_type)
+                if cfg[SAVE_PDB]:
+                    MolToPDBFile(mol, fname)
+                if cfg[SAVE_PNG] or cfg[SAVE_SVG]:
+                    MolToFile(mol, fname, size=cfg[IMAGE_SIZE])
+                if cfg[SAVE_SDF]:
+                    writer = SDWriter(fname)
+                    writer.write(mol)
+
+
 def main(argv=None):
     """
     Runs the main program.
@@ -647,6 +755,7 @@ def main(argv=None):
     :param argv: The command line arguments.
     :return: The return code for the program's termination.
     """
+    print(OPENING_MSG)
     args, ret = parse_cmdline(argv)
     if ret != GOOD_RET or args is None:
         return ret
@@ -654,6 +763,12 @@ def main(argv=None):
     cfg = args.config
 
     try:
+        # if a directory is going to be needed, make at the beginning, so if it raises an error, it does so before
+        #    running the simulation
+        check_if_files_to_be_saved(cfg)
+        if cfg[SAVE_FILES]:
+            make_dir(cfg[OUT_DIR])
+
         # need rates before we can start modeling reactions
         rxn_rates = calc_rates(cfg[TEMP], ea_j_part_dict=cfg[E_A_J_PART], ea_kcal_mol_dict=cfg[E_A_KCAL_MOL])
 
@@ -680,6 +795,10 @@ def main(argv=None):
         # show results
         summary = analyze_adj_matrix(result[ADJ_MATRIX])
         adj_analysis_to_stdout(summary)
+
+        # Outputs
+        produce_output(result, cfg)
+
     except InvalidDataError as e:
         warning(e)
         return INVALID_DATA

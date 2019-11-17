@@ -17,7 +17,7 @@ MONOLIG_OHS = {0: 'coniferyl', 1: 'sinapyl', 2: 'caffeoyl'}  # perhaps to be add
 SG_RATIO = 'sg_ratio'
 INI_MONOS = 'initial_num_monomers'
 MAX_MONOS = 'max_num_monomers'
-SIM_TIME = 'length_sim'
+SIM_TIME = 'length_simulation'
 RANDOM_SEED = 'random_seed'
 # specifying a random seed is not enough for reliable testing, as a generated float can differ by machine precision
 # Thus, MAX_NUM_DECIMAL is used to round floats to lower-than machine precision
@@ -286,4 +286,3 @@ def round_sig_figs(num, sig_figs=6):
     # uses built-in function, since generally faster
     num_str = float(f'{num:.{sig_figs}g}')
     return num_str
-

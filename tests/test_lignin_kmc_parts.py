@@ -521,7 +521,7 @@ class TestVisualization(unittest.TestCase):
             block = generate_mol(adj, nodes)
             mol = MolFromMolBlock(block)
             Compute2DCoords(mol)
-            MolToFile(mol, PNG_10MER, size=(1300, 300))
+            MolToFile(mol, PNG_10MER, size=(1200, 300))
             self.assertTrue(os.path.isfile(PNG_10MER))
         finally:
             silent_remove(PNG_10MER, disable=DISABLE_REMOVE)

@@ -3,7 +3,7 @@
 import logging
 import os
 import unittest
-from ligninkmc.create_lignin import main
+from ligninkmc.create_lignin import main, OPENING_MSG
 from common_wrangler.common import capture_stderr, capture_stdout
 
 __author__ = 'hmayes'
@@ -56,6 +56,12 @@ class TestCreateLigninNoOutput(unittest.TestCase):
         with capture_stdout(main, test_input) as output:
             self.assertTrue("optional arguments" in output)
 
+    def testInvalidRandomSeed(self):
+        test_input = ["-c", "ghost.ini"]
+
+    def testMakeSubDir(self):
+        test_input = ["-d", "lignin_out"]
+
 
 class TestCreateLigninNormalUse(unittest.TestCase):
     def testDefArgs(self):
@@ -72,6 +78,7 @@ class TestCreateLigninNormalUse(unittest.TestCase):
                                 "55:    0    5O4:    0    AO4:    0     B1:    0     B5:    2     " \
                                 "BB:    1    BO4:    0"
         with capture_stdout(main, test_input) as output:
+            self.assertTrue(OPENING_MSG in output)
             self.assertTrue(good_chain_summary in output)
             self.assertTrue(good_bond_summary in output)
             self.assertTrue(good_rcf_chain_summary in output)
@@ -95,3 +102,7 @@ class TestCreateLigninNormalUse(unittest.TestCase):
             self.assertTrue(good_bond_summary in output)
             self.assertTrue(good_rcf_chain_summary in output)
             self.assertTrue(good_rcf_bond_summary in output)
+
+    def testNewFeatures(self):
+        test_input = ["-r", "10"]
+        main(test_input)
