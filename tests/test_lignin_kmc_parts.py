@@ -18,7 +18,7 @@ from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, create_initial_monome
 from ligninkmc.kmc_common import (Event, Monomer, C5O4, OX, Q, C5C5, B5, BB, BO4, AO4, B1,
                                   MON_MON, MON_OLI, OLI_OLI, OLI_MON, MONOMER, OLIGOMER, GROW, TIME, MONO_LIST,
                                   ADJ_MATRIX, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_A_KCAL_MOL,
-                                  MAX_NUM_DECIMAL, round_sig_figs)
+                                  MAX_NUM_DECIMAL)
 from ligninkmc.kmc_functions import run_kmc
 from ligninkmc.visualization import (generate_mol, gen_psfgen)
 
@@ -577,71 +577,49 @@ class TestVisualization(unittest.TestCase):
             silent_remove(C_LIGNIN_MOL_OUT, disable=DISABLE_REMOVE)
             pass
 
-    # def testB1BondGenMol(self):
-    #     # Here, all the monomers are available at the beginning of the simulation; set type list for reproducibility
-    #     full_mono_type_list = [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    #                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1,
-    #                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    #                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    #                            1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    #                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    #                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
-    #                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    #                            1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    #                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    #                            1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ]
-    #     try:
-    #         for seed in range(20):
-    #             for num_monos in range(10, len(mono_type_list)):
-    #                 mono_type_list = full_mono_type_list[0: num_monos]
-    #                 initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(mono_type_list)]
-    #                 initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
-    #                 initial_state = create_initial_state(initial_events, initial_monomers)
-    #                 result = run_kmc(GOOD_RXN_RATES, initial_state, initial_events, t_max=0.02, random_seed=seed)
-    #                 silent_remove(PNG_B1)
-    #                 nodes = result[MONO_LIST]
-    #                 adj = result[ADJ_MATRIX]
-    #                 block = generate_mol(adj, nodes)
-    #         # Here, trying to catch bug in B1 bond representation. Test will be updated when bug is fixed.
-    #         self.assertFalse("I thought I'd fail!")
-    #         # After bug is fixed, add checks for correct generate_mol output
-    #         # Below not needed for testing functionality; for showing image to visually check
-    #         mol = MolFromMolBlock(block)
-    #         Compute2DCoords(mol)
-    #         MolToFile(mol, PNG_B1, size=(2000, 1200))
-    #         self.assertTrue(os.path.isfile(PNG_B1))
-    #         # If desired, also check generated psfgen (may not help coverage... to be seen...)
-    #         gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
-    #         # If kept, create and check new "good" file
-    #         self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
-    #     except InvalidDataError as e:
-    #         print(e.args[0])
-    #         self.assertTrue("This program cannot currently display" in e.args[0])
-    #         silent_remove(PNG_B1, disable=DISABLE_REMOVE)
-    #         pass
+    def testB1BondGenMol(self):
+        # Here, all the monomers are available at the beginning of the simulation; set type list for reproducibility
+        full_mono_type_list = [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                               1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1,
+                               1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                               1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                               1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                               1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                               1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
+                               1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                               1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                               1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                               1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ]
+        try:
+            seed = 1
+            num_monos = 15
+            mono_type_list = full_mono_type_list[0: num_monos]
+            initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(mono_type_list)]
+            initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
+            initial_state = create_initial_state(initial_events, initial_monomers)
+            result = run_kmc(GOOD_RXN_RATES, initial_state, initial_events, t_max=0.02, random_seed=seed)
 
-    # def testB1BondGenPSF(self):
-    #     # Only adds one line of coverage
-    #     try:
-    #         sg_ratio = 10.
-    #         pct_s = sg_ratio / (1 + sg_ratio)
-    #         num_monos = 200
-    #         np.random.seed(1)
-    #         monomer_draw = np.around(np.random.rand(num_monos), MAX_NUM_DECIMAL)
-    #         initial_monomers = create_initial_monomers(pct_s, monomer_draw)
-    #         initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
-    #         initial_state = create_initial_state(initial_events, initial_monomers)
-    #         initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE, bond=sg_ratio))
-    #         result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=0.02, random_seed=1,
-    #                          sg_ratio=sg_ratio)
-    #         adj_result = analyze_adj_matrix(result[ADJ_MATRIX])
-    #         if adj_result[BONDS][B1] > 0:
-    #             print(f"Woot! sg={sg_ratio}")
-    #         gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
-    #         self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
-    #     finally:
-    #         silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
-    #         pass
+            nodes = result[MONO_LIST]
+            adj = result[ADJ_MATRIX]
+            block = generate_mol(adj, nodes)
+            # Here, trying to catch bug in B1 bond representation. Test will be updated when bug is fixed.
+            self.assertFalse("I thought I'd fail!")
+            # After bug is fixed, add checks for correct generate_mol output
+            # Below not needed for testing functionality; for showing image to visually check
+            silent_remove(PNG_B1)
+            mol = MolFromMolBlock(block)
+            Compute2DCoords(mol)
+            MolToFile(mol, PNG_B1, size=(2000, 1200))
+            self.assertTrue(os.path.isfile(PNG_B1))
+            # If desired, also check generated psfgen (may not help coverage... to be seen...)
+            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
+            # If kept, create and check new "good" file
+            self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
+        except InvalidDataError as e:
+            print(e.args[0])
+            self.assertTrue("This program cannot currently" in e.args[0])
+            silent_remove(PNG_B1, disable=DISABLE_REMOVE)
+            pass
 
     def testDynamics(self):
         # Tests procedures in the Dynamics.ipynb
@@ -700,7 +678,6 @@ class TestVisualization(unittest.TestCase):
 
         # minimize random calls
         monomer_type_list = [1, 0]
-        num_monos = len(monomer_type_list)
         initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(monomer_type_list)]
         max_monos = 32
         num_repeats = 4

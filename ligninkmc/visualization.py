@@ -2,7 +2,6 @@
 # coding=utf-8
 
 import re
-from collections import OrderedDict
 from rdkit.Chem.Draw.MolDrawing import DrawingOptions
 from ligninkmc.kmc_common import (G, S, C, S4, G4, G7, ATOMS, BONDS)
 from common_wrangler.common import (InvalidDataError, create_out_fname, warning)
@@ -15,9 +14,9 @@ S7 = 'S7'
 def generate_mol(adj, node_list):
     """
     Based on standard molfile format https://www.daylight.com/meetings/mug05/Kappler/ctfile.pdf
-    :param adj:
-    :param node_list:
-    :return:
+    :param adj: dok_matrix
+    :param node_list: list
+    :return: mol_str, str in standard molfile
     """
     # define dictionary for atoms within each monomer
     atom_blocks = {G: ('C 0 0 0 0 \n' +  # 1
@@ -362,7 +361,7 @@ def generate_mol(adj, node_list):
         # 2 ) Convert the new primary alcohol to an aldehyde
         if sorted(bond_loc) == [1, 8]:
             # TODO: make sure all B1 bonds are correctly forms
-            warning("There are problems in how this program currently builds molecule with B1 bonds. Carefully "
+            warning("There are problems in how this program currently builds molecules with B1 bonds. Carefully "
                     "check any output.")
             index_for_one = int(not beta[tuple(bond_loc)])
             # Convert the alpha alcohol on one's tail to an aldehyde
@@ -393,7 +392,8 @@ def generate_mol(adj, node_list):
                 del (bonds[alpha_ring_bond_index])
                 removed[BONDS] += 1
             except ValueError:
-                raise InvalidDataError("This program cannot currently display this beta-1 bond. Sorry!")
+                raise InvalidDataError("This program cannot currently generate a molecule with this beta-1 bond. "
+                                       "Sorry!")
 
     mol_bond_blocks = ''.join(bonds)
     mol_atom_blocks = ''.join(atoms)
