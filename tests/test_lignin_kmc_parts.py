@@ -12,9 +12,9 @@ from rdkit.Chem.AllChem import Compute2DCoords
 from rdkit.Chem.Draw import MolToFile
 from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, create_initial_monomers,
                                      create_initial_events, create_initial_state, DEF_ADD_RATE,
-                                     analyze_adj_matrix, count_bonds, count_oligomer_yields, calc_monos_per_olig,
+                                     analyze_adj_matrix, count_bonds, count_oligomer_yields,
                                      break_bond_type, adj_analysis_to_stdout, find_fragments, fragment_size,
-                                     get_bond_type_v_time_dict)
+                                     get_bond_type_v_time_dict, overall_branching_coefficient, degree)
 from ligninkmc.kmc_common import (Event, Monomer, C5O4, OX, Q, C5C5, B5, BB, BO4, AO4, B1,
                                   MON_MON, MON_OLI, OLI_OLI, OLI_MON, MONOMER, OLIGOMER, GROW, TIME, MONO_LIST,
                                   ADJ_MATRIX, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_A_KCAL_MOL,
@@ -34,11 +34,9 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'run_kmc')
 
 # Output files #
-PNG_10MER = os.path.join(SUB_DATA_DIR, 'test_10mer.png')
-PNG_B1 = os.path.join(SUB_DATA_DIR, 'test_b1.png')
+TEST_PNG = os.path.join(SUB_DATA_DIR, 'test.png')
 C_LIGNIN_MOL_OUT = os.path.join(SUB_DATA_DIR, 'c_lignin_molfile.txt')
 GOOD_C_LIGNIN_MOL_OUT = os.path.join(SUB_DATA_DIR, 'c_lignin_molfile_good.txt')
-C_LIGNIN_PNG = os.path.join(SUB_DATA_DIR, 'c_lignin_molfile.png')
 
 TCL_FNAME = "psfgen.tcl"
 TCL_FILE_LOC = os.path.join(SUB_DATA_DIR, TCL_FNAME)
@@ -131,11 +129,11 @@ ADJ3 = dok_matrix([[0, 4, 8, 0, 0],
                    [0, 0, 0, 0, 0]])
 
 
-def create_sample_kmc_result(max_time=1., num_initial_monos=3, max_monos=10, sg_ratio=0.75):
+def create_sample_kmc_result(max_time=1., num_initial_monos=3, max_monos=10, sg_ratio=0.75, seed=10):
     # The set lists are to minimize randomness in testing (adding while debugging source of randomness in some tests;
     #     leaving because it doesn't hurt a thing; also leaving option to make a monomer_draw of arbitrary length
     #     using a seed, but rounding those numbers because the machine precision differences in floats was the bug
-    np.random.seed(10)
+    np.random.seed(seed)
     if num_initial_monos == 3:
         monomer_draw = MONO_DRAW_3
     elif num_initial_monos == 20:
@@ -329,12 +327,14 @@ class TestRunKMC(unittest.TestCase):
         self.assertTrue(list(result[ADJ_MATRIX].values()) == good_dok_vals)
 
 
-class TestAnalyzeKMC(unittest.TestCase):
+class TestAnalyzeKMCParts(unittest.TestCase):
     def testFindOneFragment(self):
         a = dok_matrix((2, 2))
-        result = find_fragments(a)
-        good_result = [{0}, {1}]
-        self.assertEqual(result, good_result)
+        frags, branches = find_fragments(a)
+        good_frags = [{0}, {1}]
+        self.assertEqual(frags, good_frags)
+        good_branches = [0, 0]
+        self.assertEqual(branches, good_branches)
 
     def testFindTwoFragments(self):
         a_array = [[0., 1., 1., 0., 0.],
@@ -343,18 +343,22 @@ class TestAnalyzeKMC(unittest.TestCase):
                    [0., 0., 0., 0., 1.],
                    [0., 0., 0., 1., 0.]]
         a = dok_matrix(a_array)
-        result = find_fragments(a)
-        good_result = [{0, 1, 2}, {3, 4}]
-        self.assertEqual(result, good_result)
+        frags, branches = find_fragments(a)
+        good_frags = [{0, 1, 2}, {3, 4}]
+        self.assertEqual(frags, good_frags)
+        good_branches = [0, 0]
+        self.assertEqual(branches, good_branches)
 
     def testFindThreeFragments(self):
         # does not increase coverage, but that's okay
         a = dok_matrix((5, 5))
         a[0, 4] = 1
         a[4, 0] = 1
-        result = find_fragments(a)
-        good_result = [{0, 4}, {1}, {2}, {3}]
-        self.assertEqual(result, good_result)
+        frags, branches = find_fragments(a)
+        good_frags = [{0, 4}, {1}, {2}, {3}]
+        self.assertEqual(frags, good_frags)
+        good_branches = [0, 0, 0, 0]
+        self.assertEqual(branches, good_branches)
 
     def testFragmentSize1(self):
         frags = [{0}, {1}]
@@ -370,46 +374,76 @@ class TestAnalyzeKMC(unittest.TestCase):
         self.assertEqual(result, good_result)
 
     def testFragmentSize3(self):
-        # Does not increase coverage; keep anyway
         frags = [{0, 1, 2, 3, 4}]
         result = fragment_size(frags)
         good_result = {0: 5, 1: 5, 2: 5, 3: 5, 4: 5}
         self.assertEqual(result, good_result)
 
     def testCountYieldsAllMonomers(self):
-        good_adj_zeros_dict = {1: 5}
-        adj_yields_dict = dict(count_oligomer_yields(ADJ_ZEROS))
-        self.assertTrue(adj_yields_dict == good_adj_zeros_dict)
+        good_olig_len_dict = {1: 5}
+        good_olig_monos_dict = {1: 5}
+        good_olig_branch_dict = {1: 0}
+        good_olig_branch_coeff_dict = {1: 0}
+        olig_len_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict = count_oligomer_yields(ADJ_ZEROS)
+        self.assertTrue(olig_len_dict == good_olig_len_dict)
+        self.assertTrue(olig_monos_dict ==  good_olig_monos_dict)
+        self.assertTrue(olig_branch_dict == good_olig_branch_dict)
+        self.assertTrue(olig_branch_coeff_dict ==  good_olig_branch_coeff_dict)
 
     def testCountYields1(self):
-        good_yield_dict = {2: 1, 1: 3}
         adj_1 = dok_matrix([[0, 4, 0, 0, 0],
                             [8, 0, 0, 0, 0],
                             [0, 0, 0, 0, 0],
                             [0, 0, 0, 0, 0],
                             [0, 0, 0, 0, 0]])
-        adj_yields_dict = dict(count_oligomer_yields(adj_1))
-        self.assertTrue(adj_yields_dict == good_yield_dict)
+        good_olig_len_dict = {1: 3, 2: 1}
+        good_olig_monos_dict = {1: 3, 2: 2}
+        good_olig_branch_dict = {1: 0, 2: 0}
+        good_olig_branch_coeff_dict = {1: 0, 2: 0}
+        olig_len_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict = count_oligomer_yields(adj_1)
+        self.assertTrue(olig_len_dict == good_olig_len_dict)
+        self.assertTrue(olig_monos_dict ==  good_olig_monos_dict)
+        self.assertTrue(olig_branch_dict == good_olig_branch_dict)
+        self.assertTrue(olig_branch_coeff_dict ==  good_olig_branch_coeff_dict)
 
     def testCountYields2(self):
-        good_yield_dict = {1: 1, 2: 2}
-        adj_yields_dict = dict(count_oligomer_yields(ADJ2))
-        self.assertTrue(adj_yields_dict == good_yield_dict)
+        olig_len_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict = count_oligomer_yields(ADJ2)
+        good_olig_len_dict = {1: 1, 2: 2}
+        good_olig_monos_dict = {1: 1, 2: 4}
+        good_olig_branch_dict = {1: 0, 2: 0}
+        good_olig_branch_coeff_dict = {1: 0, 2: 0}
+        self.assertTrue(olig_len_dict == good_olig_len_dict)
+        self.assertTrue(olig_monos_dict ==  good_olig_monos_dict)
+        self.assertTrue(olig_branch_dict == good_olig_branch_dict)
+        self.assertTrue(olig_branch_coeff_dict ==  good_olig_branch_coeff_dict)
 
     def testCountYields3(self):
-        good_yield_dict = {3: 1, 1: 2}
-        adj_yields_dict = dict(count_oligomer_yields(ADJ3))
-        self.assertTrue(adj_yields_dict == good_yield_dict)
+        olig_len_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict = count_oligomer_yields(ADJ3)
+        good_olig_len_dict = {1: 2, 3: 1}
+        good_olig_monos_dict = {1: 2, 3: 3}
+        good_olig_branch_dict = {1: 0, 3: 0}
+        good_olig_branch_coeff_dict = {1: 0, 3: 0}
+        self.assertTrue(olig_len_dict == good_olig_len_dict)
+        self.assertTrue(olig_monos_dict ==  good_olig_monos_dict)
+        self.assertTrue(olig_branch_dict == good_olig_branch_dict)
+        self.assertTrue(olig_branch_coeff_dict ==  good_olig_branch_coeff_dict)
 
-    def testCalcMonosPerOlig2(self):
-        good_adj_dict = {1: 1, 2: 4}
-        olig_monos_dict = dict(calc_monos_per_olig(ADJ2))
-        self.assertTrue(olig_monos_dict == good_adj_dict)
-
-    def testCalcMonosPerOlig3(self):
-        good_adj_dict = {3: 3, 1: 2}
-        olig_monos_dict = dict(calc_monos_per_olig(ADJ3))
-        self.assertTrue(olig_monos_dict == good_adj_dict)
+    def testCountYields4(self):
+        adj = dok_matrix((10, 10), dtype=np.float32)
+        adj_dict = {(0, 1): 8.0, (1, 0): 8.0, (1, 2): 4.0, (2, 1): 8.0, (2, 3): 4.0, (3, 2): 8.0, (3, 4): 5.0,
+                    (4, 3): 8.0, (5, 4): 8.0, (4, 5): 5.0, (5, 6): 4.0, (6, 5): 8.0, (7, 8): 8.0, (8, 7): 8.0,
+                    (0, 8): 4.0, (8, 0): 5.0, (8, 9): 4.0, (9, 8): 8.0}
+        for key, val in adj_dict.items():
+            adj[key] = val
+        olig_len_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict = count_oligomer_yields(adj)
+        good_olig_len_dict = {10: 1}
+        good_olig_monos_dict = {10: 10}
+        good_olig_branch_dict = {10: 1}
+        good_olig_branch_coeff_dict = {10: 0.1}
+        self.assertTrue(olig_len_dict == good_olig_len_dict)
+        self.assertTrue(olig_monos_dict ==  good_olig_monos_dict)
+        self.assertTrue(olig_branch_dict == good_olig_branch_dict)
+        self.assertTrue(olig_branch_coeff_dict ==  good_olig_branch_coeff_dict)
 
     def testCountBonds(self):
         good_bond_dict = {BO4: 2, B1: 0, BB: 1, B5: 1, C5C5: 0, AO4: 0, C5O4: 0}
@@ -418,7 +452,7 @@ class TestAnalyzeKMC(unittest.TestCase):
                             [0, 5, 0, 8, 0],
                             [0, 0, 8, 0, 4],
                             [0, 0, 0, 8, 0]])
-        adj_bonds = dict(count_bonds(adj_a))
+        adj_bonds = count_bonds(adj_a)
         self.assertTrue(adj_bonds == good_bond_dict)
 
     def testBreakBO4Bonds(self):
@@ -449,6 +483,67 @@ class TestAnalyzeKMC(unittest.TestCase):
         broken_adj = break_bond_type(a, B1_ALT).toarray()
         self.assertTrue(np.array_equal(broken_adj, good_broken_adj))
 
+    def testDegree0(self):
+        # Testing all monomers
+        adj = ADJ_ZEROS
+        mono_degree = list(degree(adj))
+        good_mono_degree = []
+        self.assertTrue(mono_degree == good_mono_degree)
+        branch_coeff = overall_branching_coefficient(adj)
+        self.assertTrue(branch_coeff == 0)
+
+    def testBranchCoeff1(self):
+        # testing dimers and a monomer
+        adj = ADJ2
+        mono_degree = list(degree(adj))
+        good_mono_degree = [1, 1, 1, 1]
+        self.assertTrue(mono_degree == good_mono_degree)
+        branch_coeff = overall_branching_coefficient(adj)
+        self.assertTrue(branch_coeff == 0)
+
+    def testBranchCoeff2(self):
+        # testing timer and dimers
+        adj = ADJ3
+        branch_degree = list(degree(adj))
+        good_branch_degree = [2, 1, 1]
+        self.assertTrue(branch_degree == good_branch_degree)
+        branch_coeff = overall_branching_coefficient(adj)
+        self.assertTrue(branch_coeff == 0)
+
+    def testBranchCoeff3(self):
+        adj = dok_matrix((10, 10), dtype=np.float32)
+        adj_dict = {(0, 1): 8.0, (1, 0): 8.0, (1, 2): 4.0, (2, 1): 8.0, (2, 3): 4.0, (3, 2): 8.0, (3, 4): 5.0,
+                    (4, 3): 8.0, (5, 4): 8.0, (4, 5): 5.0, (5, 6): 4.0, (6, 5): 8.0, (7, 8): 8.0, (8, 7): 8.0,
+                    (0, 8): 4.0, (8, 0): 5.0, (8, 9): 4.0, (9, 8): 8.0}
+        for key, val in adj_dict.items():
+            adj[key] = val
+        branch_degree = list(degree(adj))
+        good_branch_degree = [2, 2, 2, 2, 2, 2, 1, 1, 3, 1]
+        self.assertTrue(branch_degree == good_branch_degree)
+        branch_coeff = overall_branching_coefficient(adj)
+        good_branch_coeff = 0.1
+        self.assertAlmostEqual(branch_coeff, good_branch_coeff)
+
+    def testBranchCoeff4(self):
+        # this has 3 fragments: 2 dimers and a pentamer, which is branched
+        adj = dok_matrix((9, 9), dtype=np.float32)
+        adj_dict = {(4, 8): 8.0, (8, 4): 8.0, (7, 3): 8.0, (3, 7): 8.0, (0, 2): 5.0, (2, 0): 8.0, (4, 2): 4.0,
+                    (2, 4): 5.0, (5, 6): 8.0, (6, 5): 5.0, (1, 2): 8.0, (2, 1): 4.0}
+        for key, val in adj_dict.items():
+            adj[key] = val
+        branch_degree = list(degree(adj))
+        good_branch_degree = [1, 1, 3, 1, 2, 1, 1, 1, 1]
+        self.assertTrue(branch_degree == good_branch_degree)
+        branch_coeff = overall_branching_coefficient(adj)
+        good_branch_coeff = 1/9
+        self.assertAlmostEqual(branch_coeff, good_branch_coeff)
+        # Uncomment below to visually check output
+        # mol = MolFromMolBlock(block)
+        # Compute2DCoords(mol)
+        # MolToFile(mol, TEST_PNG, size=(2000, 1000))
+
+
+class TestAnalyzeKMCSummary(unittest.TestCase):
     def testKMCResultSummary(self):
         result = create_sample_kmc_result()
         summary = analyze_adj_matrix(result[ADJ_MATRIX])
@@ -461,13 +556,14 @@ class TestAnalyzeKMC(unittest.TestCase):
         result = create_sample_kmc_result()
         summary = analyze_adj_matrix(result[ADJ_MATRIX])
         # adj_analysis_to_stdout(summary)
-        good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n       1 oligomer(s) of chain length 10"
-        good_bond_summary = "composed of the following bond types and number:\n     55:    0    5O4:    1" \
-                            "    AO4:    0     B1:    0     B5:    2     BB:    2    BO4:    4"
+        good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n       1 oligomer(s) of chain length " \
+                             "10, with branching coefficient 0.1"
+        good_bond_summary = "composed of the following bond types and number:\n    BO4:    4     BB:    2" \
+                            "     B5:    2     B1:    0    5O4:    1    AO4:    0     55:    0"
         good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n       3 monomer(s) (chain length " \
                                  "1)\n       2 dimer(s) (chain length 2)\n       1 trimer(s) (chain length 3)"
-        good_rcf_bond_summary = "with the following remaining bond types and number:\n     55:    0    5O4:    0    " \
-                                "AO4:    0     B1:    0     B5:    2     BB:    2    BO4:    0"
+        good_rcf_bond_summary = "with the following remaining bond types and number:\n    BO4:    0     BB:    2    " \
+                                " B5:    2     B1:    0    5O4:    0    AO4:    0     55:    0"
         with capture_stdout(adj_analysis_to_stdout, summary) as output:
             self.assertTrue(good_chain_summary in output)
             self.assertTrue(good_bond_summary in output)
@@ -480,12 +576,12 @@ class TestAnalyzeKMC(unittest.TestCase):
         # adj_analysis_to_stdout(summary)
         good_chain_summary = "Lignin KMC created 3 monomers, which formed:\n" \
                              "       1 trimer(s) (chain length 3)"
-        good_bond_summary = "composed of the following bond types and number:\n     55:    0    5O4:    0" \
-                            "    AO4:    0     B1:    0     B5:    0     BB:    1    BO4:    1"
+        good_bond_summary = "composed of the following bond types and number:\n    BO4:    1     BB:    1" \
+                            "     B5:    0     B1:    0    5O4:    0    AO4:    0     55:    0"
         good_rcf_olig_summary = "Breaking C-O bonds to simulate RCF results in:\n       1 monomer(s) (chain " \
                                 "length 1)\n       1 dimer(s) (chain length 2)"
-        good_rcf_bond_summary = "with the following remaining bond types and number:\n     55:    0    5O4:    0    " \
-                                "AO4:    0     B1:    0     B5:    0     BB:    1    BO4:    0"
+        good_rcf_bond_summary = "with the following remaining bond types and number:\n    BO4:    0     BB:    1    " \
+                                " B5:    0     B1:    0    5O4:    0    AO4:    0     55:    0"
         with capture_stdout(adj_analysis_to_stdout, summary) as output:
             self.assertTrue(good_chain_summary in output)
             self.assertTrue(good_bond_summary in output)
@@ -498,12 +594,12 @@ class TestAnalyzeKMC(unittest.TestCase):
         # adj_analysis_to_stdout(summary)
         good_chain_summary = "Lignin KMC created 20 monomers, which formed:\n       5 monomer(s) (chain length 1)\n" \
                              "       3 dimer(s) (chain length 2)\n       3 trimer(s) (chain length 3)"
-        good_bond_summary = "composed of the following bond types and number:\n     55:    0    5O4:    0" \
-                            "    AO4:    0     B1:    0     B5:    2     BB:    4    BO4:    3"
+        good_bond_summary = "composed of the following bond types and number:\n    BO4:    3     BB:    4" \
+                            "     B5:    2     B1:    0    5O4:    0    AO4:    0     55:    0"
         good_rcf_olig_summary = "Breaking C-O bonds to simulate RCF results in:\n       8 monomer(s) (chain length 1)" \
                                 "\n       6 dimer(s) (chain length 2)"
-        good_rcf_bond_summary = "with the following remaining bond types and number:\n     55:    0    5O4:    0    " \
-                                "AO4:    0     B1:    0     B5:    2     BB:    4    BO4:    0"
+        good_rcf_bond_summary = "with the following remaining bond types and number:\n    BO4:    0     BB:    4    " \
+                                " B5:    2     B1:    0    5O4:    0    AO4:    0     55:    0"
         with capture_stdout(adj_analysis_to_stdout, summary) as output:
             self.assertTrue(good_chain_summary in output)
             self.assertTrue(good_bond_summary in output)
@@ -513,18 +609,23 @@ class TestAnalyzeKMC(unittest.TestCase):
 
 class TestVisualization(unittest.TestCase):
     def testMakePNG(self):
+        # smoke test only--that it doesn't fail, not that it looks correct (that's outside the scope of this package)
+        # The choices shown resulted (at last check) in 3 fragments, one of which has a branch
         try:
-            silent_remove(PNG_10MER)
-            result = create_sample_kmc_result()
+            silent_remove(TEST_PNG)
+            result = create_sample_kmc_result(num_initial_monos=9, max_monos=9, seed=4, max_time=SHORT_TIME)
+            summary = analyze_adj_matrix(result[ADJ_MATRIX])
+            adj_analysis_to_stdout(summary)
             nodes = result[MONO_LIST]
             adj = result[ADJ_MATRIX]
             block = generate_mol(adj, nodes)
             mol = MolFromMolBlock(block)
             Compute2DCoords(mol)
-            MolToFile(mol, PNG_10MER, size=(1200, 300))
-            self.assertTrue(os.path.isfile(PNG_10MER))
+            MolToFile(mol, TEST_PNG, size=(2000, 1200))
+            self.assertTrue(os.path.isfile(TEST_PNG))
         finally:
-            silent_remove(PNG_10MER, disable=DISABLE_REMOVE)
+            silent_remove(TEST_PNG, disable=DISABLE_REMOVE)
+            pass
 
     def testMakePSFGEN(self):
         try:
@@ -560,13 +661,13 @@ class TestVisualization(unittest.TestCase):
             block = generate_mol(result[ADJ_MATRIX], result[MONO_LIST])
             with open(C_LIGNIN_MOL_OUT, "w") as f:
                 f.write(block)
-            self.assertFalse(diff_lines(C_LIGNIN_MOL_OUT, C_LIGNIN_MOL_OUT))
+            self.assertFalse(diff_lines(C_LIGNIN_MOL_OUT, GOOD_C_LIGNIN_MOL_OUT))
             # Uncomment below to visually check output
             # mol = MolFromMolBlock(block)
             # Compute2DCoords(mol)
-            # MolToFile(mol, PNG_B1, size=(2000, 1000))
+            # MolToFile(mol, TEST_PNG, size=(2000, 1000))
         finally:
-            # silent_remove(C_LIGNIN_PNG, disable=DISABLE_REMOVE)
+            # silent_remove(TEST_PNG, disable=DISABLE_REMOVE)
             silent_remove(C_LIGNIN_MOL_OUT, disable=DISABLE_REMOVE)
             pass
 
@@ -599,11 +700,11 @@ class TestVisualization(unittest.TestCase):
             self.assertFalse("I thought I'd fail!")
             # After bug is fixed, add checks for correct generate_mol output
             # Below not needed for testing functionality; for showing image to visually check
-            silent_remove(PNG_B1)
+            silent_remove(TEST_PNG)
             mol = MolFromMolBlock(block)
             Compute2DCoords(mol)
-            MolToFile(mol, PNG_B1, size=(2000, 1200))
-            self.assertTrue(os.path.isfile(PNG_B1))
+            MolToFile(mol, TEST_PNG, size=(2000, 1200))
+            self.assertTrue(os.path.isfile(TEST_PNG))
             # If desired, also check generated psfgen (may not help coverage... to be seen...)
             gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=TCL_FNAME, segname="L", out_dir=SUB_DATA_DIR)
             # If kept, create and check new "good" file
@@ -611,7 +712,7 @@ class TestVisualization(unittest.TestCase):
         except InvalidDataError as e:
             print(e.args[0])
             self.assertTrue("This program cannot currently" in e.args[0])
-            silent_remove(PNG_B1, disable=DISABLE_REMOVE)
+            silent_remove(TEST_PNG, disable=DISABLE_REMOVE)
             pass
 
     def testDynamics(self):

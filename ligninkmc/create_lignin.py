@@ -5,12 +5,13 @@
 Launches steps required to build lignin
 """
 import argparse
+import pickle
 import os
 import sys
 import numpy as np
 from scipy import triu
 from scipy.sparse import dok_matrix
-from collections import (defaultdict, Counter, OrderedDict)
+from collections import (defaultdict, OrderedDict)
 from configparser import ConfigParser
 from rdkit.Chem import (MolToSmiles, MolFromMolBlock)
 from rdkit.Chem.AllChem import Compute2DCoords
@@ -25,7 +26,9 @@ from ligninkmc.visualization import generate_mol
 from ligninkmc.kmc_common import (Event, Monomer, E_A_KCAL_MOL, E_A_J_PART, TEMP, INI_MONOS, MAX_MONOS, SIM_TIME,
                                   AFFECTED, GROW, DEF_E_A_KCAL_MOL, OX, MONOMER, OLIGOMER, LIGNIN_SUBUNITS,
                                   SG_RATIO, ADJ_MATRIX, RANDOM_SEED, AO4, B1, B1_ALT, B5, BB, BO4, C5C5, C5O4,
-                                  CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL, round_sig_figs, MONO_LIST)
+                                  CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL, round_sig_figs, MONO_LIST,
+                                  CHAIN_MONOS, CHAIN_BRANCHES,
+                                  CHAIN_BRANCH_COEFF, RCF_MONOS, RCF_BRANCHES, RCF_BRANCH_COEFF)
 
 # Config keys #
 CONFIG_KEY = 'config_key'
@@ -33,18 +36,15 @@ OUT_FORMAT_LIST = 'output_format_list'
 BASENAME = 'outfile_basename'
 IMAGE_SIZE = 'image_size'
 SAVE_PDB = 'pdb'
+SAVE_PKL = 'pkl'
 SAVE_PNG = 'png'
 SAVE_SDF = 'sdf'
 SAVE_SMI = 'smi'
 SAVE_SVG = 'svg'
-OUT_TYPE_LIST = [SAVE_PDB, SAVE_PNG, SAVE_SDF, SAVE_SMI, SAVE_SVG]
+OUT_TYPE_LIST = [SAVE_PDB, SAVE_PKL, SAVE_PNG, SAVE_SDF, SAVE_SMI, SAVE_SVG]
 OUT_TYPE_STR = "', '".join(OUT_TYPE_LIST)
 SAVE_FILES = 'save_files_boolean'
-SAVE_PDB = 'pdb'
-SAVE_PNG = 'png'
-SAVE_SDF = 'sdf'
-SAVE_SMI = 'smi'
-SAVE_SVG = 'svg'
+
 
 # Defaults #
 DEF_TEMP = 298.15  # K
@@ -61,7 +61,7 @@ DEF_CFG_VALS = {OUT_DIR: None, OUT_FORMAT_LIST: None, INI_MONOS: DEF_INI_MONOS, 
                 MAX_MONOS: DEF_MAX_MONOS, BASENAME: DEF_BASENAME, IMAGE_SIZE: DEF_IMAGE_SIZE,
                 SG_RATIO: DEF_SG, TEMP: DEF_TEMP, RANDOM_SEED: None,
                 E_A_KCAL_MOL: DEF_E_A_KCAL_MOL, E_A_J_PART: None, SAVE_FILES: False,
-                SAVE_PDB: False, SAVE_PNG: False, SAVE_SDF: False, SAVE_SMI: False, SAVE_SVG: False,
+                SAVE_PDB: False, SAVE_PKL: False, SAVE_PNG: False, SAVE_SDF: False, SAVE_SMI: False, SAVE_SVG: False,
                 }
 
 REQ_KEYS = {}
@@ -82,29 +82,20 @@ def find_fragments(adj):
     fragments. This implementation does not care about the specific values within the adjacency matrix, but effectively
     treats the adjacency matrix as boolean.
 
-    > a = dok_matrix((2,2))
-    > find_fragments(a)
-    [{0}, {1}]
-
-    > a.resize((5,5))
-    > a[0,1] = 1; a[1,0] = 1; a[0,2] = 1; a[2,0] = 1; a[3,4] = 1; a[4,3] = 1
-    > find_fragments(a)
-    [{0, 1, 2}, {3, 4}]
-
-    > a = dok_matrix((5, 5))
-    > a[0, 4] = 1
-    > a[4, 0] = 1
-    > find_fragments(a)
-    [{0, 4}, {1}, {2}, {3}]
-
     :param adj: dok_matrix  -- NxN sparse matrix in dictionary of keys format that contains all of the connectivity
         information for the current lignification state
-    :return: A set of sets of the unique integer identifiers for the monomers contained within each fragment.
+    :return: two lists where the list indices of each correspond to a unique fragment:
+                A list of sets: the list contains a set for each fragment, comprised of the unique integer identifiers
+                                for the monomers contained within the fragment,
+                A list of ints containing the number of number of branch points found in each fragment
     """
     remaining_nodes = list(range(adj.get_shape()[0]))
     current_node = 0
     connected_fragments = [set()]
     connection_stack = []
+
+    branches_in_frags = []
+    num_branches = 0
 
     csr_adj = adj.tocsr(copy=True)
 
@@ -117,23 +108,31 @@ def find_fragments(adj):
 
         # Look for what's connected to this row
         connections = {node for node in csr_adj[current_node].indices}
+        # if more than two units are connected, there is a branch
+        len_connections = len(connections)
+        if len_connections > 2:
+            num_branches += len_connections - 2
 
         # Add these connections to our current fragment
         current_fragment.update({current_node})
 
         # Visit any nodes that the current node is connected to that still need to be visited
-        connection_stack.extend(
-            [node for node in connections if (node in remaining_nodes and node not in connection_stack)])
+        connection_stack.extend([node for node in connections if (node in remaining_nodes and
+                                                                  node not in connection_stack)])
 
         # Get the next node that should be visited
         if len(connection_stack) != 0:
             current_node = connection_stack.pop()
         elif len(remaining_nodes) != 0:
             current_node = remaining_nodes[0]
+            # great ready for next fragment
             connected_fragments.append(set())
+            branches_in_frags.append(num_branches)
+            num_branches = 0
         else:
             current_node = None
-    return connected_fragments
+            branches_in_frags.append(num_branches)
+    return connected_fragments, branches_in_frags
 
 
 def fragment_size(frags):
@@ -252,19 +251,10 @@ def count_bonds(adj):
     Counter for the different bonds that are present in the adjacency matrix. Primarily used for getting easy analysis
     of the properties of a simulated lignin from the resulting adjacency matrix.
 
-    Use case example:
-    > a = dok_matrix([[0, 8, 0, 0, 0],
-    >                    [4, 0, 8, 0, 0],
-    >                    [0, 5, 0, 8, 0],
-    >                    [0, 0, 8, 0, 4],
-    >                    [0, 0, 0, 8, 0]])
-    > count_bonds(a)
-    {BO4: 2, B1: 0, BB: 1, B5: 1, C5C5: 0, AO4: 0, C5O4: 0}
-
-    :param adj: DOK_MATRIX   -- the adjacency matrix for the lignin polymer that has been simulated
-    :return: dictionary mapping bond strings to the frequency of that specific bond
+    :param adj: dok_matrix   -- the adjacency matrix for the lignin polymer that has been simulated
+    :return: OrderedDict mapping bond strings to the frequency of that specific bond
     """
-    bound_count_dict = {BO4: 0, B1: 0, BB: 0, B5: 0, C5C5: 0, AO4: 0, C5O4: 0}
+    bound_count_dict = OrderedDict({BO4: 0,  BB: 0, B5: 0, B1: 0, C5O4: 0, AO4: 0, C5C5: 0})
     bonding_dict = {(4, 8): BO4, (8, 4): BO4, (8, 1): B1, (1, 8): B1, (8, 8): BB, (5, 5): C5C5,
                     (8, 5): B5, (5, 8): B5, (7, 4): AO4, (4, 7): AO4, (5, 4): C5O4, (4, 5): C5O4}
 
@@ -283,63 +273,41 @@ def count_bonds(adj):
 
 def count_oligomer_yields(adj):
     """
-    Use the depth first search implemented in find_fragments(adj) to locate individual fragments
-
-    Use case examples:
-    > a = dok_matrix([[0, 0, 0, 0, 0],
-    >                 [0, 0, 0, 0, 0],
-    >                 [0, 0, 0, 0, 0],
-    >                 [0, 0, 0, 0, 0],
-    >                 [0, 0, 0, 0, 0]])
-    > count_oligomer_yields(a)
-    {1: 5}
-
-    > a = dok_matrix([[0, 4, 0, 0, 0],
-    >                 [8, 0, 0, 0, 0],
-    >                 [0, 0, 0, 0, 0],
-    >                 [0, 0, 0, 0, 0],
-    >                 [0, 0, 0, 0, 0]])
-    > count_oligomer_yields(a)
-    {1: 3, 2: 1}
-
-    > a = dok_matrix([[0,4,0,0,0],
-    >                 [8,0,0,0,0],
-    >                 [0,0,0,8,0],
-    >                 [0,0,5,0,0],
-    >                 [0,0,0,0,0]])
-    > count_oligomer_yields(a)
-    {1: 1, 2: 2}
-
-    > a = dok_matrix([[0,4,8,0,0],
-    >                 [8,0,0,0,0],
-    >                 [5,0,0,0,0],
-    >                 [0,0,0,0,0],
-    >                 [0,0,0,0,0]])
-    > count_oligomer_yields(a)
-    {1: 2, 3: 1}
+    Use the depth first search implemented in find_fragments(adj) to locate individual fragments and branching
+    Related values are also calculated.
 
     :param adj: scipy dok_matrix, the adjacency matrix for the lignin polymer that has been simulated
-    :return: dict mapping the length of fragments (keys) to the number of occurrences of that length (vals)
+    :return: four dicts: an OrderedDict for olig_len_dict (olig_len: num_oligs); the keys are common to all
+                             dicts so one ordered dict should be sufficient. The other three dicts are:
+                                 olig_length: the total number of monomers involved in oligomers
+                                 olig_length: total number of branch points in oligomers of that length
+                                 olig_length: the branching coefficient for the oligomers of that length
     """
-    # Figure out what is still connected by using the determineCycles function, and look at the length of each
-    # connected piece
-    oligomers = find_fragments(adj)
-    olig_len_counter = Counter(map(len, oligomers))
-    return dict(olig_len_counter)
+    oligomers, branches_in_oligs = find_fragments(adj)
 
+    temp_olig_len_dict = defaultdict(int)
+    temp_olig_branch_dict = defaultdict(int)
+    for oligomer, num_branches in zip(oligomers, branches_in_oligs):
+        temp_olig_len_dict[len(oligomer)] += 1
+        temp_olig_branch_dict[len(oligomer)] += num_branches
 
-def calc_monos_per_olig(adj):
-    """
-    From an adjacency matrix, creates a dictionary of olig_lengths: num_monos_in_olig_length
-    :param adj: scipy dok_matrix   -- the adjacency matrix for the lignin polymer that has been simulated
-    :return: dict mapping the length of fragments (keys) to the number of monomers that ended up in oligomers of
-                 that length (vals)
-    """
-    olig_len_dict = count_oligomer_yields(adj)
+    # create one ordered dict, and three regular dicts
+    olig_lengths = list(temp_olig_len_dict.keys())
+    olig_lengths.sort()
+    olig_len_dict = OrderedDict()
     olig_monos_dict = {}
-    for olig_len, olig_num in olig_len_dict.items():
-        olig_monos_dict[olig_len] = olig_len * olig_num
-    return olig_monos_dict
+    olig_branch_dict = {}
+    olig_branch_coeff_dict = {}
+    for olig_len in olig_lengths:
+        num_oligs = temp_olig_len_dict[olig_len]
+        num_monos_in_olig_length = num_oligs * olig_len
+        num_branches = temp_olig_branch_dict[olig_len]
+        olig_len_dict[olig_len] = num_oligs
+        olig_monos_dict[olig_len] = num_monos_in_olig_length
+        olig_branch_dict[olig_len] = num_branches
+        olig_branch_coeff_dict[olig_len] = num_branches / num_monos_in_olig_length
+
+    return olig_len_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict
 
 
 def analyze_adj_matrix(adjacency):
@@ -348,16 +316,6 @@ def analyze_adj_matrix(adjacency):
     simulated frequency of different oligomer sizes and the number of each different type of bond before and after in
     silico RCF. The specific code to handle each of these properties is written in the count_bonds(adj) and
     count_oligomer_yields(adj) specifically.
-
-    > a = dok_matrix([[0, 0, 0, 0, 0],
-    >                 [0, 0, 0, 0, 0],
-    >                 [0, 0, 0, 0, 0],
-    >                 [0, 0, 0, 0, 0],
-    >                 [0, 0, 0, 0, 0] ] )
-    > analyze_adj_matrix(a)
-    {'Chain Lengths': output from count_oligomer_yields(a), 'Bonds': output from count_bonds(a) ,
-     'RCF Yields': output from count_oligomer_yields(a') where a' has bonds broken,
-     'RCF Bonds': output from count_bonds(a)}
 
     :param adjacency: scipy dok_matrix  -- the adjacency matrix for the lignin polymer that has been simulated
     :return: A dictionary of results: Chain Lengths, RCF Yields, Bonds, and RCF Bonds
@@ -368,7 +326,7 @@ def analyze_adj_matrix(adjacency):
     adjacency = break_bond_type(adjacency, B1_ALT)
 
     # Examine the initial polymers before any bonds are broken
-    yields = count_oligomer_yields(adjacency)
+    olig_yield_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict = count_oligomer_yields(adjacency)
     bond_distributions = count_bonds(adjacency)
 
     # Simulate the RCF process at complete conversion by breaking all of the
@@ -376,25 +334,13 @@ def analyze_adj_matrix(adjacency):
     rcf_adj = break_bond_type(break_bond_type(break_bond_type(adjacency, BO4), AO4), C5O4)
 
     # Now count the bonds and yields remaining
-    rcf_yields = count_oligomer_yields(rcf_adj)
+    rcf_yield_dict, rcf_monos_dict, rcf_branch_dict, rcf_branch_coeff_dict = count_oligomer_yields(rcf_adj)
     rcf_bonds = count_bonds(rcf_adj)
 
-    # sort results for reliably repeatable (and more readable) output
-    sorted_yields = OrderedDict()
-    for i in sorted(dict(yields).keys()):
-        sorted_yields[i] = yields[i]
-    sorted_bond_dist = OrderedDict()
-    for i in sorted(bond_distributions.keys()):
-        sorted_bond_dist[i] = bond_distributions[i]
-    sorted_rcf_yield = OrderedDict()
-    for i in sorted(dict(rcf_yields).keys()):
-        sorted_rcf_yield[i] = rcf_yields[i]
-    sorted_rcf_bonds = OrderedDict()
-    for i in sorted(rcf_bonds.keys()):
-        sorted_rcf_bonds[i] = rcf_bonds[i]
-
-    return {CHAIN_LEN: sorted_yields, BONDS: sorted_bond_dist,
-            RCF_YIELDS: sorted_rcf_yield, RCF_BONDS: sorted_rcf_bonds}
+    return {BONDS: bond_distributions, CHAIN_LEN: olig_yield_dict, CHAIN_MONOS:  olig_monos_dict,
+            CHAIN_BRANCHES: olig_branch_dict, CHAIN_BRANCH_COEFF: olig_branch_coeff_dict,
+            RCF_BONDS: rcf_bonds, RCF_YIELDS: rcf_yield_dict, RCF_MONOS: rcf_monos_dict,
+            RCF_BRANCHES: rcf_branch_dict, RCF_BRANCH_COEFF: rcf_branch_coeff_dict}
 
 
 def adj_analysis_to_stdout(adj_results):
@@ -404,17 +350,18 @@ def adj_analysis_to_stdout(adj_results):
     :return: n/a: prints to stdout
     """
     chain_len_results = adj_results[CHAIN_LEN]
-    num_monos_created = calc_oligs_monos_from_adj(chain_len_results)
+    num_monos_created = sum(adj_results[CHAIN_MONOS].values())
 
     print(f"Lignin KMC created {num_monos_created} monomers, which formed:")
-    print_olig_distribution(chain_len_results)
+    print_olig_distribution(chain_len_results, adj_results[CHAIN_BRANCH_COEFF])
 
     lignin_bonds = adj_results[BONDS]
     print(f"composed of the following bond types and number:")
     print_bond_type_num(lignin_bonds)
 
     print("\nBreaking C-O bonds to simulate RCF results in:")
-    print_olig_distribution(dict(adj_results[RCF_YIELDS]))
+    print_olig_distribution(adj_results[RCF_YIELDS], adj_results[RCF_BRANCH_COEFF])
+
     print(f"with the following remaining bond types and number:")
     print_bond_type_num(adj_results[RCF_BONDS])
 
@@ -433,7 +380,7 @@ def print_bond_type_num(lignin_bonds):
     print(bond_summary)
 
 
-def print_olig_distribution(chain_len_results):
+def print_olig_distribution(chain_len_results, coeff):
     for olig_len, olig_num in chain_len_results.items():
         if olig_len == 1:
             print(f"{olig_num:>8} monomer(s) (chain length 1)")
@@ -442,7 +389,8 @@ def print_olig_distribution(chain_len_results):
         elif olig_len == 3:
             print(f"{olig_num:>8} trimer(s) (chain length 3)")
         else:
-            print(f"{olig_num:>8} oligomer(s) of chain length {olig_len}")
+            print(f"{olig_num:>8} oligomer(s) of chain length {olig_len}, with branching coefficient "
+                  f"{round(coeff[olig_len], 3)}")
 
 
 def degree(adj):
@@ -451,26 +399,26 @@ def degree(adj):
     is the number of edges connected to a node. In the context of lignin, that is simply the number of
     connected residues to a specific residue, and can be used to determine derived properties like the
     branching coefficient.
-
-    Inputs:
-        adj scipy dok_matrix   -- the adjacency matrix for the lignin polymer that has been simulated
-
-    Outputs:
-        The degree for each monomer as a numpy array.
+    :param adj: scipy dok_matrix   -- the adjacency matrix for the lignin polymer that has been simulated
+    :return: The degree for each monomer as a numpy array.
     """
     return np.bincount(adj.nonzero()[0])
 
 
-def branching_coefficient(adj):
+def overall_branching_coefficient(adj):
     """
     Based on the definition in Dellon et al. (10.1021/acs.energyfuels.7b01150), this is the number of
-       oligomers with degree 3 or more divided by the total number of monomers.
+       branched oligomers divided by the total number of monomers.
+    This value is indifferent to the number of fragments in the output.
 
-    :param adj: DOK_MATRIX   -- the adjacency matrix for the lignin polymer that has been simulated
+    :param adj: dok_matrix, the adjacency matrix for the lignin polymer that has been simulated
     :return: The branching coefficient that corresponds to the adjacency matrix
     """
     degrees = degree(adj)
-    return np.sum(degrees >= 3) / len(degrees)
+    if len(degrees) == 0:
+        return 0
+    else:
+        return np.sum(degrees >= 3) / len(degrees)
 
 
 def get_bond_type_v_time_dict(adj_list, sum_len_larger_than=None):
@@ -490,9 +438,10 @@ def get_bond_type_v_time_dict(adj_list, sum_len_larger_than=None):
         count_bonds_list = count_bonds(adj)
         for bond_type in count_bonds_list:
             bond_type_dict[bond_type].append(count_bonds_list[bond_type])
-        frag_count_dict_list.append(calc_monos_per_olig(adj))
-    # since breaking bonds is not allowed, the longest oligomer will be from the last step; find that length
-    max_olig_len = max(frag_count_dict_list[-1].keys())
+        olig_yield_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict = count_oligomer_yields(adj)
+        frag_count_dict_list.append(olig_monos_dict)
+    # since breaking bonds is not allowed, the longest oligomer will be from the last step; ordered, so last len
+    max_olig_len = list(frag_count_dict_list[-1].keys())[-1]
     # can now get the dict of lists from list of dicts
     for frag_count_list in frag_count_dict_list:
         for olig_len in range(1, max_olig_len + 1):
@@ -734,13 +683,15 @@ def produce_output(result, cfg):
         str_to_file(smi_str, fname)
     else:
         print("\nSMILES representation: \n", MolToSmiles(mol))
-    if cfg[SAVE_PDB] or cfg[SAVE_PNG] or cfg[SAVE_SDF] or cfg[SAVE_SVG]:
+    if cfg[SAVE_PDB] or cfg[SAVE_PKL] or cfg[SAVE_PNG] or cfg[SAVE_SDF] or cfg[SAVE_SVG]:
         Compute2DCoords(mol)
-        for save_type in [SAVE_PDB, SAVE_PNG, SAVE_SDF, SAVE_SVG]:
+        for save_type in [SAVE_PDB, SAVE_PKL, SAVE_PNG, SAVE_SDF, SAVE_SVG]:
             if cfg[save_type]:
                 fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=save_type)
                 if cfg[SAVE_PDB]:
                     MolToPDBFile(mol, fname)
+                if cfg[SAVE_PKL]:
+                    pickle.dump(mol, fname)
                 if cfg[SAVE_PNG] or cfg[SAVE_SVG]:
                     MolToFile(mol, fname, size=cfg[IMAGE_SIZE])
                 if cfg[SAVE_SDF]:

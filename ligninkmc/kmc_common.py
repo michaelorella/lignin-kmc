@@ -54,12 +54,17 @@ AFFECTED = 'affected'
 ADJ_MATRIX = 'adjacency_matrix'
 MONO_LIST = 'monomers'
 
-CHAIN_LEN = 'Chain Lengths'
 ATOMS = 'Atoms'
 BONDS = 'Bonds'
-RCF_YIELDS = 'RCF Yields'
+CHAIN_LEN = 'Chain Lengths'
+CHAIN_MONOS = 'Chain Monomers'
+CHAIN_BRANCHES = 'Chain Branches'
+CHAIN_BRANCH_COEFF = 'Chain Branch Coefficients'
 RCF_BONDS = 'RCF Bonds'
-
+RCF_YIELDS = 'RCF Yields'
+RCF_MONOS = 'RCF Monomers'
+RCF_BRANCHES = 'RCF Branches'
+RCF_BRANCH_COEFF = 'RCF Branch Coefficients'
 
 # Data
 

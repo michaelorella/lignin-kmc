@@ -68,15 +68,18 @@ class TestCreateLigninNormalUse(unittest.TestCase):
         test_input = ["-r", "10"]
         # main(test_input)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n" \
-                             "       1 trimer(s) (chain length 3)\n       1 oligomer(s) of chain length 7"
+                             "       1 trimer(s) (chain length 3)\n       " \
+                             "1 oligomer(s) of chain length 7, with branching coefficient 0.143"
         good_bond_summary = "composed of the following bond types and number:\n " \
-                            "    55:    0    5O4:    1    AO4:    0     B1:    0     B5:    2     BB:    1    BO4:    4"
+                            "   BO4:    4     BB:    1     B5:    2     B1:    0    5O4:    1    AO4:    0     55:    0"
         good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n" \
                                  "       4 monomer(s) (chain length 1)\n" \
                                  "       3 dimer(s) (chain length 2)"
-        good_rcf_bond_summary = "with the following remaining bond types and number:\n     " \
-                                "55:    0    5O4:    0    AO4:    0     B1:    0     B5:    2     " \
-                                "BB:    1    BO4:    0"
+        good_rcf_bond_summary = "with the following remaining bond types and number:\n    BO4:    0     " \
+                                "BB:    1     B5:    2     B1:    0    5O4:    0    AO4:    0     55:    0"
+        good_smiles = "COc1cc(C(O)C(CO)Oc2c(OC)cc(C(O)C(CO)Oc3c(OC)cc(C4OCC5C(c6cc(OC)c([O])c(OC)c6)OCC45)cc3OC)cc2O" \
+                      "c2c(OC)cc(C(O)C(CO)Oc3c(OC)cc(C4Oc5c(OC)cc(/C=C/CO)cc5C4CO)cc3OC)cc2OC)cc(OC)c1[O].COc1" \
+                      "cc(C(O)C(CO)Oc2c(OC)cc(C3Oc4c(OC)cc(/C=C/CO)cc4C3CO)cc2OC)cc(OC)c1[O]"
         with capture_stdout(main, test_input) as output:
             self.assertTrue(OPENING_MSG in output)
             self.assertTrue(good_chain_summary in output)
@@ -88,21 +91,16 @@ class TestCreateLigninNormalUse(unittest.TestCase):
         test_input = ["-c", SMALL_INI, "-r", "11"]
         # main(test_input)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n" \
-                             "       1 oligomer(s) of chain length 10"
-        good_bond_summary = "composed of the following bond types and number:\n     " \
-                            "55:    0    5O4:    0    AO4:    0     B1:    0     B5:    2     BB:    1    BO4:    6"
+                             "       1 oligomer(s) of chain length 10, with branching coefficient 0.0"
+        good_bond_summary = "composed of the following bond types and number:\n    BO4:    6" \
+                            "     BB:    1     B5:    2     B1:    0    5O4:    0    AO4:    0     55:    0"
         good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n" \
                                  "       4 monomer(s) (chain length 1)\n" \
                                  "       3 dimer(s) (chain length 2)"
-        good_rcf_bond_summary = "with the following remaining bond types and number:\n     " \
-                                "55:    0    5O4:    0    AO4:    0     B1:    0     B5:    2     BB:    1" \
-                                "    BO4:    0"
+        good_rcf_bond_summary = "with the following remaining bond types and number:\n    BO4:    0" \
+                                "     BB:    1     B5:    2     B1:    0    5O4:    0    AO4:    0     55:    0"
         with capture_stdout(main, test_input) as output:
             self.assertTrue(good_chain_summary in output)
             self.assertTrue(good_bond_summary in output)
             self.assertTrue(good_rcf_chain_summary in output)
             self.assertTrue(good_rcf_bond_summary in output)
-
-    def testNewFeatures(self):
-        test_input = ["-r", "10"]
-        main(test_input)
