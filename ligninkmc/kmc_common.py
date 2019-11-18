@@ -1,6 +1,5 @@
 # !/usr/bin/env python
 # coding=utf-8
-from collections import OrderedDict
 
 from common_wrangler.common import InvalidDataError
 
@@ -150,17 +149,15 @@ class Event:
     Events are compared based on the monomers that are involved in the event, the specific bond being formed, and the
     value updates to the adjacency matrix.
     """
-    # create an ordered dictionary (for consistency) that maps event keys onto numerical changes in monomer
+    # create a dict that maps event keys onto numerical changes in monomer
     # state where the value is a tuple of (new reactant active point, openPos0, openPos1)
-    eventDict = OrderedDict({BO4: ((-1, 7), (), (7,)), BB: ((0, 0), (), ()),
-                             C5C5: ((0, 0), (), ()), C5O4: ((-1, 0), (), ()),
-                             B5: ((-1, 0), (), ()), B1: ((0, 7), (), (7,)),
-                             AO4: ((-1, 4), (), ()), Q: (0, (1,), ()), OX: (4, (), ())})
+    eventDict = {BO4: ((-1, 7), (), (7,)), BB: ((0, 0), (), ()),
+                 C5C5: ((0, 0), (), ()), C5O4: ((-1, 0), (), ()),
+                 B5: ((-1, 0), (), ()), B1: ((0, 7), (), (7,)),
+                 AO4: ((-1, 4), (), ()), Q: (0, (1,), ()), OX: (4, (), ())}
 
-    # Create an ordered dictionary to properly order the event indices
-    activeDict = OrderedDict({(4, 8): (0, 1), (8, 4): (1, 0), (4, 5): (0, 1), (5, 4): (1, 0), (5, 8): (0, 1),
-                              (8, 5): (1, 0), (1, 8): (0, 1), (8, 1): (1, 0), (4, 7): (0, 1), (7, 4): (1, 0),
-                              (5, 5): (0, 1), (8, 8): (0, 1)})
+    activeDict = {(4, 8): (0, 1), (8, 4): (1, 0), (4, 5): (0, 1), (5, 4): (1, 0), (5, 8): (0, 1), (8, 5): (1, 0),
+                  (1, 8): (0, 1), (8, 1): (1, 0), (4, 7): (0, 1), (7, 4): (1, 0), (5, 5): (0, 1), (8, 8): (0, 1)}
 
     def __init__(self, event_name, ids, rate=0, bond=()):
         """
@@ -246,8 +243,8 @@ class Monomer:
             mon = Monomer(2, 0) # Makes a caffeoyl unit monomer with ID = 0
             mon = Monomer(1, n) # Makes a sinapyl alcohol with ID = n
 
-        :param unit_type: --  int    -- integer switch of the monomer type
-        :param i:    --  int    -- unique identifier for the monomer
+        :param unit_type: int    -- integer switch of the monomer type
+        :param i: int    -- unique identifier for the monomer
         Outputs:
             New instance of a monomer object with the desired attributes
         """
