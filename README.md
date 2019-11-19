@@ -186,21 +186,17 @@ environment mirroring this one, run the following command in the terminal (or An
 conda env create -f environment.yml
 ```
 
-Once the environment has been created, you can install the lignin-KMC module using a Python `import` statement. The 
-necessary package to import is `ligninkmc`. To do this, start the environment you just created in conda and run Python:
-```
-(base) ~/ conda activate lignin_kmc
-(lignin_kmc) ~/ Python
+Once the environment has been created, activate it:
 
-Python 3.6.6 |Anaconda, Inc.| (default, Jun 28 2018, 11:27:44) [MSC v.1900 64 bit (AMD64)] on win32
-Type "help", "copyright", "credits" or "license" for more information.
+```
+conda activate lignin_kmc
 ```
 
-Congratulations! Lignin-KMC is now installed! With this basic installation, you will have access to the functions therein 
-(such as `run_kmc`, `generate_mol`, and `analyze_adj_matrix`) and the classes `Monomer` and `Event`.
+Congratulations! Lignin-KMC is now installed! With this basic installation, you will have access to the functions 
+therein (such as `run_kmc`, `generate_mol`, and `analyze_adj_matrix`) and the classes `Monomer` and `Event`.
 
 ## Examples
-For examples, see `~/LigninPolymerizationNotebook.ipynb` and `~/Example.ipynb`. 
+For examples, see `~/LigninPolymerizationNotebook.ipynb`, `~/Example.ipynb`, and `Dynamics.ipynb`. 
 
 ## API Reference
 
@@ -233,7 +229,8 @@ monomer type.
 
 __find_fragments__(adj)
 - adj = dok_matrix = NxN sparse matrix in the dictionary of keys format
-- return = [{},{},...,{}] = list of sets of connected components within the adjacency matrix 
+- return = [{}, {}, ..., {}], [int, int, ..., int] = list of sets of connected components within the adjacency matrix 
+and a list of ints containing the number of number of branch points found in each fragment.
 
 Identifies connected component subgraphs of the supergraph `adj`, which can be used to determine yields or identify 
 whether two monomers are connected.
@@ -244,7 +241,13 @@ __fragment_size__(frags)
 
 Gets the sizes for all of the monomers in the simulation
 
-__break_bond_type__(adj, bondType)
+__quick_frag_size__(monomer)
+- monomer = Monomer = instance of monomer object that we want to check
+- return = str = 'monomer' or 'oligomer' 
+
+Uses the open positions attribute of the monomer object to determine whether there is anything connected to this monomer yet
+
+__break_bond_type__(adj, bond_type)
 - adj = scipy dok_matrix = adjacency matrix
 - bond_type = str = the bond that should be broken
 - return = dok_matrix = new adjacency matrix after bonds were broken
@@ -255,13 +258,17 @@ all bonds of a given type are removed without discrimination.
 
 __count_bonds__(adj)
 - adj = dok_matrix = adjacency matrix
-- return = dict() = a dictionary containing all bond strings mapped to the number of times they occur within `adj`
+- return = OrderedDict = a dictionary containing all bond strings mapped to the number of times they occur within `adj`
 
 Used for evaluating the frequency of different linkages within a simulated lignin
 
 __count_oligomer_yields__(adj)
 - adj = dok_matrix = adjacency matrix
-- return = dict = maps the size of an oligomer to the number of occurrences within the adjacency matrix
+- return = OrderedDict, dict, dict, dict = maps the size of an oligomer to:
+     the number of occurrences within the adjacency matrix, 
+     the total number of monomers involved in oligomers,
+     total number of branch points in oligomers of that length, and
+     the branching coefficient for the oligomers of that length
 
 Used to count the yields of monomers, dimers, etc., when the simulation is complete
 
@@ -271,24 +278,14 @@ __analyze_adj_matrix__(adjacency)
 
 Aggregates analysis of oligomer length and bond types, and these same properties post C-O bond cleavage.
 
-### kmc_functions.py
-
-#### FUNCTIONS
-
-__quick_frag_size__(monomer)
-- monomer = Monomer = instance of monomer object that we want to check
-- return = str = 'monomer' or 'oligomer' 
-
-Uses the open positions attribute of the monomer object to determine whether there is anything connected to this monomer yet
-
 __update_events__(monomers, adj, last_event, events, rate_vec, rate_dict, max_mon=500)
-- monomers = dict() = maps the index of the monomer to the object and the events that a change to this index would effect
+- state_dict = dict() = maps the index of the monomer to the object and the events that a change to this index would effect
 - adj = dok_matrix = adjacency matrix
 - last_event = Event = the previous event that occurred
-- events = dict() = map the hash value of each event to the unique event - this is all of the possible events at the 
+- event_dict = dict() = map the hash value of each event to the unique event - this is all of the possible events at the 
   current state after the method is run
 - rate_vec = dict() = map the hash value of each event to the rate of that event
-- rate_dict = dict() = the rates that are obtained *a priori* from DFT calculations
+- rate_dict = dict() = the reaction rates for all possible reactions, in 1/s or 1/monomer-second
 - max_mon = int = the maximum number of monomers in the simulation
 - return = None
 
@@ -296,17 +293,17 @@ Mutates the dictionary of events and rateVec that are passed to the function. Th
 entire state doesn't need to be reconstructed on every iteration of the simulation. Once these changes are made, the 
 event choice is ready to be made and the chosen event can be performed.
 
-__do_event__(event, state, adj, sg_ratio=None)
+__do_event__(event, state, adj, sg_ratio=None, random_seed=None)
 - event = Event = the event that was chosen to be performed
 - state = dict() = the dictionary mapping monomer indices to the monomer object and events that would be changed by a 
   change to the monomer
 - adj = dok_matrix = adjacency matrix
 - sg_ratio = float needed if and only if: a) there are S and G and only S and G, and b) new monomers will be added
+- random_seed = int (positive val) needed if repeatable results are desired (for testing)
 
 Updates the monomers and adjacency matrix to reflect the execution of the chosen event
 
-__run_kmc__(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynamics=False, random_seed=None, 
-            sg_ratio=None)
+__run_kmc__(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynamics=False, random_seed=None)
 - rate_dict:  dict -- the rate of each of the possible events as a 3-d dictionary mapping bond type, monomers sizes,  
                       and monomer types to a rate in units consistent with your final time definition
 - initial_state: dict  -- The dictionary mapping the index of each monomer to a dictionary with the monomer
@@ -316,17 +313,12 @@ __run_kmc__(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
 - t_max: float -- The final simulation time (units depend on units of rates)
 - dynamics: boolean -- if True, will keep values for every time step
 - random_seed: None or hashable value to aid testing
-- sg_ratio: needed if there is S and G and nothing else
 - return: dict with the simulation times, adjacency matrix, and list of monomers at the end of the simulation
 
 Runs the Gillespie algorithm on the situation specified by the parameters. This is the workhorse of the code, where the 
 monomers are changed and linked to simulate the growth of lignin *in planta*.
 
-### visualization.py
-
-#### FUNCTIONS
-
-__generate_mol__(adj,nodeList)
+__generate_mol__(adj, node_list)
 - adj = dok_matrix = adjacency matrix
 - nodeList = [Monomer, Monomer, ..., Monomer] = list of monomers output from the simulation
 - return = str = molfile contents

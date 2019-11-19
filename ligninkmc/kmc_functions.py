@@ -330,10 +330,9 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
         method, implemented in a hash map where the event hash value is the key
     :param rate_vec: dict  -- The rates of all of the unique event_dict implemented in a hash map where the Event
         hash value is the key
-    :param rate_dict: dict  -- The dictionary of the possible rates involved in each reaction, where the possible
-        reactions are OX,B1,C5O4,AO4,C5C5,B5,Q,AO4, and . These are calculated a priori from DFT
+    :param rate_dict: dict  -- The dictionary of the possible rates involved in each reaction
     :param max_mon: int -- The maximum number of monomers that should be stored in the simulation
-    :return: v
+    :return: n/a, updates state_dict, adj, event_dict, rate_vec
     """
 
     # Map the monomer active state to the possible event_dict it can do
@@ -524,7 +523,7 @@ def do_event(event, state, adj, sg_ratio=None, random_seed=None):
     :param sg_ratio: float needed if and only if:
                          a) there are S and G and only S and G, and
                          b) new state_dict will be added
-    :param random_seed: if an integer is provided, it will be used for reproducible results in testing
+    :param random_seed: if a positive integer is provided, it will be used for reproducible results (for testing)
     :return: N/A - mutates the list of state and adjacency matrix instead
     """
 
