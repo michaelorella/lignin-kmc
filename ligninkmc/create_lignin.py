@@ -8,27 +8,28 @@ import argparse
 import os
 import sys
 import numpy as np
-from scipy import triu
-from scipy.sparse import dok_matrix
 from collections import (defaultdict, OrderedDict)
 from configparser import ConfigParser
-from rdkit.Chem import (MolToSmiles, MolFromMolBlock, AddHs)
-from rdkit.Chem.AllChem import (Compute2DCoords, EmbedMolecule, ETKDG)
+from rdkit.Chem import (MolToSmiles, MolFromMolBlock)
+from rdkit.Chem.AllChem import (Compute2DCoords)
 from rdkit.Chem.Draw import MolToFile
-from rdkit.Chem.rdmolfiles import (MolToPDBFile, SDWriter)
 from rdkit.Chem.rdMolInterchange import MolToJSON
+from scipy import triu
+from scipy.sparse import dok_matrix
 from common_wrangler.common import (warning, process_cfg, MAIN_SEC, GOOD_RET, INPUT_ERROR, KB, H,
                                     KCAL_MOL_TO_J_PART, InvalidDataError, INVALID_DATA, OUT_DIR, make_dir,
                                     create_out_fname, str_to_file)
 from ligninkmc import __version__
+from ligninkmc.kmc_common import (Event, Monomer, E_BARRIER_KCAL_MOL, E_BARRIER_J_PART, TEMP, INI_MONOS, MAX_MONOS,
+                                  SIM_TIME, AFFECTED, GROW, DEF_E_BARRIER_KCAL_MOL, OX, MONOMER, OLIGOMER,
+                                  LIGNIN_SUBUNITS, SG_RATIO, ADJ_MATRIX, RANDOM_SEED, AO4, B1, B1_ALT, B5, BB, BO4,
+                                  C5C5, C5O4, S, G, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL,
+                                  round_sig_figs, MONO_LIST, CHAIN_MONOS, CHAIN_BRANCHES, CHAIN_BRANCH_COEFF,
+                                  RCF_MONOS, RCF_BRANCHES, RCF_BRANCH_COEFF)
 from ligninkmc.kmc_functions import run_kmc
 from ligninkmc.visualization import (generate_mol, gen_psfgen)
-from ligninkmc.kmc_common import (Event, Monomer, E_A_KCAL_MOL, E_A_J_PART, TEMP, INI_MONOS, MAX_MONOS, SIM_TIME,
-                                  AFFECTED, GROW, DEF_E_A_KCAL_MOL, OX, MONOMER, OLIGOMER, LIGNIN_SUBUNITS,
-                                  SG_RATIO, ADJ_MATRIX, RANDOM_SEED, AO4, B1, B1_ALT, B5, BB, BO4, C5C5, C5O4, S, G,
-                                  CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL, round_sig_figs,
-                                  MONO_LIST, CHAIN_MONOS, CHAIN_BRANCHES, CHAIN_BRANCH_COEFF,
-                                  RCF_MONOS, RCF_BRANCHES, RCF_BRANCH_COEFF)
+
+__author__ = 'hmayes'
 
 # Config keys #
 CONFIG_KEY = 'config_key'
@@ -36,13 +37,11 @@ OUT_FORMAT_LIST = 'output_format_list'
 BASENAME = 'outfile_basename'
 IMAGE_SIZE = 'image_size'
 SAVE_JSON = 'json'
-SAVE_PDB = 'pdb'
 SAVE_PNG = 'png'
-SAVE_SDF = 'sdf'
 SAVE_SMI = 'smi'
 SAVE_SVG = 'svg'
 SAVE_TCL = 'tcl'
-OUT_TYPE_LIST = [SAVE_JSON, SAVE_PDB, SAVE_PNG, SAVE_SDF, SAVE_SMI, SAVE_SVG, SAVE_TCL]
+OUT_TYPE_LIST = [SAVE_JSON, SAVE_PNG,  SAVE_SMI, SAVE_SVG, SAVE_TCL]
 OUT_TYPE_STR = "', '".join(OUT_TYPE_LIST)
 SAVE_FILES = 'save_files_boolean'
 
@@ -60,9 +59,9 @@ DEF_BASENAME = 'lignin-kmc-out'
 DEF_VAL = 'default_value'
 DEF_CFG_VALS = {OUT_DIR: None, OUT_FORMAT_LIST: None, INI_MONOS: DEF_INI_MONOS, SIM_TIME: DEF_SIM_TIME,
                 MAX_MONOS: DEF_MAX_MONOS, BASENAME: DEF_BASENAME, IMAGE_SIZE: DEF_IMAGE_SIZE,
-                SG_RATIO: DEF_SG, TEMP: DEF_TEMP, RANDOM_SEED: None, E_A_KCAL_MOL: DEF_E_A_KCAL_MOL, E_A_J_PART: None,
-                SAVE_FILES: False, SAVE_JSON: False, SAVE_PDB: False, SAVE_PNG: False, SAVE_SDF: False,
-                SAVE_SMI: False, SAVE_SVG: False, SAVE_TCL: False,
+                SG_RATIO: DEF_SG, TEMP: DEF_TEMP, RANDOM_SEED: None, E_BARRIER_KCAL_MOL: DEF_E_BARRIER_KCAL_MOL,
+                E_BARRIER_J_PART: None, SAVE_FILES: False, SAVE_JSON: False, SAVE_PNG: False, SAVE_SMI: False,
+                SAVE_SVG: False, SAVE_TCL: False,
                 }
 
 REQ_KEYS = {}
@@ -491,12 +490,12 @@ def parse_cmdline(argv=None):
                                                  'examples in our project package on github \n  '
                                                  '(https://github.com/michaelorella/lignin-kmc/), but not currently '
                                                  'from the command line. If this \n  functionality is desired, please '
-                                                 'start a new issue on the github.\n\n  '
-                                                 'By default, the activation energies from this reference will be '
-                                                 'used, as specified in Tables S1 and S2.\n  Alternately, the user '
-                                                 f"may specify values, which should be specified as a dict of dict "
-                                                 f"of dicts in a \n  specified configuration file (specified with '-c')"
-                                                 f" using the '{E_A_KCAL_MOL}' or '{E_A_J_PART}'\n  parameters with "
+                                                 'start a new issue on the github.\n\n  By default, the Gibbs free '
+                                                 f'energy barriers from this reference will be used, as specified in '
+                                                 f'Tables S1 and S2.\n  Alternately, the user may specify values, '
+                                                 f"which should be specified as a dict of dict of dicts in a \n  "
+                                                 f"specified configuration file (specified with '-c') using the "
+                                                 f"'{E_BARRIER_KCAL_MOL}' or '{E_BARRIER_J_PART}'\n  parameters with "
                                                  f"corresponding units (kcal/mol or joules/particle, respectively), in "
                                                  f"a configuration file \n  (see '-c'). The format is (bond_type: "
                                                  f"monomer(s) involved: units involved: ea_vals), for example:\n      "
@@ -515,17 +514,17 @@ def parse_cmdline(argv=None):
     parser.add_argument("-d", "--out_dir", help="The directory where output files will be saved. The default is "
                                                 "the current directory.", default=DEF_CFG_VALS[OUT_DIR])
     parser.add_argument("-f", "--output_format_list", help="The type(s) of output format to be saved. Provide as a "
-                                                           "space- or comma-separated \nlist. The currently supported "
+                                                           "space- or comma-separated list. \nThe currently supported "
                                                            f"types are: '{OUT_TYPE_STR}'. \nThe '{SAVE_JSON}' "
                                                            f"option will save a json format of RDKit's 'mol' "
-                                                           f"(molecule) object. The '{SAVE_TCL}' option will create "
-                                                           f"a file for use with VMD to generate a psf file, as "
-                                                           f"further described in Lignin-Builder, "
-                                                           f"https://github.com/jvermaas/LigninBuilder, "
+                                                           f"(molecule) object. The '{SAVE_TCL}' \noption will create "
+                                                           f"a file for use with VMD to generate a psf file and 3D "
+                                                           f"molecules, \nas described in LigninBuilder, "
+                                                           f"https://github.com/jvermaas/LigninBuilder, \n"
                                                            f"https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.8b05665"
-                                                           f". \n\nA base name for the saved "
+                                                           f". \nA base name for the saved "
                                                            f"files can be provided with the '-o' option. Otherwise, "
-                                                           f"the base \nname will be '{DEF_BASENAME}'.",
+                                                           f"the \nbase name will be '{DEF_BASENAME}'.",
                         default=DEF_CFG_VALS[OUT_FORMAT_LIST])
     parser.add_argument("-i", "--initial_num_monomers", help=f"The initial number of monomers to be included in the "
                                                              f"simulation. The default is {DEF_INI_MONOS}.",
@@ -534,23 +533,23 @@ def parse_cmdline(argv=None):
                                                           f"default is {DEF_SIM_TIME} s.", default=DEF_SIM_TIME)
     parser.add_argument("-m", "--max_num_monomers", help=f"The maximum number of monomers to be studied. The default "
                                                          f"value is {DEF_MAX_MONOS}.", default=DEF_MAX_MONOS)
-    parser.add_argument("-o", "--output_basename", help="The basename for output file(s). If an extension is provided, "
-                                                        "it will determine \nthe type of output. Multiple output "
-                                                        "formats can be selected with the '-f' option. \nThe default "
-                                                        "format type is '.smi' (SMILES). Currently supported output"
-                                                        f"types are: \n'{OUT_TYPE_STR}'.", default=DEF_BASENAME)
-    parser.add_argument("-r", "--random_seed", help="A non-zero integer to be used as a seed value for testing.",
+    parser.add_argument("-o", "--output_basename", help=f"The base name for output file(s). If an extension is "
+                                                        f"provided, it will determine \nthe type of output. Currently "
+                                                        f"supported output types are: \n'{OUT_TYPE_STR}'. Multiple "
+                                                        f"output formats can be selected with the \n'-f' option. If "
+                                                        f"the '-f' option is selected and no output base name "
+                                                        f"provided, a \ndefault base name of '{DEF_BASENAME}' will be "
+                                                        f"used.", default=DEF_BASENAME)
+
+    parser.add_argument("-r", "--random_seed", help="A positive integer to be used as a seed value for testing.",
                         default=DEF_CFG_VALS[RANDOM_SEED])
     parser.add_argument("-s", "--image_size", help=f"The output size of svg or png files in pixels (provide two "
-                                                   f"integers). The default \nis {DEF_IMAGE_SIZE} pixels.",
+                                                   f"integers). The default size \nis {DEF_IMAGE_SIZE} pixels.",
                         default=DEF_IMAGE_SIZE)
     parser.add_argument("-sg", "--sg_ratio", help=f"The S:G (guaiacol:syringyl) ratio. "
                                                   f"The default is {DEF_SG}.", default=DEF_SG)
     parser.add_argument("-t", "--temperature_in_k", help=f"The temperature (in K) at which to model lignin "
-                                                         f"biosynthesis. The default is {DEF_TEMP} K. \nCAUTION: the "
-                                                         f"default energy barriers were calculated at {DEF_TEMP} K. "
-                                                         f"If they are used, \nthe resulting calculated reaction rates "
-                                                         f"may not be valid.",
+                                                         f"biosynthesis. The default is {DEF_TEMP} K.",
                         default=DEF_TEMP)
 
     args = None
@@ -586,23 +585,24 @@ def parse_cmdline(argv=None):
 
 def calc_rates(temp, ea_j_part_dict=None, ea_kcal_mol_dict=None):
     """
-    Uses temperature and provided activation energy to calculate rates using the Eyring equation
-    dictionary formats: dict = {rxn_type: {substrate(s): {sub_lengths (e.g. (monomer, monomer)): value, ...}, ...}, ...}
+    Uses temperature and provided Gibbs free energy barriers (at 298.15 K and 1 atm) to calculate rates using the
+        Eyring equation
+    Dict formats: dict = {rxn_type: {substrate(s): {sub_lengths (e.g. (monomer, monomer)): value, ...}, ...}, ...}
 
     Only ea_j_part_dict or ea_kcal_mol_dict are needed; if both are provided, only ea_j_part_dict will be used
 
     :param temp: float, temperature in K
-    :param ea_j_part_dict: dictionary of activation energies in Joule/particle, in format noted above
-    :param ea_kcal_mol_dict: dictionary of activation energies in Joule/particle, in format noted above
+    :param ea_j_part_dict: dictionary of Gibbs free energy barriers in Joule/particle, in format noted above
+    :param ea_kcal_mol_dict: dictionary of Gibbs free energy barriers in kcal/mol, in format noted above
     :return: rxn_rates: dict of reaction rates units of 1/s
     """
-    # want activation energies in J/particle; user can provide them in those units or in kcal/mol
+    # want Gibbs free energy barriers in J/particle for later calculation;
+    #     user can provide them in those units or in kcal/mol
     if ea_j_part_dict is None:
         ea_j_part_dict = {
             rxn_type: {substrate: {sub_len: ea_kcal_mol_dict[rxn_type][substrate][sub_len] * KCAL_MOL_TO_J_PART
                                    for sub_len in ea_kcal_mol_dict[rxn_type][substrate]}
                        for substrate in ea_kcal_mol_dict[rxn_type]} for rxn_type in ea_kcal_mol_dict}
-    # TODO: check if need to change to solution state...
     rxn_rates = {}
     for rxn_type in ea_j_part_dict:
         rxn_rates[rxn_type] = {}
@@ -624,7 +624,8 @@ def create_initial_monomers(pct_s, monomer_draw):
     :return: list of Monomer objects of specified type
     """
     # TODO: If want more than 2 monomer options, need to change logic; that will require an overhaul, since
-    #       sg_ratio is often used
+    #       sg_ratio is often used. However, until we have Gibbs free energy barriers for bonding between more than
+    #       just S and G, no need to update
     # if mon_choice < pct_s, make it an S; that is, the evaluation comes back True (=1='S');
     #     otherwise, get False = 0 = 'G'. Since only two options (True/False) only works for 2 monomers
     return [Monomer(int(mono_type_draw < pct_s), i) for i, mono_type_draw in enumerate(monomer_draw)]
@@ -655,31 +656,22 @@ def produce_output(result, cfg):
         str_to_file(smi_str, fname, print_info=True)
     else:
         print("\nSMILES representation: \n", MolToSmiles(mol), "\n")
-    if cfg[SAVE_TCL]:
-        # This is a separated from below as it does not require 2D or 3D coordinates
-        fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=SAVE_TCL)
-        gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=fname, segname="L",
-                   toppar_dir='toppar', out_dir=cfg[OUT_DIR])
-    if cfg[SAVE_PDB] or cfg[SAVE_JSON] or cfg[SAVE_PNG] or cfg[SAVE_SDF] or cfg[SAVE_SVG]:
+    if cfg[SAVE_PNG] or cfg[SAVE_SVG] or cfg[SAVE_JSON]:
+        # PNG and SVG make 2D images and thus need coordinates
+        # JSON will save coordinates--zero's if not computed; might as well compute and save non-zero values
         Compute2DCoords(mol)
-        mol3d = None  # making IDE happy; no other purpose
-        if cfg[SAVE_PDB] or cfg[SAVE_SDF]:
-            mol3d = AddHs(mol)
-            EmbedMolecule(mol3d, ETKDG())
-        for save_type in [SAVE_PDB, SAVE_JSON, SAVE_PNG, SAVE_SDF, SAVE_SVG]:
-            if cfg[save_type]:
-                fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=save_type)
-                if save_type == SAVE_PDB:
-                    MolToPDBFile(mol3d, fname)
-                elif save_type == SAVE_JSON:
-                    json_str = MolToJSON(mol)
-                    str_to_file(json_str + '\n', fname)
-                elif save_type == SAVE_PNG or save_type == SAVE_SVG:
-                    MolToFile(mol, fname, size=cfg[IMAGE_SIZE])
-                elif save_type == SAVE_SDF:
-                    writer = SDWriter(fname)
-                    writer.write(mol3d)
-                print(f"Wrote file: {fname}")
+    for save_format in [SAVE_TCL, SAVE_JSON, SAVE_PNG, SAVE_SVG]:
+        if cfg[save_format]:
+            fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=save_format)
+            if save_format == SAVE_TCL:
+                gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=fname, segname="L",
+                           toppar_dir='toppar', out_dir=cfg[OUT_DIR])
+            if save_format == SAVE_JSON:
+                json_str = MolToJSON(mol)
+                str_to_file(json_str + '\n', fname)
+            elif save_format == SAVE_PNG or save_format == SAVE_SVG:
+                MolToFile(mol, fname, size=cfg[IMAGE_SIZE])
+            print(f"Wrote file: {fname}")
 
 
 def validate_input(cfg):
@@ -689,11 +681,6 @@ def validate_input(cfg):
     :param cfg: dict of configuration values
     :return: will raise an error if invalid data is encountered
     """
-    if (cfg[E_A_KCAL_MOL] == DEF_E_A_KCAL_MOL) and cfg[TEMP] != DEF_TEMP:
-        warning(f"Caution: the default energy barriers, which were calculated at {DEF_TEMP}, have been selected for "
-                f"use at a different specified temperature ({cfg[TEMP]} K). The resulting calculated reaction "
-                f"rates may not be valid.")
-
     # Don't use "if cfg[RANDOM_SEED]:", because that won't catch the user giving the value 0, which they might think
     #    would be a valid random seed, but won't work for this package because of later "if cfg[RANDOM_SEED]:" checks
     if cfg[RANDOM_SEED] is not None:
@@ -734,8 +721,8 @@ def validate_input(cfg):
                 raise ValueError
             cfg[IMAGE_SIZE] = (int(raw_vals[0]), int(raw_vals[1]))
     except ValueError:
-        raise InvalidDataError(f"Found '{cfg[req_pos_num]}' input for '{req_pos_num}'. The {req_pos_num} must be "
-                               f"a positive number.")
+        raise InvalidDataError(f"Found '{cfg[IMAGE_SIZE]}' input for '{IMAGE_SIZE}'. The {IMAGE_SIZE} must be "
+                               f"two positive numbers, separated either by a comma or a space.")
 
     # Check for valid output requests
     check_if_files_to_be_saved(cfg)
@@ -799,7 +786,8 @@ def main(argv=None):
         validate_input(cfg)
 
         # need rates before we can start modeling reactions
-        rxn_rates = calc_rates(cfg[TEMP], ea_j_part_dict=cfg[E_A_J_PART], ea_kcal_mol_dict=cfg[E_A_KCAL_MOL])
+        rxn_rates = calc_rates(cfg[TEMP], ea_j_part_dict=cfg[E_BARRIER_J_PART],
+                               ea_kcal_mol_dict=cfg[E_BARRIER_KCAL_MOL])
 
         # decide on initial monomers, based on given SG_RATIO
         pct_s = cfg[SG_RATIO] / (1 + cfg[SG_RATIO])
@@ -820,8 +808,8 @@ def main(argv=None):
             initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE, bond=cfg[SG_RATIO]))
         elif cfg[MAX_MONOS] < cfg[INI_MONOS]:
             warning(f"The specified maximum number of monomers ({cfg[MAX_MONOS]}) is less than the specified initial "
-                    f"number of monomers ({cfg[INI_MONOS]}). The program will proceed with the initial number of "
-                    f"monomers with no addition of monomers.")
+                    f"number of monomers ({cfg[INI_MONOS]}). \n          The program will proceed with the initial "
+                    f"number of monomers with no addition of monomers.")
 
         # begin simulation
         result = run_kmc(rxn_rates, initial_state, initial_events, n_max=cfg[MAX_MONOS], t_max=cfg[SIM_TIME],

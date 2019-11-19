@@ -3,7 +3,7 @@
 
 """
 Written:        2018-06-06 Michael Orella
-Last Edited:    2019-11-11 by Heather Mayes
+Last Edited:    2019-11-19 by Heather Mayes
 
 Code base for simulating the in planta polymerization of monolignols through Gillepsie algorithm adaptations.
 """
@@ -233,13 +233,6 @@ def connect_monos(mon1, mon2):
         mon2.parent = parent
         mon1.parent = parent
         return parent
-
-
-def connected_size(mon=None):
-    if mon == mon.parent:
-        return mon.size
-    else:
-        return connected_size(mon=mon.parent)
 
 
 def do_event(event, state, adj, sg_ratio=None, random_seed=None):

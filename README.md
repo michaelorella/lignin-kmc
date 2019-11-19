@@ -27,7 +27,7 @@ This project runs on Python ≥3.6 with the following packages installed:
 - NumPy
 - MatPlotLib
 - JobLib
-- rdKit
+- rdKit (must be installed via conda; see below)
 - common-wrangler
 
 ## Installation
@@ -51,9 +51,15 @@ Additional dependencies will again be installed as required.
 
 ### Command-Line Use
 
-Lignin-KMC is populated with default variables that make it as easy to run as:
+Lignin-KMC is populated with default variables that make it as easy to run as entering (on a terminal):
 
-`create`
+`> create_lignin`
+
+This will use all default values (see below) and give the default output, which will look something like:
+
+"""
+
+"""
 
 
 ### Developer Use
@@ -88,9 +94,9 @@ Congratulations! Lignin-KMC is now installed! With this basic installation, you 
 
 ## Examples
 For these examples, I will assume that the rates have already been obtained and have been input as a 3-dimensional 
-dictionary (bond type, monomer types, oligomer sizes) to transition state free energy barriers or reaction rates at 
-the temperature of interest. For examples (from the definition of the energy barrier dictionary to the simulation of 
-lignin biosynthesis), see `~/LigninPolymerizationNotebook.ipynb` and `~/Example.ipynb`. 
+dictionary (bond type, monomer types, oligomer sizes) to transition state Gibbs free energy barriers (at 298 K and 1 
+atm)or reaction rates at the temperature of interest. For examples (from the definition of the Gibbs free energy barrier 
+dictionary to the simulation of lignin biosynthesis), see `~/LigninPolymerizationNotebook.ipynb` and `~/Example.ipynb`. 
 
 ## API Reference
 

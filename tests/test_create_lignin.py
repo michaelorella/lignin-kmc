@@ -27,6 +27,7 @@ DEF_SMI_OUT = os.path.join(SUB_DATA_DIR, DEF_BASENAME + ".smi")
 DEF_SVG_OUT = os.path.join(SUB_DATA_DIR, DEF_BASENAME + ".svg")
 DEF_TCL_OUT = os.path.join(SUB_DATA_DIR, DEF_BASENAME + ".tcl")
 GOOD_DEF_JSON_OUT = os.path.join(SUB_DATA_DIR, "lignin-kmc-out_good.json")
+GOOD_DEF_TCL_OUT = os.path.join(SUB_DATA_DIR, "lignin-kmc-out_good.tcl")
 SMALL_INI = os.path.join(SUB_DATA_DIR, "small_config.ini")
 TEST_SMI_BASENAME = "test_lignin.smi"
 TEST_SMI_OUT = os.path.join(SUB_DATA_DIR, TEST_SMI_BASENAME)
@@ -113,7 +114,6 @@ class TestCreateLigninNoOutput(unittest.TestCase):
             self.assertTrue('must be a positive number' in output)
 
     def testNegIniMonos(self):
-        # todo: finish test
         test_input = ["-r", "10", "-i", "-4"]
         with capture_stderr(main, test_input) as output:
             self.assertTrue('must be a positive integer' in output)
@@ -145,6 +145,12 @@ class TestCreateLigninNoOutput(unittest.TestCase):
             self.assertTrue('is less than' in output)
         with capture_stdout(main, test_input) as output:
             self.assertTrue("Lignin KMC created 6 monomers" in output)
+
+    def testBadImageSize(self):
+        test_input = ["-r", "10", "-s", "4"]
+        # main(test_input)
+        with capture_stderr(main, test_input) as output:
+            self.assertTrue("two positive numbers" in output)
 
 
 class TestCreateLigninNormalUse(unittest.TestCase):
@@ -216,8 +222,14 @@ class TestCreateLigninNormalUse(unittest.TestCase):
             self.assertTrue(good_bond_summary in output)
             self.assertTrue(good_rcf_chain_summary in output)
             self.assertTrue(good_rcf_bond_summary in output)
-        with capture_stderr(main, test_input) as output:
-            self.assertTrue("400" in output)
+
+    def testSaveJSONPathInOutName(self):
+        try:
+            test_input = ["-r", "10", "-f", "json", "-o", DEF_JSON_OUT]
+            main(test_input)
+            self.assertFalse(diff_lines(DEF_JSON_OUT, GOOD_DEF_JSON_OUT))
+        finally:
+            silent_remove(DEF_JSON_OUT, disable=DISABLE_REMOVE)
 
     def testSaveJSON(self):
         try:
@@ -227,31 +239,37 @@ class TestCreateLigninNormalUse(unittest.TestCase):
         finally:
             silent_remove(DEF_JSON_OUT, disable=DISABLE_REMOVE)
 
-    def testSaveJSONSDK(self):
-        # todo; check sdf
+    def testSaveJSONTcl(self):
         try:
-            test_input = ["-r", "10", "-f", "json sdf", "-d", SUB_DATA_DIR]
+            test_input = ["-r", "10", "-f", "json tcl", "-d", SUB_DATA_DIR]
             main(test_input)
             self.assertFalse(diff_lines(DEF_JSON_OUT, GOOD_DEF_JSON_OUT))
+            self.assertFalse(diff_lines(DEF_TCL_OUT, GOOD_DEF_TCL_OUT))
         finally:
+            silent_remove(DEF_JSON_OUT, disable=DISABLE_REMOVE)
+            silent_remove(DEF_TCL_OUT, disable=DISABLE_REMOVE)
+            pass
+
+    def testSaveJSONCommaPNG(self):
+        # This wil use the default image size
+        try:
+            silent_remove(DEF_PNG_OUT)
+            test_input = ["-r", "10", "-f", "json, png", "-d", SUB_DATA_DIR]
+            main(test_input)
+            self.assertTrue(os.path.isfile(DEF_PNG_OUT))
+            self.assertFalse(diff_lines(DEF_JSON_OUT, GOOD_DEF_JSON_OUT))
+        finally:
+            silent_remove(DEF_PNG_OUT, disable=DISABLE_REMOVE)
             silent_remove(DEF_JSON_OUT, disable=DISABLE_REMOVE)
             pass
 
-    def testSaveJSONCommaSDK(self):
-        # todo; check sdf
-        try:
-            test_input = ["-r", "10", "-f", "json, sdf", "-d", SUB_DATA_DIR]
-            main(test_input)
-            self.assertFalse(diff_lines(DEF_JSON_OUT, GOOD_DEF_JSON_OUT))
-        finally:
-            silent_remove(DEF_JSON_OUT, disable=DISABLE_REMOVE)
-
     def testSavePNGSVG(self):
-        # Smoke test only
+        # Smoke test only (not comparing images)
         try:
             silent_remove(DEF_PNG_OUT)
             silent_remove(DEF_SVG_OUT)
-            test_input = ["-r", "10", "-f", "svg", "-o", DEF_BASENAME + '.png', "-d", SUB_DATA_DIR, "-m", "6"]
+            test_input = ["-r", "10", "-f", "svg", "-o", DEF_BASENAME + '.png', "-d", SUB_DATA_DIR, "-m", "6",
+                          "-s", "900 900"]
             main(test_input)
             self.assertTrue(os.path.isfile(DEF_PNG_OUT))
             self.assertTrue(os.path.isfile(DEF_SVG_OUT))
@@ -260,15 +278,16 @@ class TestCreateLigninNormalUse(unittest.TestCase):
             silent_remove(DEF_SVG_OUT, disable=DISABLE_REMOVE)
 
     def testSavePNGSVGNewSize(self):
-        # Smoke test only
+        # Smoke test only (not comparing images)
         try:
-            test_input = ["-r", "10", "-f", "png, svg", "-d", SUB_DATA_DIR, "-s", "(800, 800)"]
+            test_input = ["-r", "10", "-f", "png, svg", "-d", SUB_DATA_DIR, "-s", "(900, 900)"]
             main(test_input)
             self.assertTrue(os.path.isfile(DEF_PNG_OUT))
             self.assertTrue(os.path.isfile(DEF_SVG_OUT))
         finally:
             silent_remove(DEF_PNG_OUT, disable=DISABLE_REMOVE)
             silent_remove(DEF_SVG_OUT, disable=DISABLE_REMOVE)
+            pass
 
     def testAltSGRatio(self):
         test_input = ["-r", "8", "-sg", "2.5"]
@@ -287,8 +306,3 @@ class TestCreateLigninNormalUse(unittest.TestCase):
                       "cc5OC)c4)OCC23)ccc1OC(CO)C(O)c1cc(OC)c([O])c(OC)c1"
         with capture_stdout(main, test_input) as output:
             self.assertTrue(good_smiles in output)
-
-    # todo, pdb, sdf, tcl, ini num monos, max_num_monos (right now makes an extra....)
-    def testPSFGEN(self):
-        # todo complete test
-        pass

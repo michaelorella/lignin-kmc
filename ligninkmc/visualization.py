@@ -378,7 +378,8 @@ def generate_mol(adj, node_list):
                 bound_atoms = re.split(' +', possibility)[4:]
                 others.extend([int(x) for x in bound_atoms if int(x) != alpha_idx])
 
-            # TODO: Fix the section below--it does not work; for now, do not allow this functionality
+            # TODO: Fix the section below--it does not work; for now, simply catch the error and provide a
+            #   descriptive failure message (instead of a stack trace)
             # The oxygen atom should have the greatest index of the atoms bound to the alpha position because it
             #     was added last
             try:
@@ -459,23 +460,6 @@ def gen_psfgen(orig_adj, monomers, fname="psfgen.tcl", segname="L", toppar_dir="
             # print(monomer)
         f.write(f"}}\n")
 
-        # # step through in a consistent order; may be a more elegant way, but this works
-        # adj_dict = dict(adj)
-        # adj_keys = list(adj_dict.keys())
-        # adj_keys.sort()
-        # new_adj_dict = OrderedDict()
-        # for adj_key in adj_keys:
-        #     val = adj_dict[adj_key]
-        #     # Since B-1 linkages involve three monomers, signal that the previous beta-O-4/B-1 linkage required
-        #     #     for B-1 is broken by flipping the sign.
-        #     if val == 1:
-        #         val *= -1
-        #     new_adj_dict[adj_key] = val
-        # print("finished keys")
-        #
-        # # print("yo yo")
-        # Since B-1 linkages actually involve three monomers, we signal that the previous beta-O-4/B-1 linkage required
-        #     for B-1 is broken by flipping the sign.
         for row in (adj == 1).nonzero()[0]:
             col = (adj.getrow(row) == 8).nonzero()[1]
             if len(col):

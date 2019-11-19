@@ -18,7 +18,7 @@ from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, create_initial_monome
                                      get_bond_type_v_time_dict, overall_branching_coefficient, degree)
 from ligninkmc.kmc_common import (Event, Monomer, C5O4, OX, C5C5, B5, BB, BO4, AO4, B1, DEF_RXN_RATES,
                                   MON_OLI, MONOMER, GROW, TIME, MONO_LIST, ADJ_MATRIX, CHAIN_LEN, BONDS,
-                                  RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_A_KCAL_MOL, MAX_NUM_DECIMAL)
+                                  RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_BARRIER_KCAL_MOL, MAX_NUM_DECIMAL)
 from ligninkmc.kmc_functions import run_kmc
 from ligninkmc.visualization import (generate_mol, gen_psfgen)
 
@@ -126,7 +126,7 @@ class TestCalcRates(unittest.TestCase):
     Tests calculation of rate coefficients by the Eyring equation.
     """
     def test_calc_rates_from_kcal_mol(self):
-        rxn_rates = calc_rates(DEF_TEMP, ea_kcal_mol_dict=DEF_E_A_KCAL_MOL)
+        rxn_rates = calc_rates(DEF_TEMP, ea_kcal_mol_dict=DEF_E_BARRIER_KCAL_MOL)
         self.assertTrue(len(rxn_rates) == len(DEF_RXN_RATES))
         rxn_type, substrate, substrate_type = None, None, None  # to make IDE happy
         try:
