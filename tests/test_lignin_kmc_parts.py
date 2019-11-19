@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
+import logging
 import os
 import unittest
-import numpy as np
-import joblib as par
-import logging
 from collections import OrderedDict
-from scipy.sparse import dok_matrix
+
+import joblib as par
+import numpy as np
 from common_wrangler.common import (InvalidDataError, capture_stdout, silent_remove, diff_lines)
 from rdkit.Chem import MolFromMolBlock
 from rdkit.Chem.AllChem import Compute2DCoords
 from rdkit.Chem.Draw import MolToFile
+from scipy.sparse import dok_matrix
 from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, create_initial_monomers,
                                      create_initial_events, create_initial_state, DEF_ADD_RATE,
                                      analyze_adj_matrix, count_bonds, count_oligomer_yields,
                                      break_bond_type, adj_analysis_to_stdout, find_fragments, fragment_size,
                                      get_bond_type_v_time_dict, overall_branching_coefficient, degree)
-from ligninkmc.kmc_common import (Event, Monomer, C5O4, OX, Q, C5C5, B5, BB, BO4, AO4, B1,
-                                  MON_MON, MON_OLI, OLI_OLI, OLI_MON, MONOMER, OLIGOMER, GROW, TIME, MONO_LIST,
-                                  ADJ_MATRIX, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_A_KCAL_MOL,
-                                  MAX_NUM_DECIMAL)
+from ligninkmc.kmc_common import (Event, Monomer, C5O4, OX, C5C5, B5, BB, BO4, AO4, B1, DEF_RXN_RATES,
+                                  MON_OLI, MONOMER, GROW, TIME, MONO_LIST, ADJ_MATRIX, CHAIN_LEN, BONDS,
+                                  RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_A_KCAL_MOL, MAX_NUM_DECIMAL)
 from ligninkmc.kmc_functions import run_kmc
 from ligninkmc.visualization import (generate_mol, gen_psfgen)
 
@@ -57,65 +57,6 @@ MONO_DRAW_3 = [0.48772, 0.15174, 0.7886]
 MONO_DRAW_20 = [0.48772, 0.15174, 0.7886, 0.48772, 0.15174, 0.7886, 0.48772, 0.15174, 0.7886, 0.48772, 0.15174, 0.7886,
                 0.48772, 0.15174, 0.7886, 0.48772, 0.15174, 0.7886, 0.48772, 0.15174]
 
-GOOD_RXN_RATES = {C5O4: {(0, 0): {MON_MON: 38335.5972148372, MON_OLI: 123.419593715543, OLI_MON: 123.419593715543,
-                                  OLI_OLI: 3698609451.84164},
-                         (1, 0): {MON_MON: 63606.8417529500, MON_OLI: 123.419593715543, OLI_MON: 123.419593715543,
-                                  OLI_OLI: 3698609451.84164},
-                         (2, 2): {MON_MON: 11762.4692901771, MON_OLI: 11762.4692901771, OLI_MON: 11762.4692901771,
-                                  OLI_OLI: 11762.4692901771}},
-                  C5C5: {(0, 0): {MON_MON: 4272.63018912086, MON_OLI: 22.8233180720356, OLI_MON: 22.8233180720356,
-                                  OLI_OLI: 10182201166.0217},
-                         (2, 2): {MON_MON: 105537.166803781, MON_OLI: 105537.166803781, OLI_MON: 105537.166803781,
-                                  OLI_OLI: 105537.166803781}},
-                  B5: {(0, 0): {MON_MON: 577740233.381881, MON_OLI: 348201801.431315, OLI_MON: 348201801.431315,
-                                OLI_OLI: 348201801.431315},
-                       (0, 1): {MON_MON: 577740233.381881, MON_OLI: 348201801.431315, OLI_MON: 348201801.431315,
-                                OLI_OLI: 348201801.431315},
-                       (2, 2): {MON_MON: 251507997491.634, MON_OLI: 348201801.431315, OLI_MON: 348201801.431315,
-                                OLI_OLI: 348201801.431315}},
-                  BB: {(0, 0): {MON_MON: 958592907.607318, MON_OLI: 958592907.607318, OLI_MON: 958592907.607318,
-                                OLI_OLI: 958592907.607318},
-                       (1, 0): {MON_MON: 106838377.218107, MON_OLI: 106838377.218107, OLI_MON: 106838377.218107,
-                                OLI_OLI: 106838377.218107},
-                       (0, 1): {MON_MON: 106838377.218107, MON_OLI: 106838377.218107, OLI_MON: 106838377.218107,
-                                OLI_OLI: 106838377.218107},
-                       (1, 1): {MON_MON: 958592907.607318, MON_OLI: 958592907.607318, OLI_MON: 958592907.607318,
-                                OLI_OLI: 958592907.607318},
-                       (2, 2): {MON_MON: 32781102.2219828, MON_OLI: 32781102.2219828, OLI_MON: 32781102.2219828,
-                                OLI_OLI: 32781102.2219828}},
-                  BO4: {(0, 0): {MON_MON: 149736731.431189, MON_OLI: 177267402.79460, OLI_MON: 177267402.794600,
-                                 OLI_OLI: 177267402.794600},
-                        (1, 0): {MON_MON: 1327129.87498242, MON_OLI: 177267402.79460, OLI_MON: 177267402.794600,
-                                 OLI_OLI: 177267402.794600},
-                        (0, 1): {MON_MON: 1860006.62719604, MON_OLI: 177267402.79460, OLI_MON: 177267402.794600,
-                                 OLI_OLI: 177267402.794600},
-                        (1, 1): {MON_MON: 407201.805441432, MON_OLI: 147913.051594236, OLI_MON: 147913.051594236,
-                                 OLI_OLI: 147913.051594236},
-                        (2, 2): {MON_MON: 1590507825.87210, MON_OLI: 692396712512.577, OLI_MON: 692396712512.577,
-                                 OLI_OLI: 692396712512.577}},
-                  AO4: {(0, 0): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
-                                 OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265},
-                        (1, 0): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
-                                 OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265},
-                        (0, 1): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
-                                 OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265},
-                        (1, 1): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
-                                 OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265},
-                        (2, 2): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
-                                 OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265}},
-                  B1: {(0, 0): {MON_OLI: 570703.795464849, OLI_MON: 570703.795464849, OLI_OLI: 570703.795464849},
-                       (1, 0): {MON_OLI: 16485.4030071542, OLI_MON: 16485.4030071542, OLI_OLI: 16485.4030071542},
-                       (0, 1): {MON_OLI: 89146.6234207596, OLI_MON: 89146.6234207596, OLI_OLI: 89146.6234207596},
-                       (1, 1): {MON_OLI: 11762.4692901771, OLI_MON: 11762.4692901771, OLI_OLI: 11762.4692901771},
-                       (2, 2): {MON_OLI: 570703.795464849, OLI_MON: 570703.795464849, OLI_OLI: 570703.795464849}},
-                  OX: {0: {MONOMER: 1360057059567.54, OLIGOMER: 149736731.431189},
-                       1: {MONOMER: 2256621533195.09, OLIGOMER: 151582896154.443},
-                       2: {MONOMER: 1360057059567.54, OLIGOMER: 1360057059567.54}},
-                  Q: {0: {MONOMER: 45383.9995564285, OLIGOMER: 45383.9995564285},
-                      1: {MONOMER: 16485.4030071542, OLIGOMER: 16485.4030071542},
-                      2: {MONOMER: 45383.9995564285, OLIGOMER: 45383.9995564285}}
-                  }
-
 ADJ2 = dok_matrix([[0, 4, 0, 0, 0],
                    [8, 0, 0, 0, 0],
                    [0, 0, 0, 8, 0],
@@ -145,11 +86,11 @@ def create_sample_kmc_result(max_time=1., num_initial_monos=3, max_monos=10, sg_
 
     # these are tested separately elsewhere
     initial_monomers = create_initial_monomers(sg_ratio, monomer_draw)
-    initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
+    initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
     initial_state = OrderedDict(create_initial_state(initial_events, initial_monomers))
     initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE))
     #            # make random seed and sort event_dict for testing reliability
-    result = run_kmc(GOOD_RXN_RATES, initial_state, initial_events, n_max=max_monos, t_max=max_time,
+    result = run_kmc(DEF_RXN_RATES, initial_state, initial_events, n_max=max_monos, t_max=max_time,
                      random_seed=10, sg_ratio=sg_ratio)
     return result
 
@@ -157,10 +98,10 @@ def create_sample_kmc_result(max_time=1., num_initial_monos=3, max_monos=10, sg_
 def create_sample_kmc_result_c_lignin(num_monos=2, max_monos=12, seed=10):
     initial_monomers = [Monomer(2, i) for i in range(num_monos)]
     # noinspection PyTypeChecker
-    initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
+    initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
     initial_state = create_initial_state(initial_events, initial_monomers)
     initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE))
-    result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), n_max=max_monos, t_max=2, random_seed=seed)
+    result = run_kmc(DEF_RXN_RATES, initial_state, sorted(initial_events), n_max=max_monos, t_max=2, random_seed=seed)
     return result
 
 
@@ -186,13 +127,13 @@ class TestCalcRates(unittest.TestCase):
     """
     def test_calc_rates_from_kcal_mol(self):
         rxn_rates = calc_rates(DEF_TEMP, ea_kcal_mol_dict=DEF_E_A_KCAL_MOL)
-        self.assertTrue(len(rxn_rates) == len(GOOD_RXN_RATES))
+        self.assertTrue(len(rxn_rates) == len(DEF_RXN_RATES))
         rxn_type, substrate, substrate_type = None, None, None  # to make IDE happy
         try:
-            for rxn_type in GOOD_RXN_RATES:
-                for substrate in GOOD_RXN_RATES[rxn_type]:
-                    for substrate_type in GOOD_RXN_RATES[rxn_type][substrate]:
-                        self.assertAlmostEqual(GOOD_RXN_RATES[rxn_type][substrate][substrate_type],
+            for rxn_type in DEF_RXN_RATES:
+                for substrate in DEF_RXN_RATES[rxn_type]:
+                    for substrate_type in DEF_RXN_RATES[rxn_type][substrate]:
+                        self.assertAlmostEqual(DEF_RXN_RATES[rxn_type][substrate][substrate_type],
                                                rxn_rates[rxn_type][substrate][substrate_type])
         except (TypeError, IndexError) as e:
             print(f'{e}\nError when looking at rxn_type: {rxn_type} substrate: {substrate}    '
@@ -231,13 +172,13 @@ class TestEvent(unittest.TestCase):
     def testIDRepr(self):
         rxn = OX
         # noinspection PyTypeChecker
-        event1 = Event(rxn, [2], GOOD_RXN_RATES[rxn][0][MONOMER])
+        event1 = Event(rxn, [2], DEF_RXN_RATES[rxn][0][MONOMER])
         self.assertTrue(str(event1) == "Performing oxidation on index 2")
 
     def testIDReprBond(self):
         rxn = BO4
         # noinspection PyTypeChecker
-        event1 = Event(rxn, [1, 2], GOOD_RXN_RATES[rxn][(0, 1)][MON_OLI], (4, 5))
+        event1 = Event(rxn, [1, 2], DEF_RXN_RATES[rxn][(0, 1)][MON_OLI], (4, 5))
         good_str = "Forming bo4 bond between indices [1, 2] (adjacency_matrix update (4, 5))"
         self.assertTrue(str(event1) == good_str)
         self.assertTrue(repr(event1) == good_str)
@@ -245,21 +186,14 @@ class TestEvent(unittest.TestCase):
     def testEventIDHash(self):
         monomer_a = Monomer(1, 4)
         monomer_b = Monomer(1, 4)
-        events_a = create_initial_events([monomer_a], GOOD_RXN_RATES)
-        events_b = create_initial_events([monomer_b], GOOD_RXN_RATES)
+        events_a = create_initial_events([monomer_a], DEF_RXN_RATES)
+        events_b = create_initial_events([monomer_b], DEF_RXN_RATES)
         self.assertTrue(events_a == events_b)
         check_set = {events_a[0], events_b[0]}
         self.assertTrue(len(check_set) == 1)
 
 
 class TestCreateInitialMonomers(unittest.TestCase):
-    def testInvalidSGRatio(self):
-        try:
-            create_initial_monomers(None, [0.48772, 0.15174, 0.7886])
-            self.assertFalse("Should not arrive here; An error should have be raised")
-        except InvalidDataError as e:
-            self.assertTrue("None" in e.args[0])
-
     def testCreate3Monomers(self):
         initial_monomers = create_initial_monomers(0.75, [0.48772, 0.15174, 0.7886])
         self.assertTrue(len(initial_monomers) == 3)
@@ -275,7 +209,7 @@ class TestState(unittest.TestCase):
         sg_ratio = 0.75
         monomer_draw = [0.48772, 0.15174, 0.7886]
         initial_monomers = create_initial_monomers(sg_ratio, monomer_draw)
-        initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
+        initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
         initial_state = create_initial_state(initial_events, initial_monomers)
         self.assertTrue(len(initial_state) == 3)
         self.assertTrue(str(initial_monomers[0]) == str(initial_state[0][MONOMER]))
@@ -289,12 +223,12 @@ class TestRunKMC(unittest.TestCase):
         monomer_draw = np.around(np.random.rand(num_initial_monos), MAX_NUM_DECIMAL)
         # these are tested separately
         initial_monomers = create_initial_monomers(initial_sg_ratio, monomer_draw)
-        initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
+        initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
         initial_state = create_initial_state(initial_events, initial_monomers)
         events = {initial_events[i] for i in range(num_initial_monos)}
         events.add(Event(GROW, [], rate=DEF_ADD_RATE))
         try:
-            run_kmc(GOOD_RXN_RATES, initial_state, sorted(events), n_max=20, t_max=1, random_seed=10)
+            run_kmc(DEF_RXN_RATES, initial_state, sorted(events), n_max=20, t_max=1, random_seed=10)
             self.assertFalse("Should not arrive here; An error should have be raised")
         except InvalidDataError as e:
             self.assertTrue("A numeric sg_ratio" in e.args[0])
@@ -386,9 +320,9 @@ class TestAnalyzeKMCParts(unittest.TestCase):
         good_olig_branch_coeff_dict = {1: 0}
         olig_len_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict = count_oligomer_yields(ADJ_ZEROS)
         self.assertTrue(olig_len_dict == good_olig_len_dict)
-        self.assertTrue(olig_monos_dict ==  good_olig_monos_dict)
+        self.assertTrue(olig_monos_dict == good_olig_monos_dict)
         self.assertTrue(olig_branch_dict == good_olig_branch_dict)
-        self.assertTrue(olig_branch_coeff_dict ==  good_olig_branch_coeff_dict)
+        self.assertTrue(olig_branch_coeff_dict == good_olig_branch_coeff_dict)
 
     def testCountYields1(self):
         adj_1 = dok_matrix([[0, 4, 0, 0, 0],
@@ -402,9 +336,9 @@ class TestAnalyzeKMCParts(unittest.TestCase):
         good_olig_branch_coeff_dict = {1: 0, 2: 0}
         olig_len_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict = count_oligomer_yields(adj_1)
         self.assertTrue(olig_len_dict == good_olig_len_dict)
-        self.assertTrue(olig_monos_dict ==  good_olig_monos_dict)
+        self.assertTrue(olig_monos_dict == good_olig_monos_dict)
         self.assertTrue(olig_branch_dict == good_olig_branch_dict)
-        self.assertTrue(olig_branch_coeff_dict ==  good_olig_branch_coeff_dict)
+        self.assertTrue(olig_branch_coeff_dict == good_olig_branch_coeff_dict)
 
     def testCountYields2(self):
         olig_len_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict = count_oligomer_yields(ADJ2)
@@ -413,9 +347,9 @@ class TestAnalyzeKMCParts(unittest.TestCase):
         good_olig_branch_dict = {1: 0, 2: 0}
         good_olig_branch_coeff_dict = {1: 0, 2: 0}
         self.assertTrue(olig_len_dict == good_olig_len_dict)
-        self.assertTrue(olig_monos_dict ==  good_olig_monos_dict)
+        self.assertTrue(olig_monos_dict == good_olig_monos_dict)
         self.assertTrue(olig_branch_dict == good_olig_branch_dict)
-        self.assertTrue(olig_branch_coeff_dict ==  good_olig_branch_coeff_dict)
+        self.assertTrue(olig_branch_coeff_dict == good_olig_branch_coeff_dict)
 
     def testCountYields3(self):
         olig_len_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict = count_oligomer_yields(ADJ3)
@@ -424,9 +358,9 @@ class TestAnalyzeKMCParts(unittest.TestCase):
         good_olig_branch_dict = {1: 0, 3: 0}
         good_olig_branch_coeff_dict = {1: 0, 3: 0}
         self.assertTrue(olig_len_dict == good_olig_len_dict)
-        self.assertTrue(olig_monos_dict ==  good_olig_monos_dict)
+        self.assertTrue(olig_monos_dict == good_olig_monos_dict)
         self.assertTrue(olig_branch_dict == good_olig_branch_dict)
-        self.assertTrue(olig_branch_coeff_dict ==  good_olig_branch_coeff_dict)
+        self.assertTrue(olig_branch_coeff_dict == good_olig_branch_coeff_dict)
 
     def testCountYields4(self):
         adj = dok_matrix((10, 10), dtype=np.float32)
@@ -441,9 +375,9 @@ class TestAnalyzeKMCParts(unittest.TestCase):
         good_olig_branch_dict = {10: 1}
         good_olig_branch_coeff_dict = {10: 0.1}
         self.assertTrue(olig_len_dict == good_olig_len_dict)
-        self.assertTrue(olig_monos_dict ==  good_olig_monos_dict)
+        self.assertTrue(olig_monos_dict == good_olig_monos_dict)
         self.assertTrue(olig_branch_dict == good_olig_branch_dict)
-        self.assertTrue(olig_branch_coeff_dict ==  good_olig_branch_coeff_dict)
+        self.assertTrue(olig_branch_coeff_dict == good_olig_branch_coeff_dict)
 
     def testCountBonds(self):
         good_bond_dict = {BO4: 2, B1: 0, BB: 1, B5: 1, C5C5: 0, AO4: 0, C5O4: 0}
@@ -689,9 +623,9 @@ class TestVisualization(unittest.TestCase):
             num_monos = 15
             mono_type_list = full_mono_type_list[0: num_monos]
             initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(mono_type_list)]
-            initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
+            initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
             initial_state = create_initial_state(initial_events, initial_monomers)
-            result = run_kmc(GOOD_RXN_RATES, initial_state, initial_events, t_max=0.02, random_seed=seed)
+            result = run_kmc(DEF_RXN_RATES, initial_state, initial_events, t_max=0.02, random_seed=seed)
 
             nodes = result[MONO_LIST]
             adj = result[ADJ_MATRIX]
@@ -721,10 +655,10 @@ class TestVisualization(unittest.TestCase):
         monomer_type_list = [0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, ]
         num_monos = len(monomer_type_list)
         initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(monomer_type_list)]
-        initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
+        initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
         initial_state = create_initial_state(initial_events, initial_monomers)
         # since GROW is not added to event_dict, no additional monomers will be added (sg_ratio is thus not needed)
-        result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), random_seed=10, dynamics=True)
+        result = run_kmc(DEF_RXN_RATES, initial_state, sorted(initial_events), random_seed=10, dynamics=True)
         # With dynamics, the MONO_LIST will be a list of monomer lists:
         #    the inner list is the usual MONO_LIST, but here is it saved for every time step
         t_steps = result[TIME]
@@ -775,7 +709,7 @@ class TestVisualization(unittest.TestCase):
         initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(monomer_type_list)]
         max_monos = 32
         num_repeats = 4
-        initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
+        initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
         # FYI: np.logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0)[source]
         num_rates = 3
         add_rates = np.logspace(4, 12, num_rates)
@@ -788,12 +722,12 @@ class TestVisualization(unittest.TestCase):
             initial_state = create_initial_state(initial_events, initial_monomers)
             initial_events.append(Event(GROW, [], rate=add_rate, bond=sg_ratio))
             if run_multi:
-                results = par.Parallel(n_jobs=num_jobs)([fun(GOOD_RXN_RATES, initial_state, initial_events,
+                results = par.Parallel(n_jobs=num_jobs)([fun(DEF_RXN_RATES, initial_state, initial_events,
                                                              n_max=max_monos, t_max=1, sg_ratio=pct_s,
                                                              random_seed=(random_seed + i))
                                                          for i in range(num_repeats)])
             else:
-                results = [run_kmc(GOOD_RXN_RATES, initial_state, initial_events, n_max=max_monos, t_max=1,
+                results = [run_kmc(DEF_RXN_RATES, initial_state, initial_events, n_max=max_monos, t_max=1,
                                    sg_ratio=pct_s, random_seed=(random_seed + i)) for i in range(num_repeats)]
             add_rates_result_list.append(results)
 
@@ -839,15 +773,15 @@ class TestVisualization(unittest.TestCase):
             initial_monomers = create_initial_monomers(pct_s, monomer_draw)
 
             # Initialize the monomers, event_dict, and state
-            initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
+            initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
             initial_state = create_initial_state(initial_events, initial_monomers)
 
             if run_multi:
-                results = par.Parallel(n_jobs=num_jobs)([fun(GOOD_RXN_RATES, initial_state, initial_events,
+                results = par.Parallel(n_jobs=num_jobs)([fun(DEF_RXN_RATES, initial_state, initial_events,
                                                              n_max=num_monos, t_max=1, random_seed=(random_seed + i))
                                                          for i in range(num_repeats)])
             else:
-                results = [run_kmc(GOOD_RXN_RATES, initial_state, initial_events, n_max=num_monos, t_max=1,
+                results = [run_kmc(DEF_RXN_RATES, initial_state, initial_events, n_max=num_monos, t_max=1,
                                    random_seed=(random_seed + i)) for i in range(num_repeats)]
             sg_result_list.append(results)
 
@@ -871,10 +805,10 @@ class TestVisualization(unittest.TestCase):
                                       1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, ]
             num_monos = len(initial_mono_type_list)
             initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(initial_mono_type_list)]
-            initial_events = create_initial_events(initial_monomers, GOOD_RXN_RATES)
+            initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
             initial_state = create_initial_state(initial_events, initial_monomers)
             # since GROW is not added to event_dict, no additional monomers will be added
-            result = run_kmc(GOOD_RXN_RATES, initial_state, sorted(initial_events), t_max=2, random_seed=10)
+            result = run_kmc(DEF_RXN_RATES, initial_state, sorted(initial_events), t_max=2, random_seed=10)
             # quick tests for run_kmc differences
             self.assertTrue(len(result[TIME]) == 674)
             self.assertAlmostEqual(result[TIME][-1], 1.295926885239862)

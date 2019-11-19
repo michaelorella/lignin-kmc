@@ -17,3 +17,4 @@ temp*
 plots/
 .tox
 /update.sh
+/tests/test_data/run_kmc/lignin-kmc-out.sdf

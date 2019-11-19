@@ -5,7 +5,6 @@
 Launches steps required to build lignin
 """
 import argparse
-import pickle
 import os
 import sys
 import numpy as np
@@ -13,35 +12,37 @@ from scipy import triu
 from scipy.sparse import dok_matrix
 from collections import (defaultdict, OrderedDict)
 from configparser import ConfigParser
-from rdkit.Chem import (MolToSmiles, MolFromMolBlock)
-from rdkit.Chem.AllChem import Compute2DCoords
+from rdkit.Chem import (MolToSmiles, MolFromMolBlock, AddHs)
+from rdkit.Chem.AllChem import (Compute2DCoords, EmbedMolecule, ETKDG)
 from rdkit.Chem.Draw import MolToFile
 from rdkit.Chem.rdmolfiles import (MolToPDBFile, SDWriter)
-from common_wrangler.common import (warning, process_cfg, MAIN_SEC, GOOD_RET, INPUT_ERROR, IO_ERROR, KB, H,
+from rdkit.Chem.rdMolInterchange import MolToJSON
+from common_wrangler.common import (warning, process_cfg, MAIN_SEC, GOOD_RET, INPUT_ERROR, KB, H,
                                     KCAL_MOL_TO_J_PART, InvalidDataError, INVALID_DATA, OUT_DIR, make_dir,
                                     create_out_fname, str_to_file)
 from ligninkmc import __version__
 from ligninkmc.kmc_functions import run_kmc
-from ligninkmc.visualization import generate_mol
+from ligninkmc.visualization import (generate_mol, gen_psfgen)
 from ligninkmc.kmc_common import (Event, Monomer, E_A_KCAL_MOL, E_A_J_PART, TEMP, INI_MONOS, MAX_MONOS, SIM_TIME,
                                   AFFECTED, GROW, DEF_E_A_KCAL_MOL, OX, MONOMER, OLIGOMER, LIGNIN_SUBUNITS,
-                                  SG_RATIO, ADJ_MATRIX, RANDOM_SEED, AO4, B1, B1_ALT, B5, BB, BO4, C5C5, C5O4,
-                                  CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL, round_sig_figs, MONO_LIST,
-                                  CHAIN_MONOS, CHAIN_BRANCHES,
-                                  CHAIN_BRANCH_COEFF, RCF_MONOS, RCF_BRANCHES, RCF_BRANCH_COEFF)
+                                  SG_RATIO, ADJ_MATRIX, RANDOM_SEED, AO4, B1, B1_ALT, B5, BB, BO4, C5C5, C5O4, S, G,
+                                  CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL, round_sig_figs,
+                                  MONO_LIST, CHAIN_MONOS, CHAIN_BRANCHES, CHAIN_BRANCH_COEFF,
+                                  RCF_MONOS, RCF_BRANCHES, RCF_BRANCH_COEFF)
 
 # Config keys #
 CONFIG_KEY = 'config_key'
 OUT_FORMAT_LIST = 'output_format_list'
 BASENAME = 'outfile_basename'
 IMAGE_SIZE = 'image_size'
+SAVE_JSON = 'json'
 SAVE_PDB = 'pdb'
-SAVE_PKL = 'pkl'
 SAVE_PNG = 'png'
 SAVE_SDF = 'sdf'
 SAVE_SMI = 'smi'
 SAVE_SVG = 'svg'
-OUT_TYPE_LIST = [SAVE_PDB, SAVE_PKL, SAVE_PNG, SAVE_SDF, SAVE_SMI, SAVE_SVG]
+SAVE_TCL = 'tcl'
+OUT_TYPE_LIST = [SAVE_JSON, SAVE_PDB, SAVE_PNG, SAVE_SDF, SAVE_SMI, SAVE_SVG, SAVE_TCL]
 OUT_TYPE_STR = "', '".join(OUT_TYPE_LIST)
 SAVE_FILES = 'save_files_boolean'
 
@@ -59,9 +60,9 @@ DEF_BASENAME = 'lignin-kmc-out'
 DEF_VAL = 'default_value'
 DEF_CFG_VALS = {OUT_DIR: None, OUT_FORMAT_LIST: None, INI_MONOS: DEF_INI_MONOS, SIM_TIME: DEF_SIM_TIME,
                 MAX_MONOS: DEF_MAX_MONOS, BASENAME: DEF_BASENAME, IMAGE_SIZE: DEF_IMAGE_SIZE,
-                SG_RATIO: DEF_SG, TEMP: DEF_TEMP, RANDOM_SEED: None,
-                E_A_KCAL_MOL: DEF_E_A_KCAL_MOL, E_A_J_PART: None, SAVE_FILES: False,
-                SAVE_PDB: False, SAVE_PKL: False, SAVE_PNG: False, SAVE_SDF: False, SAVE_SMI: False, SAVE_SVG: False,
+                SG_RATIO: DEF_SG, TEMP: DEF_TEMP, RANDOM_SEED: None, E_A_KCAL_MOL: DEF_E_A_KCAL_MOL, E_A_J_PART: None,
+                SAVE_FILES: False, SAVE_JSON: False, SAVE_PDB: False, SAVE_PNG: False, SAVE_SDF: False,
+                SAVE_SMI: False, SAVE_SVG: False, SAVE_TCL: False,
                 }
 
 REQ_KEYS = {}
@@ -366,13 +367,6 @@ def adj_analysis_to_stdout(adj_results):
     print_bond_type_num(adj_results[RCF_BONDS])
 
 
-def calc_oligs_monos_from_adj(chain_len_results):
-    olig_len_array = np.asarray(list(chain_len_results.keys()))
-    olig_num_array = np.asarray(list(chain_len_results.values()))
-    num_monos_created = np.dot(olig_num_array, olig_len_array)
-    return num_monos_created
-
-
 def print_bond_type_num(lignin_bonds):
     bond_summary = ""
     for bond_type, bond_num in lignin_bonds.items():
@@ -477,35 +471,6 @@ def read_cfg(f_loc, cfg_proc=process_cfg):
     return main_proc
 
 
-def check_if_files_to_be_saved(config):
-    # determine if any files will be created and saved
-    if config[OUT_FORMAT_LIST]:
-        out_format_list = config[OUT_FORMAT_LIST]
-        # remove any periods
-        out_format_list.replace(".", "")
-        # todo: check that splits on both space and comma
-        format_list = config[OUT_FORMAT_LIST].split(', ')
-    else:
-        format_list = []
-    if config[BASENAME]:
-        # todo: check out_path (if is empty if just a base name; if a path, check that path exists
-        out_path, base_name = os.path.split(config[BASENAME])
-        if out_path:
-            make_dir(out_path)
-        base, ext = os.path.splitext(base_name)
-        # todo: check ext works
-        if ext in OUT_TYPE_LIST:
-            format_list.append(ext)
-    if len(format_list) > 0:
-        for format_type in format_list:
-            if format_type in OUT_TYPE_LIST:
-                config[SAVE_FILES] = True
-                config[format_type] = True
-            else:
-                raise InvalidDataError(f"Invalid extension in provided '{BASENAME}': '{config[BASENAME]}'.\n"
-                                       f"    Currently supported types are: '{OUT_TYPE_STR}'")
-
-
 def parse_cmdline(argv=None):
     """
     Returns the parsed argument list and return code.
@@ -515,12 +480,18 @@ def parse_cmdline(argv=None):
         argv = sys.argv[1:]
 
     # initialize the parser object:
-    parser = argparse.ArgumentParser(description='Create lignin chain(s) as described in:\n  Orella, M., '
+    parser = argparse.ArgumentParser(description=f"Create lignin chain(s) composed of 'S' ({S}) and/or 'G' ({G}) "
+                                                 f"monolignols, as described in:\n  Orella, M., "
                                                  'Gani, T. Z. H., Vermaas, J. V., Stone, M. L., Anderson, E. M., '
                                                  'Beckham, G. T., \n  Brushett, Fikile R., Roman-Leshkov, Y. (2019). '
                                                  'Lignin-KMC: A Toolkit for Simulating Lignin Biosynthesis.\n  '
                                                  'ACS Sustainable Chemistry & Engineering. '
-                                                 'https://doi.org/10.1021/acssuschemeng.9b03534.\n\n  '
+                                                 'https://doi.org/10.1021/acssuschemeng.9b03534. C-Lignin can be \n  '
+                                                 'modeled with the functions in this package, as shown in ipynb '
+                                                 'examples in our project package on github \n  '
+                                                 '(https://github.com/michaelorella/lignin-kmc/), but not currently '
+                                                 'from the command line. If this \n  functionality is desired, please '
+                                                 'start a new issue on the github.\n\n  '
                                                  'By default, the activation energies from this reference will be '
                                                  'used, as specified in Tables S1 and S2.\n  Alternately, the user '
                                                  f"may specify values, which should be specified as a dict of dict "
@@ -544,10 +515,17 @@ def parse_cmdline(argv=None):
     parser.add_argument("-d", "--out_dir", help="The directory where output files will be saved. The default is "
                                                 "the current directory.", default=DEF_CFG_VALS[OUT_DIR])
     parser.add_argument("-f", "--output_format_list", help="The type(s) of output format to be saved. Provide as a "
-                                                           "space- or comma-separated list. \nThe currently supported "
-                                                           f"types are: '{OUT_TYPE_STR}'. \nA base name for the saved "
+                                                           "space- or comma-separated \nlist. The currently supported "
+                                                           f"types are: '{OUT_TYPE_STR}'. \nThe '{SAVE_JSON}' "
+                                                           f"option will save a json format of RDKit's 'mol' "
+                                                           f"(molecule) object. The '{SAVE_TCL}' option will create "
+                                                           f"a file for use with VMD to generate a psf file, as "
+                                                           f"further described in Lignin-Builder, "
+                                                           f"https://github.com/jvermaas/LigninBuilder, "
+                                                           f"https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.8b05665"
+                                                           f". \n\nA base name for the saved "
                                                            f"files can be provided with the '-o' option. Otherwise, "
-                                                           f"the \nbase name will be '{DEF_BASENAME}'.",
+                                                           f"the base \nname will be '{DEF_BASENAME}'.",
                         default=DEF_CFG_VALS[OUT_FORMAT_LIST])
     parser.add_argument("-i", "--initial_num_monomers", help=f"The initial number of monomers to be included in the "
                                                              f"simulation. The default is {DEF_INI_MONOS}.",
@@ -561,16 +539,19 @@ def parse_cmdline(argv=None):
                                                         "formats can be selected with the '-f' option. \nThe default "
                                                         "format type is '.smi' (SMILES). Currently supported output"
                                                         f"types are: \n'{OUT_TYPE_STR}'.", default=DEF_BASENAME)
+    parser.add_argument("-r", "--random_seed", help="A non-zero integer to be used as a seed value for testing.",
+                        default=DEF_CFG_VALS[RANDOM_SEED])
     parser.add_argument("-s", "--image_size", help=f"The output size of svg or png files in pixels (provide two "
                                                    f"integers). The default \nis {DEF_IMAGE_SIZE} pixels.",
                         default=DEF_IMAGE_SIZE)
     parser.add_argument("-sg", "--sg_ratio", help=f"The S:G (guaiacol:syringyl) ratio. "
                                                   f"The default is {DEF_SG}.", default=DEF_SG)
     parser.add_argument("-t", "--temperature_in_k", help=f"The temperature (in K) at which to model lignin "
-                                                         f"biosynthesis. The default is {DEF_TEMP} K.",
+                                                         f"biosynthesis. The default is {DEF_TEMP} K. \nCAUTION: the "
+                                                         f"default energy barriers were calculated at {DEF_TEMP} K. "
+                                                         f"If they are used, \nthe resulting calculated reaction rates "
+                                                         f"may not be valid.",
                         default=DEF_TEMP)
-    parser.add_argument("-r", "--random_seed", help="A non-zero integer to be used as a seed value for testing.",
-                        default=DEF_CFG_VALS[RANDOM_SEED])
 
     args = None
     try:
@@ -588,7 +569,7 @@ def parse_cmdline(argv=None):
                          RANDOM_SEED: args.random_seed,
                          }
         if args.config is None:
-            args.config = DEF_CFG_VALS
+            args.config = DEF_CFG_VALS.copy()
         # Now overwrite any config values with command-line arguments, only if those values are not the default
         for config_key, arg_val in conf_arg_dict.items():
             if not (arg_val == DEF_CFG_VALS[config_key]):
@@ -615,9 +596,6 @@ def calc_rates(temp, ea_j_part_dict=None, ea_kcal_mol_dict=None):
     :param ea_kcal_mol_dict: dictionary of activation energies in Joule/particle, in format noted above
     :return: rxn_rates: dict of reaction rates units of 1/s
     """
-    # copy config value(s) to convenient names
-    temp = temp
-
     # want activation energies in J/particle; user can provide them in those units or in kcal/mol
     if ea_j_part_dict is None:
         ea_j_part_dict = {
@@ -649,13 +627,7 @@ def create_initial_monomers(pct_s, monomer_draw):
     #       sg_ratio is often used
     # if mon_choice < pct_s, make it an S; that is, the evaluation comes back True (=1='S');
     #     otherwise, get False = 0 = 'G'. Since only two options (True/False) only works for 2 monomers
-    try:
-        return [Monomer(int(mono_type_draw < pct_s), i) for i, mono_type_draw in enumerate(monomer_draw)]
-    except TypeError as e:
-        if "'<' not supported between instances of 'float' and 'NoneType'" in e.args[0]:
-            raise InvalidDataError(f"A float is required for the sg_ratio; instead found: {pct_s}")
-        else:
-            raise InvalidDataError(e)
+    return [Monomer(int(mono_type_draw < pct_s), i) for i, mono_type_draw in enumerate(monomer_draw)]
 
 
 def create_initial_events(initial_monomers, rxn_rates):
@@ -676,27 +648,136 @@ def produce_output(result, cfg):
     # Default out is SMILES
     block = generate_mol(result[ADJ_MATRIX], result[MONO_LIST])
     mol = MolFromMolBlock(block)
-    smi_str = MolToSmiles(mol)
+    smi_str = MolToSmiles(mol) + '\n'
     # if SMI is to be saved, don't output to stdout
     if cfg[SAVE_SMI]:
         fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=SAVE_SMI)
-        str_to_file(smi_str, fname)
+        str_to_file(smi_str, fname, print_info=True)
     else:
-        print("\nSMILES representation: \n", MolToSmiles(mol))
-    if cfg[SAVE_PDB] or cfg[SAVE_PKL] or cfg[SAVE_PNG] or cfg[SAVE_SDF] or cfg[SAVE_SVG]:
+        print("\nSMILES representation: \n", MolToSmiles(mol), "\n")
+    if cfg[SAVE_TCL]:
+        # This is a separated from below as it does not require 2D or 3D coordinates
+        fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=SAVE_TCL)
+        gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=fname, segname="L",
+                   toppar_dir='toppar', out_dir=cfg[OUT_DIR])
+    if cfg[SAVE_PDB] or cfg[SAVE_JSON] or cfg[SAVE_PNG] or cfg[SAVE_SDF] or cfg[SAVE_SVG]:
         Compute2DCoords(mol)
-        for save_type in [SAVE_PDB, SAVE_PKL, SAVE_PNG, SAVE_SDF, SAVE_SVG]:
+        mol3d = None  # making IDE happy; no other purpose
+        if cfg[SAVE_PDB] or cfg[SAVE_SDF]:
+            mol3d = AddHs(mol)
+            EmbedMolecule(mol3d, ETKDG())
+        for save_type in [SAVE_PDB, SAVE_JSON, SAVE_PNG, SAVE_SDF, SAVE_SVG]:
             if cfg[save_type]:
                 fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=save_type)
-                if cfg[SAVE_PDB]:
-                    MolToPDBFile(mol, fname)
-                if cfg[SAVE_PKL]:
-                    pickle.dump(mol, fname)
-                if cfg[SAVE_PNG] or cfg[SAVE_SVG]:
+                if save_type == SAVE_PDB:
+                    MolToPDBFile(mol3d, fname)
+                elif save_type == SAVE_JSON:
+                    json_str = MolToJSON(mol)
+                    str_to_file(json_str + '\n', fname)
+                elif save_type == SAVE_PNG or save_type == SAVE_SVG:
                     MolToFile(mol, fname, size=cfg[IMAGE_SIZE])
-                if cfg[SAVE_SDF]:
+                elif save_type == SAVE_SDF:
                     writer = SDWriter(fname)
-                    writer.write(mol)
+                    writer.write(mol3d)
+                print(f"Wrote file: {fname}")
+
+
+def validate_input(cfg):
+    """
+    Checking for errors at the beginning, so don't waste time starting calculations that will not be able to complete
+
+    :param cfg: dict of configuration values
+    :return: will raise an error if invalid data is encountered
+    """
+    if (cfg[E_A_KCAL_MOL] == DEF_E_A_KCAL_MOL) and cfg[TEMP] != DEF_TEMP:
+        warning(f"Caution: the default energy barriers, which were calculated at {DEF_TEMP}, have been selected for "
+                f"use at a different specified temperature ({cfg[TEMP]} K). The resulting calculated reaction "
+                f"rates may not be valid.")
+
+    # Don't use "if cfg[RANDOM_SEED]:", because that won't catch the user giving the value 0, which they might think
+    #    would be a valid random seed, but won't work for this package because of later "if cfg[RANDOM_SEED]:" checks
+    if cfg[RANDOM_SEED] is not None:
+        try:
+            # numpy seeds must be 0 and 2**32 - 1. Raise an error if the input cannot be converted to an int. Also raise
+            #   an error for 0, since that will return False that a seed was provided in the logic in this package
+            cfg[RANDOM_SEED] = int(cfg[RANDOM_SEED])
+            if cfg[RANDOM_SEED] <= 0 or cfg[RANDOM_SEED] > (2**32 - 1):
+                raise ValueError
+        except ValueError:
+            raise InvalidDataError(f"Invalid input provided for '{RANDOM_SEED}': '{cfg[RANDOM_SEED]}'. If you "
+                                   f"would like to obtain consistent output by using a random seed, provide a "
+                                   f"positive integer value no greater than 2**32 - 1.")
+
+    for req_pos_num in [SG_RATIO, SIM_TIME]:
+        try:
+            cfg[req_pos_num] = float(cfg[req_pos_num])
+            if cfg[req_pos_num] < 0:
+                raise ValueError
+        except ValueError:
+            raise InvalidDataError(f"Found '{cfg[req_pos_num]}' input for '{req_pos_num}'. The {req_pos_num} must be "
+                                   f"a positive number.")
+
+    for num_monos in [INI_MONOS, MAX_MONOS]:
+        try:
+            cfg[num_monos] = int(cfg[num_monos])
+            if cfg[num_monos] < 0:
+                raise ValueError
+        except ValueError:
+            raise InvalidDataError(f"Found '{cfg[num_monos]}' input for '{num_monos}'. The {num_monos} must be a "
+                                   f"positive integer.")
+
+    try:
+        # Will be a string to process unless it is the default
+        if isinstance(cfg[IMAGE_SIZE], str):
+            raw_vals = cfg[IMAGE_SIZE].replace(",", " ").replace("(", "").replace(")", "").split()
+            if len(raw_vals) != 2:
+                raise ValueError
+            cfg[IMAGE_SIZE] = (int(raw_vals[0]), int(raw_vals[1]))
+    except ValueError:
+        raise InvalidDataError(f"Found '{cfg[req_pos_num]}' input for '{req_pos_num}'. The {req_pos_num} must be "
+                               f"a positive number.")
+
+    # Check for valid output requests
+    check_if_files_to_be_saved(cfg)
+
+
+def check_if_files_to_be_saved(cfg):
+    """
+    Evaluate input for requests to save output and check for valid specified locations
+    :param cfg: dict of configuration values
+    :return: if the cfg designs that files should be created, returns an updated cfg dict, and raises errors if
+              invalid data in encountered
+    """
+    if cfg[OUT_FORMAT_LIST]:
+        # remove any periods to aid comparison; might as well also change comma to space and then split on just space
+        out_format_list = cfg[OUT_FORMAT_LIST].replace(".", " ").replace(",", " ")
+        format_set = set(out_format_list.split())
+    else:
+        format_set = set()
+
+    if cfg[BASENAME] and (cfg[BASENAME] != DEF_BASENAME):
+        # If cfg[BASENAME] is not just the base name, make it so, saving a dir or ext in their spots
+        out_path, base_name = os.path.split(cfg[BASENAME])
+        if out_path and cfg[OUT_DIR]:
+            cfg[OUT_DIR] = os.path.join(cfg[OUT_DIR], out_path)
+        elif out_path:
+            cfg[OUT_DIR] = out_path
+        base, ext = os.path.splitext(base_name)
+        cfg[BASENAME] = base
+        format_set.add(ext.replace(".", ""))
+
+    if len(format_set) > 0:
+        for format_type in format_set:
+            if format_type in OUT_TYPE_LIST:
+                cfg[SAVE_FILES] = True
+                cfg[format_type] = True
+            else:
+                raise InvalidDataError(f"Invalid extension provided: '{format_type}'. The currently supported types "
+                                       f"are: '{OUT_TYPE_STR}'")
+
+    # if out_dir does not already exist, recreate it, only if we will actually need it
+    if cfg[SAVE_FILES] and cfg[OUT_DIR]:
+        make_dir(cfg[OUT_DIR])
 
 
 def main(argv=None):
@@ -714,11 +795,8 @@ def main(argv=None):
     cfg = args.config
 
     try:
-        # if a directory is going to be needed, make at the beginning, so if it raises an error, it does so before
-        #    running the simulation
-        check_if_files_to_be_saved(cfg)
-        if cfg[SAVE_FILES]:
-            make_dir(cfg[OUT_DIR])
+        # tests at the beginning to catch errors early
+        validate_input(cfg)
 
         # need rates before we can start modeling reactions
         rxn_rates = calc_rates(cfg[TEMP], ea_j_part_dict=cfg[E_A_J_PART], ea_kcal_mol_dict=cfg[E_A_KCAL_MOL])
@@ -727,7 +805,7 @@ def main(argv=None):
         pct_s = cfg[SG_RATIO] / (1 + cfg[SG_RATIO])
         ini_num_monos = cfg[INI_MONOS]
         if cfg[RANDOM_SEED]:
-            np.random.seed(int(cfg[RANDOM_SEED]))
+            np.random.seed(cfg[RANDOM_SEED])
             monomer_draw = np.around(np.random.rand(ini_num_monos), MAX_NUM_DECIMAL)
         else:
             monomer_draw = np.random.rand(ini_num_monos)
@@ -750,12 +828,9 @@ def main(argv=None):
         # Outputs
         produce_output(result, cfg)
 
-    except InvalidDataError as e:
+    except (InvalidDataError, KeyError) as e:
         warning(e)
         return INVALID_DATA
-    except KeyError as e:
-        warning(e)
-        return IO_ERROR
 
     return GOOD_RET  # success
 
