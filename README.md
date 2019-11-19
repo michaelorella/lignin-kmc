@@ -358,7 +358,8 @@ following points and be as detailed as possible:
 ## Pull Requests
 Pull requests are always welcome for suggestions to improve either the code or usability. Before submitting the pull 
 request, please ensure that your standalone code is working properly by both running the existing tests and adding 
-tests of any new functionality.
+tests of any new functionality (at least 90% coverage). To run the existing tests, from the main directory, run `pytest`. 
+Currently (2019-11-19), test coverage is 98% for create_lignin.py, 100% for kmc_common.py, and 95% for kmc_functions.py.
 
 # License
 MIT © Michael Orella
