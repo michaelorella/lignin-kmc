@@ -9,5 +9,7 @@ dependencies:
   - python=3.6.6
   - scipy=1.1.0
   - rdkit=2018.03.4.0
+  - common_wrangler=0.2.3
   - joblib=0.12.2
+  - pytest=5.2.4
 prefix: lignin_kmc

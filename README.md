@@ -179,9 +179,9 @@ git clone https://github.com/michaelorella/lignin-kmc
 ```
 
 In the root, you will find a file titled `environment.yml`. This file contains all of the dependencies listed above 
-plus two additional packages required for testing, with the versions tested. To create your own environment mirroring 
-this one, run the following command in the terminal 
-(or Anaconda Prompt on Windows):
+plus two additional packages required for testing (pytest and joblib), with the versions tested. To create your own 
+environment mirroring this one, run the following command in the terminal (or Anaconda Prompt on Windows):
+
 ```
 conda env create -f environment.yml
 ```
