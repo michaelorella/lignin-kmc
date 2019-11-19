@@ -8,26 +8,25 @@ import argparse
 import os
 import sys
 import numpy as np
-from collections import (defaultdict, OrderedDict)
+from collections import (defaultdict)
 from configparser import ConfigParser
+from common_wrangler.common import (MAIN_SEC, GOOD_RET, INPUT_ERROR, KB, H, KCAL_MOL_TO_J_PART, InvalidDataError,
+                                    INVALID_DATA, OUT_DIR, warning, process_cfg, make_dir,
+                                    create_out_fname, str_to_file, round_sig_figs)
 from rdkit.Chem import (MolToSmiles, MolFromMolBlock)
 from rdkit.Chem.AllChem import (Compute2DCoords)
 from rdkit.Chem.Draw import MolToFile
 from rdkit.Chem.rdMolInterchange import MolToJSON
-from scipy import triu
-from scipy.sparse import dok_matrix
-from common_wrangler.common import (warning, process_cfg, MAIN_SEC, GOOD_RET, INPUT_ERROR, KB, H,
-                                    KCAL_MOL_TO_J_PART, InvalidDataError, INVALID_DATA, OUT_DIR, make_dir,
-                                    create_out_fname, str_to_file)
+
 from ligninkmc import __version__
 from ligninkmc.kmc_common import (Event, Monomer, E_BARRIER_KCAL_MOL, E_BARRIER_J_PART, TEMP, INI_MONOS, MAX_MONOS,
                                   SIM_TIME, AFFECTED, GROW, DEF_E_BARRIER_KCAL_MOL, OX, MONOMER, OLIGOMER,
-                                  LIGNIN_SUBUNITS, SG_RATIO, ADJ_MATRIX, RANDOM_SEED, AO4, B1, B1_ALT, B5, BB, BO4,
-                                  C5C5, C5O4, S, G, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL,
-                                  round_sig_figs, MONO_LIST, CHAIN_MONOS, CHAIN_BRANCHES, CHAIN_BRANCH_COEFF,
-                                  RCF_MONOS, RCF_BRANCHES, RCF_BRANCH_COEFF)
-from ligninkmc.kmc_functions import run_kmc
-from ligninkmc.visualization import (generate_mol, gen_psfgen)
+                                  LIGNIN_SUBUNITS, SG_RATIO, ADJ_MATRIX, RANDOM_SEED, S, G, CHAIN_LEN, BONDS,
+                                  RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL,
+                                  MONO_LIST, CHAIN_MONOS, CHAIN_BRANCH_COEFF,
+                                  RCF_BRANCH_COEFF)
+from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_psfgen, count_bonds,
+                                     count_oligomer_yields, analyze_adj_matrix)
 
 __author__ = 'hmayes'
 
@@ -73,275 +72,6 @@ OPENING_MSG = f"Running Lignin-KMC version {__version__}. " \
 ################################################################################
 # ANALYSIS CODE
 ################################################################################
-
-
-def find_fragments(adj):
-    """
-    Implementation of a modified depth first search on the adjacency matrix provided to identify isolated graphs within
-    the superstructure. This allows us to easily track the number of isolated fragments and the size of each of these
-    fragments. This implementation does not care about the specific values within the adjacency matrix, but effectively
-    treats the adjacency matrix as boolean.
-
-    :param adj: dok_matrix  -- NxN sparse matrix in dictionary of keys format that contains all of the connectivity
-        information for the current lignification state
-    :return: two lists where the list indices of each correspond to a unique fragment:
-                A list of sets: the list contains a set for each fragment, comprised of the unique integer identifiers
-                                for the monomers contained within the fragment,
-                A list of ints containing the number of number of branch points found in each fragment
-    """
-    remaining_nodes = list(range(adj.get_shape()[0]))
-    current_node = 0
-    connected_fragments = [set()]
-    connection_stack = []
-
-    branches_in_frags = []
-    num_branches = 0
-
-    csr_adj = adj.tocsr(copy=True)
-
-    while current_node is not None:
-        # Indicate that we are currently visiting this node by removing it
-        remaining_nodes.remove(current_node)
-
-        # Add to the current_fragment
-        current_fragment = connected_fragments[-1]
-
-        # Look for what's connected to this row
-        connections = {node for node in csr_adj[current_node].indices}
-        # if more than two units are connected, there is a branch
-        len_connections = len(connections)
-        if len_connections > 2:
-            num_branches += len_connections - 2
-
-        # Add these connections to our current fragment
-        current_fragment.update({current_node})
-
-        # Visit any nodes that the current node is connected to that still need to be visited
-        connection_stack.extend([node for node in connections if (node in remaining_nodes and
-                                                                  node not in connection_stack)])
-
-        # Get the next node that should be visited
-        if len(connection_stack) != 0:
-            current_node = connection_stack.pop()
-        elif len(remaining_nodes) != 0:
-            current_node = remaining_nodes[0]
-            # great ready for next fragment
-            connected_fragments.append(set())
-            branches_in_frags.append(num_branches)
-            num_branches = 0
-        else:
-            current_node = None
-            branches_in_frags.append(num_branches)
-    return connected_fragments, branches_in_frags
-
-
-def fragment_size(frags):
-    """
-    A rigorous way to analyze_adj_matrix the size of fragments that have been identified using the find_fragments(adj)
-    tool. Makes a dictionary of monomer identities mapped to the length of the fragment that contains them.
-
-    Example usage:
-    > frags = [{0}, {1}]
-    > result = fragment_size(frags)
-    {0: 1, 1: 1}
-
-    > frags = [{0, 4, 2}, {1, 3}]
-    > result = fragment_size(frags)
-    {0: 3, 2: 3, 4: 3, 1: 2, 3: 2}
-
-    > frags = [{0, 1, 2, 3, 4}]
-    > result = fragment_size(frags)
-    {0: 5, 1: 5, 2: 5, 3: 5, 4: 5}
-
-    :param frags: list of sets; the set (list) of monomer identifier sets that were output from
-                  find_fragments, or the monomers that are connected to each other
-    :return: dict mapping the integer identity of each monomer to the length of the fragment that it is found in
-    """
-    sizes = {}
-    for fragment in frags:
-        length = len(fragment)
-        for node in fragment:
-            sizes[node] = length
-    return sizes
-
-
-def break_bond_type(adj, bond_type):
-    """
-    Function for removing all of a certain type of bond from the adjacency matrix. This is primarily used for the
-    analysis at the end of the simulations when in silico RCF should occur. The update happens via conditional removal
-    of the matching values in the adjacency matrix.
-
-    Example use cases:
-    > a = dok_matrix((5,5))
-    > a[1,0] = 4; a[0,1] = 8; a[2,3] = 8; a[3,2] = 8;
-    > break_bond_type(a, BO4).todense()
-    [[0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0],
-     [0, 0, 0, 8, 0],
-     [0, 0, 8, 0, 0],
-     [0, 0, 0, 0, 0]]
-
-    > a = dok_matrix([[0, 4, 0, 0, 0],
-    >                 [8, 0, 1, 0, 0],
-    >                 [0, 8, 0, 0, 0],
-    >                 [0, 0, 0, 0, 0],
-    >                 [0, 0, 0, 0, 0]])
-    > break_bond_type(a, B1_ALT).todense()
-    [[0, 0, 0, 0, 0],
-     [0, 0, 1, 0, 0],
-     [0, 8, 0, 0, 0],
-     [0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0]]
-
-    :param adj: dok_matrix, the adjacency matrix for the lignin polymer that has been simulated, and needs
-        certain bonds removed
-    :param bond_type: str, the string containing the bond type that should be broken. These are the standard
-        nomenclature, except for B1_ALT, which removes the previous bond between the beta position and another monomer
-        on the monomer that is bound through 1
-    :return: dok_matrix, new adjacency matrix after bonds were broken
-    """
-    # Copy the matrix into a new matrix
-    new_adj = adj.todok(copy=True)
-
-    breakage = {B1: (lambda row, col: (adj[(row, col)] == 1 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
-                                                                                          adj[(col, row)] == 1)),
-                B1_ALT: (lambda row, col: (adj[(row, col)] == 1 and adj[(col, row)] == 8) or
-                                          (adj[(row, col)] == 8 and adj[(col, row)] == 1)),
-                B5: (lambda row, col: (adj[(row, col)] == 5 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
-                                                                                          adj[(col, row)] == 5)),
-                BO4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
-                                                                                           adj[(col, row)] == 4)),
-                AO4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 7) or (adj[(row, col)] == 7 and
-                                                                                           adj[(col, row)] == 4)),
-                C5O4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 5) or (adj[(row, col)] == 5 and
-                                                                                            adj[(col, row)] == 4)),
-                BB: (lambda row, col: (adj[(row, col)] == 8 and adj[(col, row)] == 8)),
-                C5C5: (lambda row, col: (adj[(row, col)] == 5 and adj[(col, row)] == 5))}
-
-    for adj_bond_loc in adj.keys():
-        adj_row = adj_bond_loc[0]
-        adj_col = adj_bond_loc[1]
-
-        if breakage[bond_type](adj_row, adj_col) and bond_type != B1_ALT:
-            new_adj[(adj_row, adj_col)] = 0
-            new_adj[(adj_col, adj_row)] = 0
-        elif breakage[bond_type](adj_row, adj_col):
-            if adj[(adj_row, adj_col)] == 1:
-                # The other 8 is in this row
-                remove_prev_bond(adj, adj_row, new_adj)
-            else:
-                # The other 8 is in the other row
-                remove_prev_bond(adj, adj_col, new_adj)
-    return new_adj
-
-
-def remove_prev_bond(adj, search_loc, new_adj):
-    idx = 0  # make IDE happy
-    data = adj.tocoo().getrow(search_loc).data
-    cols = adj.tocoo().getrow(search_loc).indices
-    for i, idx in enumerate(cols):
-        if data[i] == 8:
-            break
-    new_adj[(search_loc, idx)] = 0
-    new_adj[(idx, search_loc)] = 0
-
-
-def count_bonds(adj):
-    """
-    Counter for the different bonds that are present in the adjacency matrix. Primarily used for getting easy analysis
-    of the properties of a simulated lignin from the resulting adjacency matrix.
-
-    :param adj: dok_matrix   -- the adjacency matrix for the lignin polymer that has been simulated
-    :return: OrderedDict mapping bond strings to the frequency of that specific bond
-    """
-    bound_count_dict = OrderedDict({BO4: 0,  BB: 0, B5: 0, B1: 0, C5O4: 0, AO4: 0, C5C5: 0})
-    bonding_dict = {(4, 8): BO4, (8, 4): BO4, (8, 1): B1, (1, 8): B1, (8, 8): BB, (5, 5): C5C5,
-                    (8, 5): B5, (5, 8): B5, (7, 4): AO4, (4, 7): AO4, (5, 4): C5O4, (4, 5): C5O4}
-
-    adj_array = triu(adj.toarray(), k=1)
-
-    # Don't double count by looking only at the upper triangular keys
-    for el in dok_matrix(adj_array).keys():
-        row = el[0]
-        col = el[1]
-
-        bond = (adj[(row, col)], adj[(col, row)])
-        bound_count_dict[bonding_dict[bond]] += 1
-
-    return bound_count_dict
-
-
-def count_oligomer_yields(adj):
-    """
-    Use the depth first search implemented in find_fragments(adj) to locate individual fragments and branching
-    Related values are also calculated.
-
-    :param adj: scipy dok_matrix, the adjacency matrix for the lignin polymer that has been simulated
-    :return: four dicts: an OrderedDict for olig_len_dict (olig_len: num_oligs); the keys are common to all
-                             dicts so one ordered dict should be sufficient. The other three dicts are:
-                                 olig_length: the total number of monomers involved in oligomers
-                                 olig_length: total number of branch points in oligomers of that length
-                                 olig_length: the branching coefficient for the oligomers of that length
-    """
-    oligomers, branches_in_oligs = find_fragments(adj)
-
-    temp_olig_len_dict = defaultdict(int)
-    temp_olig_branch_dict = defaultdict(int)
-    for oligomer, num_branches in zip(oligomers, branches_in_oligs):
-        temp_olig_len_dict[len(oligomer)] += 1
-        temp_olig_branch_dict[len(oligomer)] += num_branches
-
-    # create one ordered dict, and three regular dicts
-    olig_lengths = list(temp_olig_len_dict.keys())
-    olig_lengths.sort()
-    olig_len_dict = OrderedDict()
-    olig_monos_dict = {}
-    olig_branch_dict = {}
-    olig_branch_coeff_dict = {}
-    for olig_len in olig_lengths:
-        num_oligs = temp_olig_len_dict[olig_len]
-        num_monos_in_olig_length = num_oligs * olig_len
-        num_branches = temp_olig_branch_dict[olig_len]
-        olig_len_dict[olig_len] = num_oligs
-        olig_monos_dict[olig_len] = num_monos_in_olig_length
-        olig_branch_dict[olig_len] = num_branches
-        olig_branch_coeff_dict[olig_len] = num_branches / num_monos_in_olig_length
-
-    return olig_len_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict
-
-
-def analyze_adj_matrix(adjacency):
-    """
-    Performs the analysis for a single simulation to extract the relevant macroscopic properties, such as both the
-    simulated frequency of different oligomer sizes and the number of each different type of bond before and after in
-    silico RCF. The specific code to handle each of these properties is written in the count_bonds(adj) and
-    count_oligomer_yields(adj) specifically.
-
-    :param adjacency: scipy dok_matrix  -- the adjacency matrix for the lignin polymer that has been simulated
-    :return: A dictionary of results: Chain Lengths, RCF Yields, Bonds, and RCF Bonds
-    """
-
-    # Remove any excess b1 bonds from the matrix, e.g. bonds that should be
-    # broken during synthesis
-    adjacency = break_bond_type(adjacency, B1_ALT)
-
-    # Examine the initial polymers before any bonds are broken
-    olig_yield_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict = count_oligomer_yields(adjacency)
-    bond_distributions = count_bonds(adjacency)
-
-    # Simulate the RCF process at complete conversion by breaking all of the
-    # alkyl C-O bonds that were formed during the reaction
-    rcf_adj = break_bond_type(break_bond_type(break_bond_type(adjacency, BO4), AO4), C5O4)
-
-    # Now count the bonds and yields remaining
-    rcf_yield_dict, rcf_monos_dict, rcf_branch_dict, rcf_branch_coeff_dict = count_oligomer_yields(rcf_adj)
-    rcf_bonds = count_bonds(rcf_adj)
-
-    return {BONDS: bond_distributions, CHAIN_LEN: olig_yield_dict, CHAIN_MONOS:  olig_monos_dict,
-            CHAIN_BRANCHES: olig_branch_dict, CHAIN_BRANCH_COEFF: olig_branch_coeff_dict,
-            RCF_BONDS: rcf_bonds, RCF_YIELDS: rcf_yield_dict, RCF_MONOS: rcf_monos_dict,
-            RCF_BRANCHES: rcf_branch_dict, RCF_BRANCH_COEFF: rcf_branch_coeff_dict}
-
 
 def adj_analysis_to_stdout(adj_results):
     """

@@ -55,11 +55,119 @@ Lignin-KMC is populated with default variables that make it as easy to run as en
 
 `> create_lignin`
 
-This will use all default values (see below) and give the default output, which will look something like:
+This will use all default values (see below) and output which will look something like:
+    
+    Running Lignin-KMC version 0.2.2. Please cite: https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.9b03534
+    
+    Lignin KMC created 10 monomers, which formed:
+           1 oligomer(s) of chain length 10, with branching coefficient 0.2
+    composed of the following bond types and number:
+        BO4:    6     BB:    1     B5:    1     B1:    0    5O4:    0    AO4:    0     55:    1
+    
+    Breaking C-O bonds to simulate RCF results in:
+           4 monomer(s) (chain length 1)
+           3 dimer(s) (chain length 2)
+    with the following remaining bond types and number:
+        BO4:    0     BB:    1     B5:    1     B1:    0    5O4:    0    AO4:    0     55:    1
+    
+    SMILES representation: 
+     COc1cc(C(O)C(CO)Oc2c(OC)cc(C3OCC4C(c5cc(OC)c(OC(CO)C(O)c6cc(OC)c(OC(CO)C(O)c7cc(OC)c([O])c(OC)c7)c(-c7cc(C(O)C(CO)Oc8c(OC)cc(C(O)C(CO)Oc9c(OC)cc(C%10Oc%11c(OC)cc(/C=C/CO)cc%11C%10CO)cc9OC)cc8OC)cc(OC)c7OC(CO)C(O)c7cc(OC)c([O])c(OC)c7)c6)c(OC)c5)OCC34)cc2OC)ccc1[O] 
 
-"""
 
-"""
+
+Your output will differ as a pseudo-random number generator is used to model the stochastic nature of chemical reactions.
+
+The default options (number of initial and final monomers, S:G ratio, etc.) can be changed either by the command line 
+options shown below, or by using a configuration file. These options can be viewed by entering the help command:
+
+ `> create_lignin -h`
+ 
+     Running Lignin-KMC version 0.2.2. Please cite: https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.9b03534
+     
+     usage: create_lignin [-h] [-c CONFIG] [-d OUT_DIR] [-f OUTPUT_FORMAT_LIST]
+                          [-i INITIAL_NUM_MONOMERS] [-l LENGTH_SIMULATION]
+                          [-m MAX_NUM_MONOMERS] [-o OUTPUT_BASENAME]
+                          [-r RANDOM_SEED] [-s IMAGE_SIZE] [-sg SG_RATIO]
+                          [-t TEMPERATURE_IN_K]
+     
+     Create lignin chain(s) composed of 'S' (syringyl) and/or 'G' (guaiacol) monolignols, as described in:
+       Orella, M., Gani, T. Z. H., Vermaas, J. V., Stone, M. L., Anderson, E. M., Beckham, G. T., 
+       Brushett, Fikile R., Roman-Leshkov, Y. (2019). Lignin-KMC: A Toolkit for Simulating Lignin Biosynthesis.
+       ACS Sustainable Chemistry & Engineering. https://doi.org/10.1021/acssuschemeng.9b03534. C-Lignin can be 
+       modeled with the functions in this package, as shown in ipynb examples in our project package on github 
+       (https://github.com/michaelorella/lignin-kmc/), but not currently from the command line. If this 
+       functionality is desired, please start a new issue on the github.
+     
+       By default, the Gibbs free energy barriers from this reference will be used, as specified in Tables S1 and S2.
+       Alternately, the user may specify values, which should be specified as a dict of dict of dicts in a 
+       specified configuration file (specified with '-c') using the 'e_barrier_in_kcal_mol' or 'e_barrier_in_j_particle'
+       parameters with corresponding units (kcal/mol or joules/particle, respectively), in a configuration file 
+       (see '-c'). The format is (bond_type: monomer(s) involved: units involved: ea_vals), for example:
+           ea_dict = {oxidation: {0: {monomer: 0.9, oligomer: 6.3}, 1: {{{MONOMER}: 0.6, {OLIGOMER}: 2.2}}, ...}
+       where 0: guaiacol, 1: syringyl, 2: caffeoyl. The default output is a SMILES string printed to standard out.
+     
+       All command-line options may alternatively be specified in a configuration file. Command-line (non-default) 
+       selections will override configuration file specifications.
+     
+     optional arguments:
+       -h, --help            show this help message and exit
+       -c CONFIG, --config CONFIG
+                             The location of the configuration file in the 'ini' format. This file can be used to 
+                             overwrite default values such as for energies.
+       -d OUT_DIR, --out_dir OUT_DIR
+                             The directory where output files will be saved. The default is the current directory.
+       -f OUTPUT_FORMAT_LIST, --output_format_list OUTPUT_FORMAT_LIST
+                             The type(s) of output format to be saved. Provide as a space- or comma-separated list. 
+                             The currently supported types are: 'json', 'png', 'smi', 'svg', 'tcl'. 
+                             The 'json' option will save a json format of RDKit's 'mol' (molecule) object. The 'tcl' 
+                             option will create a file for use with VMD to generate a psf file and 3D molecules, 
+                             as described in LigninBuilder, https://github.com/jvermaas/LigninBuilder, 
+                             https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.8b05665. 
+                             A base name for the saved files can be provided with the '-o' option. Otherwise, the 
+                             base name will be 'lignin-kmc-out'.
+       -i INITIAL_NUM_MONOMERS, --initial_num_monomers INITIAL_NUM_MONOMERS
+                             The initial number of monomers to be included in the simulation. The default is 2.
+       -l LENGTH_SIMULATION, --length_simulation LENGTH_SIMULATION
+                             The length of simulation (simulation time) in seconds. The default is 1 s.
+       -m MAX_NUM_MONOMERS, --max_num_monomers MAX_NUM_MONOMERS
+                             The maximum number of monomers to be studied. The default value is 10.
+       -o OUTPUT_BASENAME, --output_basename OUTPUT_BASENAME
+                             The base name for output file(s). If an extension is provided, it will determine 
+                             the type of output. Currently supported output types are: 
+                             'json', 'png', 'smi', 'svg', 'tcl'. Multiple output formats can be selected with the 
+                             '-f' option. If the '-f' option is selected and no output base name provided, a 
+                             default base name of 'lignin-kmc-out' will be used.
+       -r RANDOM_SEED, --random_seed RANDOM_SEED
+                             A positive integer to be used as a seed value for testing.
+       -s IMAGE_SIZE, --image_size IMAGE_SIZE
+                             The output size of svg or png files in pixels (provide two integers). The default size 
+                             is (1200, 300) pixels.
+       -sg SG_RATIO, --sg_ratio SG_RATIO
+                             The S:G (guaiacol:syringyl) ratio. The default is 1.
+       -t TEMPERATURE_IN_K, --temperature_in_k TEMPERATURE_IN_K
+                             The temperature (in K) at which to model lignin biosynthesis. The default is 298.15 K.
+
+For example, to use an S to G ratio of 2.5, 12 initial monomers, and up to 18 monomers (only would not reach this 
+if there was insufficient time; the default 1 s will be plenty), with the remaining variables set as their 
+default values, enter:
+
+ `> create_lignin -sg 2.5 -i 12 -m 28`
+
+    Running Lignin-KMC version 0.2.2. Please cite: https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.9b03534
+    
+    Lignin KMC created 18 monomers, which formed:
+           1 oligomer(s) of chain length 18, with branching coefficient 0.111
+    composed of the following bond types and number:
+        BO4:    8     BB:    4     B5:    2     B1:    0    5O4:    3    AO4:    0     55:    0
+    
+    Breaking C-O bonds to simulate RCF results in:
+           6 monomer(s) (chain length 1)
+           6 dimer(s) (chain length 2)
+    with the following remaining bond types and number:
+        BO4:    0     BB:    4     B5:    2     B1:    0    5O4:    0    AO4:    0     55:    0
+    
+    SMILES representation: 
+     COc1cc(C(O)C(CO)Oc2c(OC)cc(C3OCC4C(c5cc(OC)c(Oc6cc(C7OCC8C(c9cc(OC)c(OC(CO)C(O)c%10cc(OC)c(OC(CO)C(O)c%11cc(OC)c%12c(c%11)C(CO)C(c%11cc(OC)c([O])c(OC)c%11)O%12)c(OC)c%10)c(Oc%10c(OC)cc(C%11OCC%12C(c%13cc(OC)c(OC(CO)C(O)c%14cc(OC)c%15c(c%14)C(CO)C(c%14cc(OC)c(OC(CO)C(O)c%16cc(OC)c(OC(CO)C(O)c%17cc(OC)c([O])c(Oc%18c(OC)cc(C(O)C(CO)Oc%19c(OC)cc(C%20OCC%21C(c%22cc(OC)c([O])c(OC)c%22)OCC%20%21)cc%19OC)cc%18OC)c%17)c(OC)c%16)c(OC)c%14)O%15)c(OC)c%13)OCC%11%12)cc%10OC)c9)OCC78)cc(OC)c6OC(CO)C(O)c6cc(OC)c([O])c(OC)c6)c(OC)c5)OCC34)cc2OC)cc(OC)c1[O] 
 
 
 ### Developer Use
@@ -70,8 +178,9 @@ repository using:
 git clone https://github.com/michaelorella/lignin-kmc
 ```
 
-In the root, you will find a file titled `environment.yml`. This file contains all of the dependencies listed above, 
-with the versions tested. To create your own environment mirroring this one, run the following command in the terminal 
+In the root, you will find a file titled `environment.yml`. This file contains all of the dependencies listed above 
+plus two additional packages required for testing, with the versions tested. To create your own environment mirroring 
+this one, run the following command in the terminal 
 (or Anaconda Prompt on Windows):
 ```
 conda env create -f environment.yml
@@ -85,37 +194,17 @@ necessary package to import is `ligninkmc`. To do this, start the environment yo
 
 Python 3.6.6 |Anaconda, Inc.| (default, Jun 28 2018, 11:27:44) [MSC v.1900 64 bit (AMD64)] on win32
 Type "help", "copyright", "credits" or "license" for more information.
-
->>> import ligninkmc as kmc
 ```
 
-Congratulations! Lignin-KMC is now installed! With this basic installation, you will have access to the function 
+Congratulations! Lignin-KMC is now installed! With this basic installation, you will have access to the functions therein 
 (such as `run_kmc`, `generate_mol`, and `analyze_adj_matrix`) and the classes `Monomer` and `Event`.
 
 ## Examples
-For these examples, I will assume that the rates have already been obtained and have been input as a 3-dimensional 
-dictionary (bond type, monomer types, oligomer sizes) to transition state Gibbs free energy barriers (at 298 K and 1 
-atm)or reaction rates at the temperature of interest. For examples (from the definition of the Gibbs free energy barrier 
-dictionary to the simulation of lignin biosynthesis), see `~/LigninPolymerizationNotebook.ipynb` and `~/Example.ipynb`. 
+For examples, see `~/LigninPolymerizationNotebook.ipynb` and `~/Example.ipynb`. 
 
 ## API Reference
 
-### monomer.py
-
-#### CLASSES
-
-__Monomer__(type, index)
-- type = {0, 1, 2} = a switch that indicates whether the monomer is G = 0, S = 1, or C = 2. Extensions to include more 
-  monomers would be needed to expand this definition
-- index = int = a number that should be unique for all monomers in a simulation. This is returned as the hash value and 
-  is the tie in to the adjacency matrix
-
-The class that contains information about each monomer in the simulation, most importantly tracking the index and the 
-monomer type.
-
-#### FUNCTIONS
-
-### event.py
+### kmc_common.py
 
 #### CLASSES
 
@@ -128,8 +217,17 @@ __Event__(key, index, rate, bond)
 The class that is used to define events, which can be unpacked by the `run` function to execute the events occurring in 
 the simulation.
 
+__Monomer__(type, index)
+- type = {0, 1, 2} = a switch that indicates whether the monomer is G = 0, S = 1, or C = 2. Extensions to include more 
+  monomers would be needed to expand this definition
+- index = int = a number that should be unique for all monomers in a simulation. This is returned as the hash value and 
+  is the tie in to the adjacency matrix
 
-### analysis.py
+The class that contains information about each monomer in the simulation, most importantly tracking the index and the 
+monomer type.
+
+
+### kmc_functions.py
 
 #### FUNCTIONS
 

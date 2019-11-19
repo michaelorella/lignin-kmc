@@ -6,21 +6,19 @@ from collections import OrderedDict
 
 import joblib as par
 import numpy as np
-from common_wrangler.common import (InvalidDataError, capture_stdout, silent_remove, diff_lines)
 from rdkit.Chem import MolFromMolBlock
 from rdkit.Chem.AllChem import Compute2DCoords
 from rdkit.Chem.Draw import MolToFile
 from scipy.sparse import dok_matrix
-from ligninkmc.create_lignin import (calc_rates, DEF_TEMP, create_initial_monomers,
-                                     create_initial_events, create_initial_state, DEF_ADD_RATE,
-                                     analyze_adj_matrix, count_bonds, count_oligomer_yields,
-                                     break_bond_type, adj_analysis_to_stdout, find_fragments, fragment_size,
+from common_wrangler.common import (InvalidDataError, capture_stdout, silent_remove, diff_lines)
+from ligninkmc.create_lignin import (DEF_TEMP, DEF_ADD_RATE, calc_rates, create_initial_monomers,
+                                     create_initial_events, create_initial_state, analyze_adj_matrix,
+                                     count_bonds, count_oligomer_yields, adj_analysis_to_stdout,
                                      get_bond_type_v_time_dict, overall_branching_coefficient, degree)
 from ligninkmc.kmc_common import (Event, Monomer, C5O4, OX, C5C5, B5, BB, BO4, AO4, B1, DEF_RXN_RATES,
                                   MON_OLI, MONOMER, GROW, TIME, MONO_LIST, ADJ_MATRIX, CHAIN_LEN, BONDS,
                                   RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_BARRIER_KCAL_MOL, MAX_NUM_DECIMAL)
-from ligninkmc.kmc_functions import run_kmc
-from ligninkmc.visualization import (generate_mol, gen_psfgen)
+from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_psfgen, find_fragments, fragment_size, break_bond_type)
 
 __author__ = 'hmayes'
 
@@ -125,7 +123,7 @@ class TestCalcRates(unittest.TestCase):
     """
     Tests calculation of rate coefficients by the Eyring equation.
     """
-    def test_calc_rates_from_kcal_mol(self):
+    def testCalcRatesFromKcalMol(self):
         rxn_rates = calc_rates(DEF_TEMP, ea_kcal_mol_dict=DEF_E_BARRIER_KCAL_MOL)
         self.assertTrue(len(rxn_rates) == len(DEF_RXN_RATES))
         rxn_type, substrate, substrate_type = None, None, None  # to make IDE happy
