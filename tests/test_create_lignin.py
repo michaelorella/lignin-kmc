@@ -139,11 +139,12 @@ class TestCreateLigninNoOutput(unittest.TestCase):
             self.assertTrue('must be a positive integer' in output)
 
     def testFewerMaxThanIniMonos(self):
-        # todo: finish test; right now makes another monomer....
         test_input = ["-r", "10", "-i", "6", "-m", "4"]
-        main(test_input)
-        # with capture_stderr(main, test_input) as output:
-        #     self.assertTrue('must be a positive integer' in output)
+        # main(test_input)
+        with capture_stderr(main, test_input) as output:
+            self.assertTrue('is less than' in output)
+        with capture_stdout(main, test_input) as output:
+            self.assertTrue("Lignin KMC created 6 monomers" in output)
 
 
 class TestCreateLigninNormalUse(unittest.TestCase):

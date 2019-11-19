@@ -816,7 +816,12 @@ def main(argv=None):
 
         # After the initial_monomers and initial_events have been created, they are grouped into the initial state.
         initial_state = create_initial_state(initial_events, initial_monomers)
-        initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE, bond=cfg[SG_RATIO]))
+        if cfg[MAX_MONOS] > cfg[INI_MONOS]:
+            initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE, bond=cfg[SG_RATIO]))
+        elif cfg[MAX_MONOS] < cfg[INI_MONOS]:
+            warning(f"The specified maximum number of monomers ({cfg[MAX_MONOS]}) is less than the specified initial "
+                    f"number of monomers ({cfg[INI_MONOS]}). The program will proceed with the initial number of "
+                    f"monomers with no addition of monomers.")
 
         # begin simulation
         result = run_kmc(rxn_rates, initial_state, initial_events, n_max=cfg[MAX_MONOS], t_max=cfg[SIM_TIME],
