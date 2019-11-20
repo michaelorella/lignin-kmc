@@ -19,6 +19,8 @@ MAX_MONOS = 'max_num_monomers'
 SIM_TIME = 'length_simulation'
 RANDOM_SEED = 'random_seed'
 CHAIN_ID = 'chain_id'
+PSF_FNAME = 'psf_fname'
+TOPPAR_DIR = "toppar_dir"
 # specifying a random seed is not enough for reliable testing, as a generated float can differ by machine precision
 # Thus, MAX_NUM_DECIMAL is used to round floats to lower-than machine precision
 MAX_NUM_DECIMAL = 8
@@ -66,7 +68,10 @@ RCF_MONOS = 'RCF Monomers'
 RCF_BRANCHES = 'RCF Branches'
 RCF_BRANCH_COEFF = 'RCF Branch Coefficients'
 
+DEF_TCL_FNAME = "psfgen.tcl"
 DEF_CHAIN_ID = 'L'
+DEF_PSF_FNAME = 'lignin'
+DEF_TOPPAR = "toppar/"
 
 # Data
 

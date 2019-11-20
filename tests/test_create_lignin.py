@@ -28,6 +28,7 @@ DEF_SVG_OUT = os.path.join(SUB_DATA_DIR, DEF_BASENAME + ".svg")
 DEF_TCL_OUT = os.path.join(SUB_DATA_DIR, DEF_BASENAME + ".tcl")
 GOOD_DEF_JSON_OUT = os.path.join(SUB_DATA_DIR, "lignin-kmc-out_good.json")
 GOOD_DEF_TCL_OUT = os.path.join(SUB_DATA_DIR, "lignin-kmc-out_good.tcl")
+GOOD_TCL_OPTIONS_OUT = os.path.join(SUB_DATA_DIR, "lignin-kmc-out_options_good.tcl")
 SMALL_INI = os.path.join(SUB_DATA_DIR, "small_config.ini")
 TEST_SMI_BASENAME = "test_lignin.smi"
 TEST_SMI_OUT = os.path.join(SUB_DATA_DIR, TEST_SMI_BASENAME)
@@ -352,3 +353,13 @@ class TestCreateLigninNormalUse(unittest.TestCase):
                       "cc5OC)c4)OCC23)ccc1OC(CO)C(O)c1cc(OC)c([O])c(OC)c1"
         with capture_stdout(main, test_input) as output:
             self.assertTrue(good_smiles in output)
+
+    def testPSFGenOptions(self):
+        try:
+            test_input = ["-r", "8", "-i", "4", "-m", "4", "-f", "tcl", "-d", SUB_DATA_DIR,
+                          "--chain_id", "1", "--psf_fname", "birch", "--toppar_dir", ""]
+            main(test_input)
+            self.assertFalse(diff_lines(DEF_TCL_OUT, GOOD_TCL_OPTIONS_OUT))
+        finally:
+            silent_remove(DEF_TCL_OUT, disable=DISABLE_REMOVE)
+            pass

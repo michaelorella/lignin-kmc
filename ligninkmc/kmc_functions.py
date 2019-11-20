@@ -18,9 +18,10 @@ from scipy.sparse import dok_matrix
 from rdkit.Chem.Draw.MolDrawing import DrawingOptions
 from common_wrangler.common import (InvalidDataError, create_out_fname, warning, round_sig_figs)
 from ligninkmc.kmc_common import (Event, Monomer, AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q, GROW, TIME, OLIGOMER,
-                                  MONOMER, AFFECTED, ADJ_MATRIX, MONO_LIST, MAX_NUM_DECIMAL, CHAIN_ID, DEF_CHAIN_ID,
-                                  G, S, C, S4, G4, G7, ATOMS, BONDS, B1_ALT, CHAIN_LEN, CHAIN_MONOS, CHAIN_BRANCHES,
-                                  CHAIN_BRANCH_COEFF, RCF_BONDS, RCF_YIELDS, RCF_MONOS, RCF_BRANCHES, RCF_BRANCH_COEFF)
+                                  MONOMER, AFFECTED, ADJ_MATRIX, MONO_LIST, MAX_NUM_DECIMAL, ATOMS, BONDS,
+                                  G, S, C, S4, G4, G7, B1_ALT, CHAIN_LEN, CHAIN_MONOS, CHAIN_BRANCHES,
+                                  CHAIN_BRANCH_COEFF, RCF_BONDS, RCF_YIELDS, RCF_MONOS, RCF_BRANCHES, RCF_BRANCH_COEFF,
+                                  DEF_TCL_FNAME, DEF_CHAIN_ID, DEF_PSF_FNAME, DEF_TOPPAR)
 
 DrawingOptions.bondLineWidth = 1.2
 S7 = 'S7'
@@ -1118,8 +1119,8 @@ def write_patch(open_file, patch_name, segname, resid1, resid2=None):
         open_file.write(f"patch {patch_name} {segname}:{resid1}\n")
 
 
-def gen_psfgen(orig_adj, monomers, tcl_fname="psfgen.tcl", psf_fname='lignin', chain_id="L", toppar_dir="toppar/",
-               out_dir=None):
+def gen_psfgen(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FNAME, chain_id=DEF_CHAIN_ID,
+               toppar_dir=DEF_TOPPAR, out_dir=None):
     """
     This takes a computed adjacency matrix and monomer list and writes out a script to generate a psf file of the
     associated structure, suitable for feeding into the LigninBuilder plugin of VMD
@@ -1135,16 +1136,16 @@ def gen_psfgen(orig_adj, monomers, tcl_fname="psfgen.tcl", psf_fname='lignin', c
     :return:
     """
     adj = orig_adj.copy()
-    # in the unlikely event that chain_id starts with a space, get rid of it, as it would cause problems
-    # also make it uppercase, as that is what PDB's use
+    # In the unlikely event that chain_id starts with a space (won't happen if provided through create_lignin),
+    #     get rid of it, as it would cause problems. Also make it uppercase, as that is what PDBs use.
     chain_id = chain_id.strip().upper()
     # in the unlikely event that chain_id is empty, which would also cause problems, give it the default, instead
-    #     of just failing at the end, after all the work of generating the lignin
-    if not chain_id:
-        warning(f"No value provided for the {CHAIN_ID}. Will use '{DEF_CHAIN_ID}' for this variable..")
-        chain_id = DEF_CHAIN_ID
-    if len(chain_id) > 1:
-        chain_id = chain_id[0]
+    #     of just failing at the end, after all the work of generating the lignin. Also truncate a too-long chainID.
+    if not chain_id or len(chain_id) > 1:
+        if len(chain_id) > 1:
+            chain_id = chain_id[0]
+        else:
+            chain_id = DEF_CHAIN_ID
         warning(f"ChainID's for PDBs should be one character. Will use: '{chain_id}' as the chainID.")
     resnames = {0: 'G', 1: 'S', 2: 'C'}
     f_out = create_out_fname(tcl_fname, base_dir=out_dir)
@@ -1156,7 +1157,6 @@ def gen_psfgen(orig_adj, monomers, tcl_fname="psfgen.tcl", psf_fname='lignin', c
     else:
         toppar_dir = ""
     with open(f_out, "w") as f:
-        print(f"Writing psfgen {f_out}")
         f.write(f"package require psfgen\n"
                 f"topology {toppar_dir}{'top_all36_cgenff.rtf'}\n"
                 f"topology {toppar_dir}{'top_lignin.top'}\n"

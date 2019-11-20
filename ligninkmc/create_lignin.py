@@ -10,21 +10,20 @@ import sys
 import numpy as np
 from collections import (defaultdict)
 from configparser import ConfigParser
-from common_wrangler.common import (MAIN_SEC, GOOD_RET, INPUT_ERROR, KB, H, KCAL_MOL_TO_J_PART, InvalidDataError,
-                                    INVALID_DATA, OUT_DIR, warning, process_cfg, make_dir,
+from common_wrangler.common import (MAIN_SEC, GOOD_RET, INPUT_ERROR, KB, H, KCAL_MOL_TO_J_PART,
+                                    INVALID_DATA, OUT_DIR, InvalidDataError, warning, process_cfg, make_dir,
                                     create_out_fname, str_to_file, round_sig_figs)
 from rdkit.Chem import (MolToSmiles, MolFromMolBlock)
 from rdkit.Chem.AllChem import (Compute2DCoords)
 from rdkit.Chem.Draw import MolToFile
 from rdkit.Chem.rdMolInterchange import MolToJSON
-
 from ligninkmc import __version__
 from ligninkmc.kmc_common import (Event, Monomer, E_BARRIER_KCAL_MOL, E_BARRIER_J_PART, TEMP, INI_MONOS, MAX_MONOS,
                                   SIM_TIME, AFFECTED, GROW, DEF_E_BARRIER_KCAL_MOL, OX, MONOMER, OLIGOMER,
                                   LIGNIN_SUBUNITS, SG_RATIO, ADJ_MATRIX, RANDOM_SEED, S, G, CHAIN_LEN, BONDS,
-                                  RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL,
-                                  MONO_LIST, CHAIN_MONOS, CHAIN_BRANCH_COEFF,
-                                  RCF_BRANCH_COEFF)
+                                  RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL, MONO_LIST, CHAIN_MONOS, CHAIN_BRANCH_COEFF,
+                                  RCF_BRANCH_COEFF, CHAIN_ID,  DEF_CHAIN_ID, PSF_FNAME, DEF_PSF_FNAME, DEF_TOPPAR,
+                                  TOPPAR_DIR)
 from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_psfgen, count_bonds,
                                      count_oligomer_yields, analyze_adj_matrix)
 
@@ -60,7 +59,8 @@ DEF_CFG_VALS = {OUT_DIR: None, OUT_FORMAT_LIST: None, INI_MONOS: DEF_INI_MONOS, 
                 MAX_MONOS: DEF_MAX_MONOS, BASENAME: DEF_BASENAME, IMAGE_SIZE: DEF_IMAGE_SIZE,
                 SG_RATIO: DEF_SG, TEMP: DEF_TEMP, RANDOM_SEED: None, E_BARRIER_KCAL_MOL: DEF_E_BARRIER_KCAL_MOL,
                 E_BARRIER_J_PART: None, SAVE_FILES: False, SAVE_JSON: False, SAVE_PNG: False, SAVE_SMI: False,
-                SAVE_SVG: False, SAVE_TCL: False,
+                SAVE_SVG: False, SAVE_TCL: False, CHAIN_ID: DEF_CHAIN_ID, PSF_FNAME: DEF_PSF_FNAME,
+                TOPPAR_DIR: DEF_TOPPAR,
                 }
 
 REQ_KEYS = {}
@@ -68,10 +68,6 @@ REQ_KEYS = {}
 OPENING_MSG = f"Running Lignin-KMC version {__version__}. " \
               f"Please cite: https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.9b03534\n"
 
-
-################################################################################
-# ANALYSIS CODE
-################################################################################
 
 def adj_analysis_to_stdout(adj_results):
     """
@@ -281,6 +277,19 @@ def parse_cmdline(argv=None):
     parser.add_argument("-t", "--temperature_in_k", help=f"The temperature (in K) at which to model lignin "
                                                          f"biosynthesis. The default is {DEF_TEMP} K.",
                         default=DEF_TEMP)
+    parser.add_argument("--chain_id", help=f"The chainID to be used when generating a tcl file, which can be used to "
+                                           f"generate a pdb file \n(see LigninBuilder). This should be one character. "
+                                           f"If a longer ID is provided, it will be \ntruncated to the first "
+                                           f"character. The default value is {DEF_CHAIN_ID}.",
+                        default=DEF_CHAIN_ID)
+    parser.add_argument("--psf_fname", help=f"The file name for psf and pdb files, designated when generating a tcl "
+                                            f"file, which can be used to generate the psf and pdb files \n(see "
+                                            f"LigninBuilder). The default value is {DEF_PSF_FNAME}.",
+                        default=DEF_PSF_FNAME)
+    parser.add_argument("--toppar_dir", help=f"The directory name where VMD should look for the toppar file(s), "
+                                             f"designated when generating a tcl file to be used by VMD (see "
+                                             f"LigninBuilder). The default value is {DEF_TOPPAR}.",
+                        default=DEF_TOPPAR)
 
     args = None
     try:
@@ -296,6 +305,9 @@ def parse_cmdline(argv=None):
                          SG_RATIO: args.sg_ratio,
                          TEMP: args.temperature_in_k,
                          RANDOM_SEED: args.random_seed,
+                         CHAIN_ID: args.chain_id,
+                         PSF_FNAME: args.psf_fname,
+                         TOPPAR_DIR: args.toppar_dir,
                          }
         if args.config is None:
             args.config = DEF_CFG_VALS.copy()
@@ -394,8 +406,8 @@ def produce_output(result, cfg):
         if cfg[save_format]:
             fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=save_format)
             if save_format == SAVE_TCL:
-                gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=fname, chain_id="L",
-                           toppar_dir='toppar', out_dir=cfg[OUT_DIR])
+                gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=fname, chain_id=cfg[CHAIN_ID],
+                           psf_fname=cfg[PSF_FNAME], toppar_dir=cfg[TOPPAR_DIR], out_dir=cfg[OUT_DIR])
             if save_format == SAVE_JSON:
                 json_str = MolToJSON(mol)
                 str_to_file(json_str + '\n', fname)

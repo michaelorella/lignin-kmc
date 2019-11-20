@@ -867,7 +867,7 @@ class TestVisualization(unittest.TestCase):
             # the function we want to test here is below
             with capture_stderr(gen_psfgen, result[ADJ_MATRIX], result[MONO_LIST], chain_id=" ",
                                 out_dir=SUB_DATA_DIR) as output:
-                self.assertTrue("No value provided" in output)
+                self.assertTrue("should be one character" in output)
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_SHORT))
         finally:
             silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
