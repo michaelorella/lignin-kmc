@@ -241,7 +241,6 @@ class Event:
         self.key = event_name
         self.index = ids
         self.rate = rate
-        # TODO: Understand why this is called "bond" when what is fed to this variable is sg_ratio
         self.bond = bond
 
     def __str__(self):

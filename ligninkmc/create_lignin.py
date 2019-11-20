@@ -394,7 +394,7 @@ def produce_output(result, cfg):
         if cfg[save_format]:
             fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=save_format)
             if save_format == SAVE_TCL:
-                gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], fname=fname, segname="L",
+                gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=fname, chain_id="L",
                            toppar_dir='toppar', out_dir=cfg[OUT_DIR])
             if save_format == SAVE_JSON:
                 json_str = MolToJSON(mol)
@@ -535,7 +535,7 @@ def main(argv=None):
         # After the initial_monomers and initial_events have been created, they are grouped into the initial state.
         initial_state = create_initial_state(initial_events, initial_monomers)
         if cfg[MAX_MONOS] > cfg[INI_MONOS]:
-            initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE, bond=cfg[SG_RATIO]))
+            initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE))
         elif cfg[MAX_MONOS] < cfg[INI_MONOS]:
             warning(f"The specified maximum number of monomers ({cfg[MAX_MONOS]}) is less than the specified initial "
                     f"number of monomers ({cfg[INI_MONOS]}). \n          The program will proceed with the initial "
