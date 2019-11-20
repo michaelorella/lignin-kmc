@@ -604,6 +604,9 @@ class TestVisualization(unittest.TestCase):
             pass
 
     def testB1BondGenMol(self):
+        # TODO: Update test as the B1 bond problem is resolved. The variable in this test cause the broken part of the
+        #       program to be visited. Currently, the test passes when the expected error message is returned.
+        #       When fixed, this test can be updated to pass when expected results are returned.
         # Here, all the monomers are available at the beginning of the simulation; set type list for reproducibility
         full_mono_type_list = [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1,

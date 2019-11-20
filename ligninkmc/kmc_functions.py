@@ -1088,8 +1088,8 @@ def generate_mol(adj, node_list):
                 del (bonds[alpha_ring_bond_index])
                 removed[BONDS] += 1
             except ValueError:
-                raise InvalidDataError("This program cannot currently generate a molecule with this beta-1 bond. "
-                                       "Sorry!")
+                raise InvalidDataError("This program cannot currently generate a molecule with this beta-1 bond. Sorry!"
+                                       "\n    Try running again, as this bond type is only occasionally created.")
 
     mol_bond_blocks = ''.join(bonds)
     mol_atom_blocks = ''.join(atoms)
