@@ -18,6 +18,7 @@ INI_MONOS = 'initial_num_monomers'
 MAX_MONOS = 'max_num_monomers'
 SIM_TIME = 'length_simulation'
 RANDOM_SEED = 'random_seed'
+CHAIN_ID = 'chain_id'
 # specifying a random seed is not enough for reliable testing, as a generated float can differ by machine precision
 # Thus, MAX_NUM_DECIMAL is used to round floats to lower-than machine precision
 MAX_NUM_DECIMAL = 8
@@ -64,6 +65,8 @@ RCF_YIELDS = 'RCF Yields'
 RCF_MONOS = 'RCF Monomers'
 RCF_BRANCHES = 'RCF Branches'
 RCF_BRANCH_COEFF = 'RCF Branch Coefficients'
+
+DEF_CHAIN_ID = 'L'
 
 # Data
 

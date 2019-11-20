@@ -23,4 +23,4 @@ patch BB L:8 L:9
 patch 4O4 L:1 L:9
 patch BO4 L:10 L:9
 regenerate angles dihedrals
-writepsf L.psf
+writepsf lignin.psf

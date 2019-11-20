@@ -357,4 +357,4 @@ patch BO4 L:67 L:119
 patch BO4 L:158 L:67
 patch BO4 L:24 L:158
 regenerate angles dihedrals
-writepsf L.psf
+writepsf lignin.psf
