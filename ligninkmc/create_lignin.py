@@ -20,7 +20,7 @@ from rdkit.Chem.rdMolInterchange import MolToJSON
 from ligninkmc import __version__
 from ligninkmc.kmc_common import (Event, Monomer, E_BARRIER_KCAL_MOL, E_BARRIER_J_PART, TEMP, INI_MONOS, MAX_MONOS,
                                   SIM_TIME, AFFECTED, GROW, DEF_E_BARRIER_KCAL_MOL, OX, MONOMER, OLIGOMER,
-                                  LIGNIN_SUBUNITS, SG_RATIO, ADJ_MATRIX, RANDOM_SEED, S, G, CHAIN_LEN, BONDS,
+                                  LIGNIN_SUBUNITS, ADJ_MATRIX, RANDOM_SEED, S, G, CHAIN_LEN, BONDS, ADD_RATE, SG_RATIO,
                                   RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL, MONO_LIST, CHAIN_MONOS, CHAIN_BRANCH_COEFF,
                                   RCF_BRANCH_COEFF, CHAIN_ID,  DEF_CHAIN_ID, PSF_FNAME, DEF_PSF_FNAME, DEF_TOPPAR,
                                   TOPPAR_DIR)
@@ -50,14 +50,14 @@ DEF_MAX_MONOS = 10  # number of monomers
 DEF_SIM_TIME = 1  # simulation time in seconds
 DEF_SG = 1
 DEF_INI_MONOS = 2
-DEF_ADD_RATE = 1e4
+DEF_ADD_RATE = 0.001
 DEF_IMAGE_SIZE = (1200, 300)
 DEF_BASENAME = 'lignin-kmc-out'
 
 DEF_VAL = 'default_value'
-DEF_CFG_VALS = {OUT_DIR: None, OUT_FORMAT_LIST: None, INI_MONOS: DEF_INI_MONOS, SIM_TIME: DEF_SIM_TIME,
-                MAX_MONOS: DEF_MAX_MONOS, BASENAME: DEF_BASENAME, IMAGE_SIZE: DEF_IMAGE_SIZE,
-                SG_RATIO: DEF_SG, TEMP: DEF_TEMP, RANDOM_SEED: None, E_BARRIER_KCAL_MOL: DEF_E_BARRIER_KCAL_MOL,
+DEF_CFG_VALS = {OUT_DIR: None, OUT_FORMAT_LIST: None, ADD_RATE: DEF_ADD_RATE, INI_MONOS: DEF_INI_MONOS,
+                MAX_MONOS: DEF_MAX_MONOS, SIM_TIME: DEF_SIM_TIME, SG_RATIO: DEF_SG, TEMP: DEF_TEMP, RANDOM_SEED: None,
+                BASENAME: DEF_BASENAME, IMAGE_SIZE: DEF_IMAGE_SIZE, E_BARRIER_KCAL_MOL: DEF_E_BARRIER_KCAL_MOL,
                 E_BARRIER_J_PART: None, SAVE_FILES: False, SAVE_JSON: False, SAVE_PNG: False, SAVE_SMI: False,
                 SAVE_SVG: False, SAVE_TCL: False, CHAIN_ID: DEF_CHAIN_ID, PSF_FNAME: DEF_PSF_FNAME,
                 TOPPAR_DIR: DEF_TOPPAR,
@@ -234,6 +234,13 @@ def parse_cmdline(argv=None):
                                                  f"(non-default) \n  selections will override configuration file "
                                                  f"specifications.",
                                      formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument("-a", "--add_rate", help=f"The rate of monomer addition to the system (in monomers/second) to "
+                                                 f"be used when the \n'{MAX_MONOS}' ('-m' option) is larger than "
+                                                 f"'{INI_MONOS}' ('-i' option), \nthus specifying monomer addition. "
+                                                 f"The simulation will end when either there are no more \npossible "
+                                                 f"reactions (including monomer addition) or when the '{SIM_TIME}' "
+                                                 f"\n('-l' option) is reached, whichever comes first.",
+                        default=DEF_ADD_RATE)
     parser.add_argument("-c", "--config", help="The location of the configuration file in the 'ini' format. This file "
                                                "can be used to \noverwrite default values such as for energies.",
                         default=None, type=read_cfg)
@@ -277,18 +284,18 @@ def parse_cmdline(argv=None):
     parser.add_argument("-t", "--temperature_in_k", help=f"The temperature (in K) at which to model lignin "
                                                          f"biosynthesis. The default is {DEF_TEMP} K.",
                         default=DEF_TEMP)
-    parser.add_argument("--chain_id", help=f"The chainID to be used when generating a tcl file, which can be used to "
-                                           f"generate a pdb file \n(see LigninBuilder). This should be one character. "
-                                           f"If a longer ID is provided, it will be \ntruncated to the first "
-                                           f"character. The default value is {DEF_CHAIN_ID}.",
+    parser.add_argument("--chain_id", help=f"The chainID to be used when generating a tcl file, which can be used "
+                                           f"to generate a pdb file \n(see LigninBuilder). This should be one "
+                                           f"character. If a longer ID is provided, it will be \ntruncated to the "
+                                           f"first character. The default value is {DEF_CHAIN_ID}.",
                         default=DEF_CHAIN_ID)
     parser.add_argument("--psf_fname", help=f"The file name for psf and pdb files, designated when generating a tcl "
-                                            f"file, which can be used to generate the psf and pdb files \n(see "
+                                            f"file, which can be used \nto generate the psf and pdb files (see "
                                             f"LigninBuilder). The default value is {DEF_PSF_FNAME}.",
                         default=DEF_PSF_FNAME)
     parser.add_argument("--toppar_dir", help=f"The directory name where VMD should look for the toppar file(s), "
-                                             f"designated when generating a tcl file to be used by VMD (see "
-                                             f"LigninBuilder). The default value is {DEF_TOPPAR}.",
+                                             f"designated when generating \na tcl file to be used by VMD (see "
+                                             f"LigninBuilder). The default value is '{DEF_TOPPAR}'.",
                         default=DEF_TOPPAR)
 
     args = None
@@ -297,6 +304,7 @@ def parse_cmdline(argv=None):
         # dict below to map config input and defaults to command-line input
         conf_arg_dict = {OUT_DIR: args.out_dir,
                          OUT_FORMAT_LIST: args.output_format_list,
+                         ADD_RATE: args.add_rate,
                          INI_MONOS: args.initial_num_monomers,
                          SIM_TIME: args.length_simulation,
                          MAX_MONOS: args.max_num_monomers,
@@ -437,6 +445,15 @@ def validate_input(cfg):
                                    f"would like to obtain consistent output by using a random seed, provide a "
                                    f"positive integer value no greater than 2**32 - 1.")
 
+    if not isinstance(cfg[ADD_RATE], float):
+        try:
+            cfg[ADD_RATE] = float(cfg[ADD_RATE])
+            if cfg[ADD_RATE] <= 0:
+                raise ValueError
+        except ValueError:
+            raise InvalidDataError(f"Encountered '{cfg[ADD_RATE]}' for the '{ADD_RATE}'. "
+                                   f"A positive number is required.")
+
     for req_pos_num in [SG_RATIO, SIM_TIME]:
         try:
             cfg[req_pos_num] = float(cfg[req_pos_num])
@@ -547,7 +564,7 @@ def main(argv=None):
         # After the initial_monomers and initial_events have been created, they are grouped into the initial state.
         initial_state = create_initial_state(initial_events, initial_monomers)
         if cfg[MAX_MONOS] > cfg[INI_MONOS]:
-            initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE))
+            initial_events.append(Event(GROW, [], rate=cfg[ADD_RATE]))
         elif cfg[MAX_MONOS] < cfg[INI_MONOS]:
             warning(f"The specified maximum number of monomers ({cfg[MAX_MONOS]}) is less than the specified initial "
                     f"number of monomers ({cfg[INI_MONOS]}). \n          The program will proceed with the initial "

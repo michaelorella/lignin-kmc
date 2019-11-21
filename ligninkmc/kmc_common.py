@@ -14,6 +14,7 @@ G7 = 'G7'
 LIGNIN_SUBUNITS = {0: G, 1: S, 2: C}  # perhaps to be added later: 3: H
 MONOLIG_OHS = {0: 'coniferyl', 1: 'sinapyl', 2: 'caffeoyl'}  # perhaps to be added later: 3: 'p-coumaryl'
 SG_RATIO = 'sg_ratio'
+ADD_RATE = 'add_rate'
 INI_MONOS = 'initial_num_monomers'
 MAX_MONOS = 'max_num_monomers'
 SIM_TIME = 'length_simulation'

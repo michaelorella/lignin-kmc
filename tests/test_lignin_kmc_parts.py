@@ -11,14 +11,14 @@ from rdkit.Chem.AllChem import Compute2DCoords
 from rdkit.Chem.Draw import MolToFile
 from scipy.sparse import dok_matrix
 from common_wrangler.common import (InvalidDataError, capture_stdout, silent_remove, diff_lines, capture_stderr)
-from ligninkmc.create_lignin import (DEF_TEMP, DEF_ADD_RATE, calc_rates, create_initial_monomers,
-                                     create_initial_events, create_initial_state, analyze_adj_matrix,
-                                     count_bonds, count_oligomer_yields, adj_analysis_to_stdout,
-                                     get_bond_type_v_time_dict, overall_branching_coefficient, degree)
+from ligninkmc.create_lignin import (DEF_TEMP, calc_rates, create_initial_monomers, create_initial_events,
+                                     degree, create_initial_state, overall_branching_coefficient,
+                                     adj_analysis_to_stdout, get_bond_type_v_time_dict)
 from ligninkmc.kmc_common import (Event, Monomer, C5O4, OX, C5C5, B5, BB, BO4, AO4, B1, DEF_RXN_RATES,
                                   MON_OLI, MONOMER, GROW, TIME, MONO_LIST, ADJ_MATRIX, CHAIN_LEN, BONDS,
                                   RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_BARRIER_KCAL_MOL, MAX_NUM_DECIMAL)
-from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_psfgen, find_fragments, fragment_size, break_bond_type)
+from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_psfgen, find_fragments, fragment_size, break_bond_type,
+                                     analyze_adj_matrix, count_oligomer_yields, count_bonds)
 
 __author__ = 'hmayes'
 
@@ -87,7 +87,7 @@ def create_sample_kmc_result(max_time=1., num_initial_monos=3, max_monos=10, sg_
     initial_monomers = create_initial_monomers(sg_ratio, monomer_draw)
     initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
     initial_state = OrderedDict(create_initial_state(initial_events, initial_monomers))
-    initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE))
+    initial_events.append(Event(GROW, [], rate=1e4))
     #            # make random seed and sort event_dict for testing reliability
     result = run_kmc(DEF_RXN_RATES, initial_state, initial_events, n_max=max_monos, t_max=max_time,
                      random_seed=10, sg_ratio=sg_ratio)
@@ -99,7 +99,7 @@ def create_sample_kmc_result_c_lignin(num_monos=2, max_monos=12, seed=10):
     # noinspection PyTypeChecker
     initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
     initial_state = create_initial_state(initial_events, initial_monomers)
-    initial_events.append(Event(GROW, [], rate=DEF_ADD_RATE))
+    initial_events.append(Event(GROW, [], rate=1e4))
     result = run_kmc(DEF_RXN_RATES, initial_state, sorted(initial_events), n_max=max_monos, t_max=2, random_seed=seed)
     return result
 
@@ -225,7 +225,7 @@ class TestRunKMC(unittest.TestCase):
         initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
         initial_state = create_initial_state(initial_events, initial_monomers)
         events = {initial_events[i] for i in range(num_initial_monos)}
-        events.add(Event(GROW, [], rate=DEF_ADD_RATE))
+        events.add(Event(GROW, [], rate=1e4))
         try:
             run_kmc(DEF_RXN_RATES, initial_state, sorted(events), n_max=20, t_max=1, random_seed=10)
             self.assertFalse("Should not arrive here; An error should have be raised")

@@ -84,11 +84,14 @@ options shown below, or by using a configuration file. These options can be view
  
      Running Lignin-KMC version 0.2.2. Please cite: https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.9b03534
      
-     usage: create_lignin [-h] [-c CONFIG] [-d OUT_DIR] [-f OUTPUT_FORMAT_LIST]
-                          [-i INITIAL_NUM_MONOMERS] [-l LENGTH_SIMULATION]
-                          [-m MAX_NUM_MONOMERS] [-o OUTPUT_BASENAME]
-                          [-r RANDOM_SEED] [-s IMAGE_SIZE] [-sg SG_RATIO]
-                          [-t TEMPERATURE_IN_K]
+     usage: _jb_unittest_runner.py [-h] [-a ADD_RATE] [-c CONFIG] [-d OUT_DIR]
+                                   [-f OUTPUT_FORMAT_LIST]
+                                   [-i INITIAL_NUM_MONOMERS] [-l LENGTH_SIMULATION]
+                                   [-m MAX_NUM_MONOMERS] [-o OUTPUT_BASENAME]
+                                   [-r RANDOM_SEED] [-s IMAGE_SIZE] [-sg SG_RATIO]
+                                   [-t TEMPERATURE_IN_K] [--chain_id CHAIN_ID]
+                                   [--psf_fname PSF_FNAME]
+                                   [--toppar_dir TOPPAR_DIR]
      
      Create lignin chain(s) composed of 'S' (syringyl) and/or 'G' (guaiacol) monolignols, as described in:
        Orella, M., Gani, T. Z. H., Vermaas, J. V., Stone, M. L., Anderson, E. M., Beckham, G. T., 
@@ -111,6 +114,12 @@ options shown below, or by using a configuration file. These options can be view
      
      optional arguments:
        -h, --help            show this help message and exit
+       -a ADD_RATE, --add_rate ADD_RATE
+                             The rate of monomer addition to the system (in monomers/second) to be used when the 
+                             'max_num_monomers' ('-m' option) is larger than 'initial_num_monomers' ('-i' option), 
+                             thus specifying monomer addition. The simulation will end when either there are no more 
+                             possible reactions (including monomer addition) or when the 'length_simulation' 
+                             ('-l' option) is reached, whichever comes first.
        -c CONFIG, --config CONFIG
                              The location of the configuration file in the 'ini' format. This file can be used to 
                              overwrite default values such as for energies.
@@ -146,6 +155,15 @@ options shown below, or by using a configuration file. These options can be view
                              The S:G (guaiacol:syringyl) ratio. The default is 1.
        -t TEMPERATURE_IN_K, --temperature_in_k TEMPERATURE_IN_K
                              The temperature (in K) at which to model lignin biosynthesis. The default is 298.15 K.
+       --chain_id CHAIN_ID   The chainID to be used when generating a tcl file, which can be used to generate a pdb file 
+                             (see LigninBuilder). This should be one character. If a longer ID is provided, it will be 
+                             truncated to the first character. The default value is L.
+       --psf_fname PSF_FNAME
+                             The file name for psf and pdb files, designated when generating a tcl file, which can be used 
+                             to generate the psf and pdb files (see LigninBuilder). The default value is lignin.
+       --toppar_dir TOPPAR_DIR
+                             The directory name where VMD should look for the toppar file(s), designated when generating 
+                             a tcl file to be used by VMD (see LigninBuilder). The default value is 'toppar/'.
 
 For example, to use an S to G ratio of 2.5, 12 initial monomers, and up to 18 monomers (only would not reach this 
 if there was insufficient time; the default 1 s will be plenty), with the remaining variables set as their 
