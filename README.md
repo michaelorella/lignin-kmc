@@ -38,7 +38,7 @@ This project runs on Python ≥3.6 with the following packages installed:
 - Once Python has been installed, you will need install [RDKit](https://www.rdkit.org/docs/Install.html) using conda. 
   -  To install it in a new environment, run: `conda create -c rdkit -n lignin-kmc rdkit`, followed by 
      `conda activate lignin-kmc` 
-  -  If you already have an environment created and want to add rdkit to that environment, instead run: 
+  -  If you already have a conda environment created and want to add rdkit to that environment, instead run: 
      `conda install -c conda-forge rdkit`
 
 -  In either case, Conda will install any missing required dependencies when it does so, and thus this may take a few 

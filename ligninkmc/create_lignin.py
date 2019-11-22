@@ -50,7 +50,7 @@ DEF_MAX_MONOS = 10  # number of monomers
 DEF_SIM_TIME = 1  # simulation time in seconds
 DEF_SG = 1
 DEF_INI_MONOS = 2
-DEF_ADD_RATE = 0.001
+DEF_ADD_RATE = 0.001  # based on https://doi.org/10.1073/pnas.1904643116
 DEF_IMAGE_SIZE = (1200, 300)
 DEF_BASENAME = 'lignin-kmc-out'
 
