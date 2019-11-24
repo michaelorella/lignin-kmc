@@ -93,52 +93,6 @@ class TestNoOutput(unittest.TestCase):
         with capture_stdout(main, test_input) as output:
             self.assertTrue("optional arguments" in output)
 
-    # def testInvalidRandomSeedAlpha(self):
-    #     test_input = ["-r", "ghost"]
-    #     with capture_stderr(main, test_input) as output:
-    #         self.assertTrue('positive integer value' in output)
-    #
-    # def testInvalidRandomSeedNegNum(self):
-    #     test_input = ["-r", "-1"]
-    #     with capture_stderr(main, test_input) as output:
-    #         self.assertTrue('positive integer value' in output)
-    #
-    def testInvalidRandomSeed0(self):
-        test_input = ["-r", "0"]
-        with capture_stderr(main, test_input) as output:
-            self.assertTrue('positive integer value' in output)
-    #
-    # def testInvalidRandomSeedTooBig(self):
-    #     just_over_max = str(2**32)
-    #     test_input = ["-r", just_over_max]
-    #     with capture_stderr(main, test_input) as output:
-    #         self.assertTrue('positive integer value' in output)
-    #
-    # def testInvalidExtension(self):
-    #     test_input = ["-r", "10", "-f", "ghost"]
-    #     with capture_stderr(main, test_input) as output:
-    #         self.assertTrue('currently supported types' in output)
-    #
-    # def testAlphaSGRatio(self):
-    #     test_input = ["-r", "10", "-sg", "ghost"]
-    #     with capture_stderr(main, test_input) as output:
-    #         self.assertTrue('must be a positive number' in output)
-    #
-    # def testNegSGRatio(self):
-    #     test_input = ["-r", "10", "-sg", "-0.1"]
-    #     with capture_stderr(main, test_input) as output:
-    #         self.assertTrue('must be a positive number' in output)
-    #
-    # def testNegSimLen(self):
-    #     test_input = ["-r", "10", "-l", "-0.1"]
-    #     with capture_stderr(main, test_input) as output:
-    #         self.assertTrue('must be a positive number' in output)
-    #
-    # def testNegIniMonos(self):
-    #     test_input = ["-r", "10", "-i", "-4"]
-    #     with capture_stderr(main, test_input) as output:
-    #         self.assertTrue('must be a positive integer' in output)
-
     def testFractionalIniMonos(self):
         test_input = ["-r", "10", "-i", "4.5"]
         with capture_stderr(main, test_input) as output:
@@ -148,42 +102,6 @@ class TestNoOutput(unittest.TestCase):
         test_input = ["-r", "10", "-l", "0"]
         with capture_stderr(main, test_input) as output:
             self.assertTrue('positive' in output)
-    #
-    # def testNegMaxMonos(self):
-    #     test_input = ["-r", "10", "-m", "-8"]
-    #     with capture_stderr(main, test_input) as output:
-    #         self.assertTrue('must be a positive integer' in output)
-    #
-    # def testFractionalMaxMonos(self):
-    #     test_input = ["-r", "10", "-m", "12.1"]
-    #     with capture_stderr(main, test_input) as output:
-    #         self.assertTrue('must be a positive integer' in output)
-    #
-    # def testFewerMaxThanIniMonos(self):
-    #     test_input = ["-r", "10", "-i", "6", "-m", "4"]
-    #     # main(test_input)
-    #     with capture_stderr(main, test_input) as output:
-    #         self.assertTrue('is less than' in output)
-    #     with capture_stdout(main, test_input) as output:
-    #         self.assertTrue("Lignin KMC created 6 monomers" in output)
-    #
-    # def testBadImageSize(self):
-    #     test_input = ["-r", "10", "-s", "4"]
-    #     # main(test_input)
-    #     with capture_stderr(main, test_input) as output:
-    #         self.assertTrue("two positive numbers" in output)
-    #
-    # def testAlphaAddRate(self):
-    #     test_input = ["-a", "ghost"]
-    #     # main(test_input)
-    #     with capture_stderr(main, test_input) as output:
-    #         self.assertTrue("A positive number" in output)
-    #
-    # def testZeroAddRate(self):
-    #     test_input = ["-a", "0"]
-    #     # main(test_input)
-    #     with capture_stderr(main, test_input) as output:
-    #         self.assertTrue("A positive number" in output)
 
     def testListWithSpace(self):
         test_input = ["-a", "1.0", "0.1"]
@@ -248,8 +166,6 @@ class TestNormalUse(unittest.TestCase):
         try:
             for fname in expected_pngs:
                 silent_remove(fname)
-            # add_rates = [1e8, 1e6, 1e4, 1e2, 1]
-            # sg_opts = [0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10]
             test_input = ["-r", "10", "-m", "20", "-a", "1e8, 1e4", "-sg", "0.25, 3", "-d", SUB_DATA_DIR]
             main(test_input)
             for fname in expected_pngs:
@@ -260,16 +176,14 @@ class TestNormalUse(unittest.TestCase):
                 silent_remove(fname, disable=DISABLE_REMOVE)
             pass
 
-    def testOrellaBarriers(self):
-        expected_out_files = [ORELLA_BOND_PNG, ORELLA_MONO_PNG]
-        try:
-            for fname in expected_out_files:
-                silent_remove(fname)
-            test_input = ["-e", "-m", "10", "-d", SUB_DATA_DIR]
-            main(test_input)
-            for fname in expected_out_files:
-                self.assertTrue(os.path.isfile(fname))
-        finally:
-            for fname in expected_out_files:
-                silent_remove(fname, disable=DISABLE_REMOVE)
-            pass
+    # Do not include the following in test coverage--just a quick way to run this for its production output
+    # def testProduction(self):
+    #     orella_out_dir = os.path.join(DATA_DIR, 'orella_plots')
+    #
+    #     input_base = ["-i", "5", "-m", "200", "-a", "1e8, 1e6, 1e4, 1e2, 1",
+    #                   "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10"]
+    #     input_1 = input_base + ["-d", SUB_DATA_DIR]
+    #     input_2 = input_base + ["-d", orella_out_dir, "-e"]
+    #
+    #     for prod_input in [input_1, input_2]:
+    #         main(prod_input)
