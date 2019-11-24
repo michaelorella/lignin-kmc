@@ -260,7 +260,9 @@ def parse_cmdline(argv=None):
     parser.add_argument("-d", "--out_dir", help="The directory where output files will be saved. The default is "
                                                 "the current directory.", default=DEF_CFG_VALS[OUT_DIR])
     parser.add_argument("-f", "--output_format_list", help="The type(s) of output format to be saved. Provide as a "
-                                                           "space- or comma-separated list. \nThe currently supported "
+                                                           "space- or comma-separated list. \nNote: if the list has "
+                                                           "spaces, it must be enclosed in quotes, to be treated as "
+                                                           "a single string. \nThe currently supported "
                                                            f"types are: '{OUT_TYPE_STR}'. \nThe '{SAVE_JSON}' "
                                                            f"option will save a json format of RDKit's 'mol' "
                                                            f"(molecule) object. The '{SAVE_TCL}' \noption will create "
@@ -289,8 +291,11 @@ def parse_cmdline(argv=None):
 
     parser.add_argument("-r", "--random_seed", help="A positive integer to be used as a seed value for testing.",
                         default=DEF_CFG_VALS[RANDOM_SEED])
-    parser.add_argument("-s", "--image_size", help=f"The output size of svg or png files in pixels (provide two "
-                                                   f"integers). The default size \nis {DEF_IMAGE_SIZE} pixels.",
+    parser.add_argument("-s", "--image_size", help=f"The output size of svg or png files in pixels. The default size "
+                                                   f"is {DEF_IMAGE_SIZE} pixels. \nTo use a different size, provide "
+                                                   f"two integers, separated by a space or a comma. \nNote: if the "
+                                                   f"list of two numbers has any spaces in it, it must be enclosed "
+                                                   f"in quotes.",
                         default=DEF_IMAGE_SIZE)
     parser.add_argument("-sg", "--sg_ratio", help=f"The S:G (guaiacol:syringyl) ratio. "
                                                   f"The default is {DEF_SG}.", default=DEF_SG)
@@ -340,7 +345,21 @@ def parse_cmdline(argv=None):
     except (KeyError, IOError, SystemExit) as e:
         if hasattr(e, 'code') and e.code == 0:
             return args, GOOD_RET
-        warning(e)
+
+        # only print the e if it has meaningful info
+        if not e.args[0] == 2:
+            warning(e)
+
+        # Easy possible error is to have a space in a list; check for it
+        check_arg_list = []
+        for arg_str in ['-f', '--output_format_list', '-s', '--image_size']:
+            if arg_str in argv:
+                check_arg_list.append(arg_str)
+        if len(check_arg_list) > 0:
+            check_list = "', '".join(check_arg_list)
+            warning(f"Check your entry/entries for '{check_list}'. If spaces separate list entries, "
+                    f"enclose the whole list in quotes, or separate with commas only.")
+
         parser.print_help()
         return args, INPUT_ERROR
     return args, GOOD_RET
