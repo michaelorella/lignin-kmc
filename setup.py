@@ -21,6 +21,7 @@ setup(name='ligninkmc',
       license='MIT',
       packages=['ligninkmc'],
       entry_points={'console_scripts': ['create_lignin = ligninkmc.create_lignin:main',
+                                        'plot_bond_formation = ligninkmc.plot_bond_formation:main'
                                         ],
                     },     package_dir={'ligninkmc': 'ligninkmc'},
       python_requires=">3.6",  # Required for f-strings support
