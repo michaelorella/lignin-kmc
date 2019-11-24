@@ -69,6 +69,20 @@ ADJ3 = dok_matrix([[0, 4, 8, 0, 0],
                    [0, 0, 0, 0, 0]])
 
 
+def get_avg_num_bonds(bond_type, num_opts, result_list, num_repeats):
+    analysis = []
+    for i in range(num_opts):
+        opt_results = result_list[i]
+        cur_adjs = [opt_results[j][ADJ_MATRIX] for j in range(num_repeats)]
+        analysis.append([analyze_adj_matrix(cur_adjs[j]) for j in range(num_repeats)])
+
+    num_bonds = [[analysis[j][i][BONDS][bond_type]/sum(analysis[j][i][BONDS].values())
+                  for i in range(num_repeats)] for j in range(num_opts)]
+    av_num_bonds = [np.mean(bond_pcts) for bond_pcts in num_bonds]
+    std_num_bonds = [np.sqrt(np.var(bond_pcts)) for bond_pcts in num_bonds]
+    return av_num_bonds, std_num_bonds
+
+
 def create_sample_kmc_result(max_time=1., num_initial_monos=3, max_monos=10, sg_ratio=0.75, seed=10):
     # The set lists are to minimize randomness in testing (adding while debugging source of randomness in some tests;
     #     leaving because it doesn't hurt a thing; also leaving option to make a monomer_draw of arbitrary length
@@ -88,7 +102,6 @@ def create_sample_kmc_result(max_time=1., num_initial_monos=3, max_monos=10, sg_
     initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
     initial_state = OrderedDict(create_initial_state(initial_events, initial_monomers))
     initial_events.append(Event(GROW, [], rate=1e4))
-    #            # make random seed and sort event_dict for testing reliability
     result = run_kmc(DEF_RXN_RATES, initial_state, initial_events, n_max=max_monos, t_max=max_time,
                      random_seed=10, sg_ratio=sg_ratio)
     return result
@@ -102,20 +115,6 @@ def create_sample_kmc_result_c_lignin(num_monos=2, max_monos=12, seed=10):
     initial_events.append(Event(GROW, [], rate=1e4))
     result = run_kmc(DEF_RXN_RATES, initial_state, sorted(initial_events), n_max=max_monos, t_max=2, random_seed=seed)
     return result
-
-
-def get_avg_bo4_bonds(num_opts, result_list, num_repeats):
-    analysis = []
-    for i in range(num_opts):
-        opt_results = result_list[i]
-        cur_adjs = [opt_results[j][ADJ_MATRIX] for j in range(num_repeats)]
-        analysis.append([analyze_adj_matrix(cur_adjs[j]) for j in range(num_repeats)])
-
-    bo4_bonds = [[analysis[j][i][BONDS][BO4]/sum(analysis[j][i][BONDS].values())
-                  for i in range(num_repeats)] for j in range(num_opts)]
-    av_bo4_bonds = [np.mean(bond_pcts) for bond_pcts in bo4_bonds]
-    std_bo4_bonds = [np.sqrt(np.var(bond_pcts)) for bond_pcts in bo4_bonds]
-    return av_bo4_bonds, std_bo4_bonds
 
 
 # Tests #
@@ -735,7 +734,7 @@ class TestVisualization(unittest.TestCase):
                                    sg_ratio=pct_s, random_seed=(random_seed + i)) for i in range(num_repeats)]
             add_rates_result_list.append(results)
 
-        av_bo4_bonds, std_bo4_bonds = get_avg_bo4_bonds(num_rates, add_rates_result_list, num_repeats)
+        av_bo4_bonds, std_bo4_bonds = get_avg_num_bonds(BO4, num_rates, add_rates_result_list, num_repeats)
 
         good_av_bo4 = [0.5564516129032258, 0.2375, 0.22593582887700536]
         good_std_bo4 = [0.02674697411576938, 0.030935921676911452, 0.035703503563198374]
@@ -789,7 +788,7 @@ class TestVisualization(unittest.TestCase):
                                    random_seed=(random_seed + i)) for i in range(num_repeats)]
             sg_result_list.append(results)
 
-        av_bo4_bonds, std_bo4_bonds = get_avg_bo4_bonds(num_sg_opts, sg_result_list, num_repeats)
+        av_bo4_bonds, std_bo4_bonds = get_avg_num_bonds(BO4, num_sg_opts, sg_result_list, num_repeats)
         good_av_bo4 = [0.2924901185770751, 0.5082251082251082, 0.6099071207430341]
         good_std_bo4 = [0.026031501723951567, 0.05822530938667193, 0.05987331147310749]
         self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))

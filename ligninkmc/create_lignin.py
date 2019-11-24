@@ -173,8 +173,6 @@ def get_bond_type_v_time_dict(adj_list, sum_len_larger_than=None):
         for olig_len in range(1, max_olig_len + 1):
             olig_len_monos_dict[olig_len].append(frag_count_list.get(olig_len, 0))
             olig_len_count_dict[olig_len].append(olig_count_list.get(olig_len, 0))
-            # todo: delete me
-            print(olig_count_list)
     # now make a list of all values greater than a number, if given
     # first initialize as None so something can be returned, even if we are not summing over a particular number
     len_monos_plus_list = None

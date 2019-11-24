@@ -1165,7 +1165,6 @@ def gen_psfgen(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FN
             resid = monomer.identity + 1
             res_name = resnames[monomer.type]
             f.write(f"    residue {resid} {res_name}\n")
-            # print(monomer)
         f.write(f"}}\n")
 
         for row in (adj == 1).nonzero()[0]:
