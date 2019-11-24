@@ -47,10 +47,14 @@ SAVE_FILES = 'save_files_boolean'
 # Defaults #
 DEF_TEMP = 298.15  # K
 DEF_MAX_MONOS = 10  # number of monomers
-DEF_SIM_TIME = 1  # simulation time in seconds
+DEF_SIM_TIME = 3600  # simulation time in seconds
 DEF_SG = 1
 DEF_INI_MONOS = 2
-DEF_ADD_RATE = 0.001  # based on https://doi.org/10.1073/pnas.1904643116
+# Estimated addition rate below is based on: https://www.pnas.org/content/early/2019/10/25/1904643116.abstract
+#     p. 23121, col2, "0.1 fmol s^-1" for 100micro-m2 surface area; estimated area for lignin modeling is 100nm^2
+#     thus 0.1 fmols/ second * 1.00E-15 mol/fmol * 6.022E+23 particles/mol  * 100 nm^2/100microm^2 = 6 monomers/s
+#     as an upper limit--rounded down to 1.0 monomers/s--this is just an estimate
+DEF_ADD_RATE = 1.0
 DEF_IMAGE_SIZE = (1200, 300)
 DEF_BASENAME = 'lignin-kmc-out'
 
@@ -149,8 +153,10 @@ def get_bond_type_v_time_dict(adj_list, sum_len_larger_than=None):
     :return: two dict of dicts
     """
     bond_type_dict = defaultdict(list)
-    # a little more work for olig_len_dict, since each timestep does not contain all possible keys
-    olig_len_dict = defaultdict(list)
+    # a little more work for olig_len_monos_dict, since each timestep does not contain all possible keys
+    olig_len_monos_dict = defaultdict(list)
+    olig_len_count_dict = defaultdict(list)
+    olig_count_dict_list = []
     frag_count_dict_list = []  # first make list of dicts to get max bond_length
     for adj in adj_list:  # loop over each timestep
         # this is keys = timestep  values
@@ -158,22 +164,31 @@ def get_bond_type_v_time_dict(adj_list, sum_len_larger_than=None):
         for bond_type in count_bonds_list:
             bond_type_dict[bond_type].append(count_bonds_list[bond_type])
         olig_yield_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict = count_oligomer_yields(adj)
+        olig_count_dict_list.append(olig_yield_dict)
         frag_count_dict_list.append(olig_monos_dict)
     # since breaking bonds is not allowed, the longest oligomer will be from the last step; ordered, so last len
     max_olig_len = list(frag_count_dict_list[-1].keys())[-1]
     # can now get the dict of lists from list of dicts
-    for frag_count_list in frag_count_dict_list:
+    for frag_count_list, olig_count_list in zip(frag_count_dict_list, olig_count_dict_list):
         for olig_len in range(1, max_olig_len + 1):
-            olig_len_dict[olig_len].append(frag_count_list.get(olig_len, 0))
+            olig_len_monos_dict[olig_len].append(frag_count_list.get(olig_len, 0))
+            olig_len_count_dict[olig_len].append(olig_count_list.get(olig_len, 0))
+            # todo: delete me
+            print(olig_count_list)
     # now make a list of all values greater than a number, if given
-    len_plus_list = None
+    # first initialize as None so something can be returned, even if we are not summing over a particular number
+    len_monos_plus_list = None
+    len_count_plus_list = None
     if sum_len_larger_than:
-        if sum_len_larger_than in olig_len_dict.keys():
-            len_plus_list = olig_len_dict[10].copy()
-        for olig_len, val_list in olig_len_dict.items():
-            if olig_len > sum_len_larger_than:
-                len_plus_list = np.add(len_plus_list, val_list)
-    return bond_type_dict, olig_len_dict, len_plus_list
+        num_time_steps = len(adj_list)
+        len_monos_plus_list = np.zeros(num_time_steps)
+        len_count_plus_list = np.zeros(num_time_steps)
+        # both dicts have same keys, so no worries
+        for olig_len, val_list in olig_len_monos_dict.items():
+            if olig_len >= sum_len_larger_than:
+                len_monos_plus_list = np.add(len_monos_plus_list, val_list)
+                len_count_plus_list = np.add(len_count_plus_list, olig_len_count_dict[olig_len])
+    return bond_type_dict, olig_len_monos_dict, len_monos_plus_list, olig_len_count_dict, len_count_plus_list
 
 
 def read_cfg(f_loc, cfg_proc=process_cfg):

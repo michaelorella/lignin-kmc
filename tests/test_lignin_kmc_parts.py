@@ -672,7 +672,8 @@ class TestVisualization(unittest.TestCase):
         # want dict[key: [], ...] where the inner list is values by timestep
         #                      instead of list of timesteps with [[key: val, ...], ... ]
         adj_list = result[ADJ_MATRIX]
-        bond_type_dict, olig_len_dict, sum_list = get_bond_type_v_time_dict(adj_list, sum_len_larger_than=10)
+        (bond_type_dict, olig_len_dict, sum_list, olig_count_dict,
+         sum_count_list) = get_bond_type_v_time_dict(adj_list, sum_len_larger_than=10)
 
         # test results by checking sums
         good_bond_type_sum_dict = {BO4: 486, B1: 0, BB: 303, B5: 187, C5C5: 0, AO4: 0, C5O4: 219}
