@@ -104,6 +104,7 @@ def plot_mono_olig_v_time(x_axis, avg_num_monos, std_dev_monos, avg_num_oligs, s
     plt.title(plot_title)
     plt.savefig(plot_fname, bbox_inches='tight', transparent=True)
     print(f"Wrote file: {plot_fname}")
+    plt.close()
 
 
 # noinspection DuplicatedCode
@@ -139,6 +140,7 @@ def plot_bond_error_bars(x_axis, avg_bond_info, std_bond_info, plot_title, plot_
     plt.title(plot_title)
     plt.savefig(plot_fname, bbox_inches='tight', transparent=True)
     print(f"Wrote file: {plot_fname}")
+    plt.close()
 
 
 def get_avg_percent_bonds(bond_list, num_opts, adj_lists, num_trials):
