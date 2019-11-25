@@ -22,8 +22,6 @@ from ligninkmc.kmc_common import (Event, S, G, GROW, DEF_RXN_RATES, ADJ_MATRIX, 
 from ligninkmc.kmc_functions import (run_kmc, analyze_adj_matrix)
 
 
-__author__ = 'hmayes'
-
 # Config keys #
 ADD_RATES = 'add_rates_list'
 RXN_RATES = 'reaction_rates_at_298K'

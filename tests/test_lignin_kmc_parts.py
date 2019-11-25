@@ -20,8 +20,6 @@ from ligninkmc.kmc_common import (Event, Monomer, C5O4, OX, C5C5, B5, BB, BO4, A
 from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_psfgen, find_fragments, fragment_size, break_bond_type,
                                      analyze_adj_matrix, count_oligomer_yields, count_bonds)
 
-__author__ = 'hmayes'
-
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)

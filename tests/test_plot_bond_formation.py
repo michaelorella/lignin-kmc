@@ -6,7 +6,6 @@ import unittest
 from ligninkmc.plot_bond_formation import main
 from common_wrangler.common import capture_stderr, capture_stdout, silent_remove
 
-__author__ = 'hmayes'
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)

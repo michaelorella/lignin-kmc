@@ -27,7 +27,6 @@ from ligninkmc.kmc_common import (Event, Monomer, E_BARRIER_KCAL_MOL, E_BARRIER_
 from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_psfgen, count_bonds,
                                      count_oligomer_yields, analyze_adj_matrix)
 
-__author__ = 'hmayes'
 
 # Config keys #
 CONFIG_KEY = 'config_key'
