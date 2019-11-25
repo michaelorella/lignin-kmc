@@ -125,7 +125,7 @@ class TestNoOutput(unittest.TestCase):
 class TestWarnings(unittest.TestCase):
     def testFewerMaxThanMinMonos(self):
         try:
-            test_input = ["-r", "10", "-i", "20", "-m", "10"]
+            test_input = ["-r", "10", "-i", "20", "-m", "10", "-dy"]
             # main(test_input)
             with capture_stderr(main, test_input) as output:
                 self.assertTrue("initial" in output)
@@ -136,7 +136,7 @@ class TestWarnings(unittest.TestCase):
 
     def testFewerThanMinRepeats(self):
         try:
-            test_input = ["-r", "10", "-n", "1", "-m", "10"]
+            test_input = ["-r", "10", "-n", "1", "-m", "10", "-dy"]
             # main(test_input)
             with capture_stderr(main, test_input) as output:
                 self.assertTrue("at least 3" in output)
@@ -151,10 +151,23 @@ class TestNormalUse(unittest.TestCase):
         try:
             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
                 silent_remove(fname)
-            test_input = ["-r", "10", "-m", "20"]
+            test_input = ["-r", "10", "-m", "20", "-dy"]
             main(test_input)
             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
                 self.assertTrue(os.path.isfile(fname))
+        finally:
+            for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
+                silent_remove(fname, disable=DISABLE_REMOVE)
+            pass
+
+    def testSmallNumMonosNoDynamics(self):
+        try:
+            for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
+                silent_remove(fname)
+            test_input = ["-r", "10", "-m", "20"]
+            main(test_input)
+            self.assertTrue(os.path.isfile(DEF_BOND_PNG))
+            self.assertFalse(os.path.isfile(DEF_MONO_PNG))
         finally:
             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
                 silent_remove(fname, disable=DISABLE_REMOVE)
@@ -166,7 +179,7 @@ class TestNormalUse(unittest.TestCase):
         try:
             for fname in expected_pngs:
                 silent_remove(fname)
-            test_input = ["-r", "10", "-m", "20", "-a", "1e8, 1e4", "-sg", "0.25, 3", "-d", SUB_DATA_DIR]
+            test_input = ["-r", "10", "-m", "20", "-a", "1e8, 1e4", "-sg", "0.25, 3", "-d", SUB_DATA_DIR, "-dy"]
             main(test_input)
             for fname in expected_pngs:
                 print(fname)
@@ -177,13 +190,13 @@ class TestNormalUse(unittest.TestCase):
             pass
 
     # Do not include the following in test coverage--just a quick way to run this for its production output
-    # def testProduction(self):
-    #     orella_out_dir = os.path.join(DATA_DIR, 'orella_plots')
-    #
-    #     input_base = ["-i", "5", "-m", "200", "-a", "1e8, 1e6, 1e4, 1e2, 1",
-    #                   "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10"]
-    #     input_1 = input_base + ["-d", SUB_DATA_DIR]
-    #     input_2 = input_base + ["-d", orella_out_dir, "-e"]
-    #
-    #     for prod_input in [input_1, input_2]:
-    #         main(prod_input)
+    def testProduction(self):
+        new_out_dir = os.path.join(DATA_DIR, 'new_plots')
+
+        input_base = ["-i", "5", "-m", "200", "-a", "1e8, 1e6, 1e4, 1e2, 1",
+                      "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10", "-d", new_out_dir]
+        input_1 = input_base
+        input_2 = input_base + ["-e"]
+
+        for prod_input in [input_1, input_2]:
+            main(prod_input)
