@@ -358,6 +358,8 @@ def main(argv=None):
         for add_rate in cfg[ADD_RATES]:
             sg_adjs = []
             add_rate_str = f'{add_rate:.{3}g}'.replace("+", "").replace(".", "-")
+            if cfg[RXN_RATES] == ORELLA_RATES:
+                add_rate_str += "_e"
             for sg_ratio in cfg[SG_RATIOS]:
                 num_monos = []
                 num_oligs = []

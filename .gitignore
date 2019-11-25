@@ -19,3 +19,5 @@ plots/
 /update.sh
 /tests/test_data/run_kmc/lignin-kmc-out.sdf
 /tests/test_data/orella_plots/
+/tests/test_data/new_plots/
+/tests/test_bond_formation.py
