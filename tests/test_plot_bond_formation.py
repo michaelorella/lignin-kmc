@@ -191,12 +191,27 @@ class TestNormalUse(unittest.TestCase):
     def testProduction(self):
         new_out_dir = os.path.join(DATA_DIR, 'new_plots')
 
+        # more efficient to just look at "1e8, 1e6, 1e4" and "1,  3, 5, 10"
         input_base = ["-i", "5", "-m", "200", "-a", "1e8, 1e6, 1e4, 1e2, 1",
-                      "-sg", "0.1, 1, 10", "-d", new_out_dir]
-                      # "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10", "-d", new_out_dir]
-        # input_1 = input_base
+                      # "-sg", "0.1, 1, 10", "-d", new_out_dir]
+                      "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10", "-d", new_out_dir]
+        input_1 = input_base
         input_2 = input_base + ["-e"]
 
-        # for prod_input in [input_1, input_2]:
-        for prod_input in [input_2]:
+        for prod_input in [input_1, input_2]:
+            main(prod_input)
+
+    def testProduction2(self):
+        new_out_dir = os.path.join(DATA_DIR, 'new_plots')
+
+        # Is the S-S oligomer-oligomer bond actually being created????
+
+        # more efficient to just look at "1e8, 1e6, 1e4" and "1,  3, 5, 10"
+        input_base = ["-i", "5", "-m", "200", "-a", "1e8, 1e6",
+                      # "-sg", "0.1, 1, 10", "-d", new_out_dir]
+                      "-sg", "5, 10", "-d", new_out_dir]
+        input_1 = input_base
+        input_2 = input_base + ["-e"]
+
+        for prod_input in [input_1, input_2]:
             main(prod_input)
