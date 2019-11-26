@@ -1173,8 +1173,6 @@ def gen_psfgen(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FN
                 col = col[0]
                 adj[(row, col)] *= -1
         for bond_matrix_tuple in adj.keys():
-            # The adjacency matrix keys are always a tuple (of 2, row & col); sometimes they are equal to each other
-            #    (e.g. oxidation)
             if bond_matrix_tuple[0] > bond_matrix_tuple[1]:
                 continue
             psf_patch_resid1 = bond_matrix_tuple[0] + 1
