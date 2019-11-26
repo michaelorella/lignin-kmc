@@ -2,9 +2,6 @@
 # coding=utf-8
 
 """
-Written:        2018-06-06 Michael Orella
-Last Edited:    2019-11-19 by Heather Mayes
-
 Code base for simulating the in planta polymerization of monolignols through Gillepsie algorithm adaptations.
 Added the visualization tools here.
 """
@@ -424,10 +421,15 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
                         index = [mon.identity, partner.identity]
                         back = [partner.identity, mon.identity]
 
-                        # Add the bond from one monomer to the other in the default config
+                        # Add the bond from one active unit to the other in the default config
                         size = (quick_frag_size(mon), quick_frag_size(partner))
                         if bond[0] in mon.open and bond[1] in partner.open:
                             try:
+                                # todo: delete when questions re olig-olig b04 bond is resolved
+                                if size == (OLIGOMER, OLIGOMER):
+                                    if rxn_event[0] == BO4:
+                                        print(f"{rxn_event[0]} reaction between oligomers with {mon.identity} and "
+                                              f"{partner.identity}")
                                 rate = rxn_event[2][(mon.type, partner.type)][size] / (cur_n ** 2)
                             except KeyError:
                                 raise InvalidDataError(f"Error while attempting to update event_dict: event "
@@ -1173,8 +1175,6 @@ def gen_psfgen(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FN
                 col = col[0]
                 adj[(row, col)] *= -1
         for bond_matrix_tuple in adj.keys():
-            # The adjacency matrix keys are always a tuple (of 2, row & col); sometimes they are equal to each other
-            #    (e.g. oxidation)
             if bond_matrix_tuple[0] > bond_matrix_tuple[1]:
                 continue
             psf_patch_resid1 = bond_matrix_tuple[0] + 1

@@ -20,8 +20,6 @@ from ligninkmc.kmc_common import (Event, Monomer, C5O4, OX, C5C5, B5, BB, BO4, A
 from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_psfgen, find_fragments, fragment_size, break_bond_type,
                                      analyze_adj_matrix, count_oligomer_yields, count_bonds)
 
-__author__ = 'hmayes'
-
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -176,8 +174,8 @@ class TestEvent(unittest.TestCase):
     def testIDReprBond(self):
         rxn = BO4
         # noinspection PyTypeChecker
-        event1 = Event(rxn, [1, 2], DEF_RXN_RATES[rxn][(0, 1)][MON_OLI], (4, 5))
-        good_str = "Forming bo4 bond between indices [1, 2] (adjacency_matrix update (4, 5))"
+        event1 = Event(rxn, [1, 2], DEF_RXN_RATES[rxn][(0, 1)][MON_OLI], (4, 8))
+        good_str = "Forming bo4 bond between indices [1, 2] (adjacency_matrix update (4, 8))"
         self.assertTrue(str(event1) == good_str)
         self.assertTrue(repr(event1) == good_str)
 

@@ -12,6 +12,7 @@ DOCLINES = __doc__.split("\n")
 
 setup(name='ligninkmc',
       author='Michael Orella, Terry Gani, and Heather Mayes',
+      author_email='hmayes@gmail.com',
       # description="Kinetic Monte Carlo implementation for creating realistic lignin topologies.",
       description=DOCLINES[0],
       # long_description="\n".join(DOCLINES[2:]),

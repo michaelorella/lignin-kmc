@@ -27,7 +27,6 @@ from ligninkmc.kmc_common import (Event, Monomer, E_BARRIER_KCAL_MOL, E_BARRIER_
 from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_psfgen, count_bonds,
                                      count_oligomer_yields, analyze_adj_matrix)
 
-__author__ = 'hmayes'
 
 # Config keys #
 CONFIG_KEY = 'config_key'
@@ -346,7 +345,8 @@ def parse_cmdline(argv=None):
         if hasattr(e, 'code') and e.code == 0:
             return args, GOOD_RET
 
-        # only print the e if it has meaningful info
+        # only print the e if it has meaningful info; 2 simply is system exit from parser;
+        #    tests that have triggered System Exit are caught and explained below
         if not e.args[0] == 2:
             warning(e)
 

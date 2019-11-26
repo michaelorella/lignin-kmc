@@ -13,9 +13,9 @@ Code Style: Python standard
 
 # Motivation
 Within the lignin community, there is a discrepancy in the understanding of how lignin polymerizes within the plant 
-cell wall. This code was developed to help address some of these questions. In essence, the goal of this project was to 
-use first principles calculations of the kinetics of monomer couplings that was able to make qualitative predictions to 
-make quantitative predictions within this framework.
+cell wall. This code was developed to help address some of these questions. In essence, the goal of this project was 
+to use the first principles calculations of monomer/oligomer coupling kinetics to obtain quantitative lignin 
+structural predictions
 
 # Use
 
@@ -169,7 +169,7 @@ For example, to use an S to G ratio of 2.5, 12 initial monomers, and up to 18 mo
 if there was insufficient time; the default 1 s will be plenty), with the remaining variables set as their 
 default values, enter:
 
- `> create_lignin -sg 2.5 -i 12 -m 28`
+ `> create_lignin -sg 2.5 -i 12 -m 18`
 
     Running Lignin-KMC version 0.2.2. Please cite: https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.9b03534
     

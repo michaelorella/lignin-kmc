@@ -22,8 +22,6 @@ from ligninkmc.kmc_common import (Event, S, G, GROW, DEF_RXN_RATES, ADJ_MATRIX, 
 from ligninkmc.kmc_functions import (run_kmc, analyze_adj_matrix)
 
 
-__author__ = 'hmayes'
-
 # Config keys #
 ADD_RATES = 'add_rates_list'
 RXN_RATES = 'reaction_rates_at_298K'
@@ -104,6 +102,7 @@ def plot_mono_olig_v_time(x_axis, avg_num_monos, std_dev_monos, avg_num_oligs, s
     plt.title(plot_title)
     plt.savefig(plot_fname, bbox_inches='tight', transparent=True)
     print(f"Wrote file: {plot_fname}")
+    plt.close()
 
 
 # noinspection DuplicatedCode
@@ -139,6 +138,7 @@ def plot_bond_error_bars(x_axis, avg_bond_info, std_bond_info, plot_title, plot_
     plt.title(plot_title)
     plt.savefig(plot_fname, bbox_inches='tight', transparent=True)
     print(f"Wrote file: {plot_fname}")
+    plt.close()
 
 
 def get_avg_percent_bonds(bond_list, num_opts, adj_lists, num_trials):
@@ -213,11 +213,11 @@ def parse_cmdline(argv=None):
                         default=DEF_NUM_REPEATS)
     parser.add_argument("-r", "--random_seed", help="Optional: a positive integer to be used as a seed value for "
                                                     "testing.", default=None)
+    parser.add_argument("-dy", "--dynamics", help=f"Select this option if dynamics are requested.", action="store_true")
     parser.add_argument("-sg", "--sg_ratios", help=f"A comma-separated list of the S:G (guaiacol:syringyl) ratios to "
                                                    f"be tested. \nIf there are spaces, the list must be enclosed in "
                                                    f"quotes to be read as a single string. \nThe default list "
                                                    f"contains the single value {DEF_SG}.", default=[DEF_SG])
-
     args = None
     try:
         args = parser.parse_args(argv)
@@ -356,6 +356,8 @@ def main(argv=None):
         for add_rate in cfg[ADD_RATES]:
             sg_adjs = []
             add_rate_str = f'{add_rate:.{3}g}'.replace("+", "").replace(".", "-")
+            if cfg[RXN_RATES] == ORELLA_RATES:
+                add_rate_str += "_e"
             for sg_ratio in cfg[SG_RATIOS]:
                 num_monos = []
                 num_oligs = []
@@ -376,40 +378,48 @@ def main(argv=None):
                         warning(f"The specified {MAX_MONOS} ({cfg[MAX_MONOS]}) is less than the specified {INI_MONOS} "
                                 f"({cfg[INI_MONOS]}). \n          The program will proceed with the initial "
                                 f"number of monomers with no addition of monomers.")
-                    result = run_kmc(cfg[RXN_RATES], initial_state, initial_events,
-                                     n_max=cfg[MAX_MONOS], sg_ratio=sg_ratio, t_max=cfg[SIM_TIME], dynamics=True,
-                                     random_seed=cfg[RANDOM_SEED])
-                    adj_list = result[ADJ_MATRIX]
-                    # following will be used to analyze final bonds only
-                    adj_repeats.append(adj_list[-1])
-                    # only need num monos, num oligs, but we'll get everything
-                    (bond_type_dict, olig_monos_dict, sum_monos_list, olig_count_dict,
-                     sum_count_list) = get_bond_type_v_time_dict(adj_list, sum_len_larger_than=2)
 
-                    num_monos.append(olig_count_dict[1])
-                    num_oligs.append(sum_count_list)
+                    # todo: delete
+                    print(cfg[RXN_RATES][BO4])
+                    result = run_kmc(cfg[RXN_RATES], initial_state, initial_events,
+                                     n_max=cfg[MAX_MONOS], sg_ratio=sg_ratio, t_max=cfg[SIM_TIME],
+                                     dynamics=args.dynamics, random_seed=cfg[RANDOM_SEED])
+                    adj_list = result[ADJ_MATRIX]
+                    if args.dynamics:
+                        # following will be used to analyze final bonds only
+                        adj_repeats.append(adj_list[-1])
+                        # only need num monos, num oligs, but we'll get everything
+                        (bond_type_dict, olig_monos_dict, sum_monos_list, olig_count_dict,
+                         sum_count_list) = get_bond_type_v_time_dict(adj_list, sum_len_larger_than=2)
+
+                        num_monos.append(olig_count_dict[1])
+                        num_oligs.append(sum_count_list)
+                    else:
+                        adj_repeats.append(adj_list)
 
                 sg_adjs.append(adj_repeats)
-                # Arrays may be different lengths, so find shortest array
-                min_len = len(num_monos[0])
-                for mono_list in num_monos[1:]:
-                    if len(mono_list) < min_len:
-                        min_len = len(mono_list)
-                # make lists of lists into np array
-                sg_num_monos = np.asarray([np.array(num_list[:min_len]) for num_list in num_monos])
-                # could save, but I'm just going to print
-                av_num_monos = np.mean(sg_num_monos, axis=0)
-                std_num_monos = np.std(sg_num_monos, axis=0)
+                if args.dynamics:
+                    # Arrays may be different lengths, so find shortest array
+                    min_len = len(num_monos[0])
+                    for mono_list in num_monos[1:]:
+                        if len(mono_list) < min_len:
+                            min_len = len(mono_list)
+                    # make lists of lists into np array
+                    sg_num_monos = np.asarray([np.array(num_list[:min_len]) for num_list in num_monos])
+                    # could save, but I'm just going to print
+                    av_num_monos = np.mean(sg_num_monos, axis=0)
+                    std_num_monos = np.std(sg_num_monos, axis=0)
 
-                sg_num_oligs = np.asarray([np.array(num_list[:min_len]) for num_list in num_oligs])
-                av_num_oligs = np.mean(sg_num_oligs, axis=0)
-                std_num_oligs = np.std(sg_num_oligs, axis=0)
+                    sg_num_oligs = np.asarray([np.array(num_list[:min_len]) for num_list in num_oligs])
+                    av_num_oligs = np.mean(sg_num_oligs, axis=0)
+                    std_num_oligs = np.std(sg_num_oligs, axis=0)
 
-                timesteps = list(range(min_len))
-                title = f"S:G Ratio {sg_ratio}, Add rate {add_rate_str} monomer/s"
-                sg_str = f'{sg_ratio:.{3}g}'.replace("+", "").replace(".", "-")
-                fname = create_out_fname(f'mono_v_olig_{sg_str}_{add_rate_str}', base_dir=cfg[OUT_DIR], ext='.png')
-                plot_mono_olig_v_time(timesteps, av_num_monos, std_num_monos, av_num_oligs, std_num_oligs, title, fname)
+                    timesteps = list(range(min_len))
+                    title = f"S:G Ratio {sg_ratio}, Add rate {add_rate_str} monomer/s"
+                    sg_str = f'{sg_ratio:.{3}g}'.replace("+", "").replace(".", "-")
+                    fname = create_out_fname(f'mono_v_olig_{sg_str}_{add_rate_str}', base_dir=cfg[OUT_DIR], ext='.png')
+                    plot_mono_olig_v_time(timesteps, av_num_monos, std_num_monos, av_num_oligs,
+                                          std_num_oligs, title, fname)
 
             all_avg_bonds, all_std_bonds = get_avg_percent_bonds(BOND_TYPE_LIST, len(cfg[SG_RATIOS]), sg_adjs,
                                                                  cfg[NUM_REPEATS])

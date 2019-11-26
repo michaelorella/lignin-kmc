@@ -6,7 +6,6 @@ import unittest
 from ligninkmc.create_lignin import main, OPENING_MSG, DEF_BASENAME
 from common_wrangler.common import capture_stderr, capture_stdout, silent_remove, diff_lines
 
-__author__ = 'hmayes'
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
