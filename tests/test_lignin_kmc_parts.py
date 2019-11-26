@@ -174,8 +174,8 @@ class TestEvent(unittest.TestCase):
     def testIDReprBond(self):
         rxn = BO4
         # noinspection PyTypeChecker
-        event1 = Event(rxn, [1, 2], DEF_RXN_RATES[rxn][(0, 1)][MON_OLI], (4, 5))
-        good_str = "Forming bo4 bond between indices [1, 2] (adjacency_matrix update (4, 5))"
+        event1 = Event(rxn, [1, 2], DEF_RXN_RATES[rxn][(0, 1)][MON_OLI], (4, 8))
+        good_str = "Forming bo4 bond between indices [1, 2] (adjacency_matrix update (4, 8))"
         self.assertTrue(str(event1) == good_str)
         self.assertTrue(repr(event1) == good_str)
 

@@ -424,10 +424,15 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
                         index = [mon.identity, partner.identity]
                         back = [partner.identity, mon.identity]
 
-                        # Add the bond from one monomer to the other in the default config
+                        # Add the bond from one active unit to the other in the default config
                         size = (quick_frag_size(mon), quick_frag_size(partner))
                         if bond[0] in mon.open and bond[1] in partner.open:
                             try:
+                                # todo: delete when questions re olig-olig b04 bond is resolved
+                                if size == (OLIGOMER, OLIGOMER):
+                                    if rxn_event[0] == BO4:
+                                        print(f"{rxn_event[0]} reaction between oligomers with {mon.identity} and "
+                                              f"{partner.identity}")
                                 rate = rxn_event[2][(mon.type, partner.type)][size] / (cur_n ** 2)
                             except KeyError:
                                 raise InvalidDataError(f"Error while attempting to update event_dict: event "

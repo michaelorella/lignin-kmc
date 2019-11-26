@@ -379,6 +379,8 @@ def main(argv=None):
                                 f"({cfg[INI_MONOS]}). \n          The program will proceed with the initial "
                                 f"number of monomers with no addition of monomers.")
 
+                    # todo: delete
+                    print(cfg[RXN_RATES][BO4])
                     result = run_kmc(cfg[RXN_RATES], initial_state, initial_events,
                                      n_max=cfg[MAX_MONOS], sg_ratio=sg_ratio, t_max=cfg[SIM_TIME],
                                      dynamics=args.dynamics, random_seed=cfg[RANDOM_SEED])
