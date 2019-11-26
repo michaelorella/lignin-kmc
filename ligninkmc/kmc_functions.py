@@ -2,9 +2,6 @@
 # coding=utf-8
 
 """
-Written:        2018-06-06 Michael Orella
-Last Edited:    2019-11-19 by Heather Mayes
-
 Code base for simulating the in planta polymerization of monolignols through Gillepsie algorithm adaptations.
 Added the visualization tools here.
 """
