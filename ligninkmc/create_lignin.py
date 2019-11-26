@@ -345,7 +345,8 @@ def parse_cmdline(argv=None):
         if hasattr(e, 'code') and e.code == 0:
             return args, GOOD_RET
 
-        # only print the e if it has meaningful info
+        # only print the e if it has meaningful info; 2 simply is system exit from parser;
+        #    tests that have triggered System Exit are caught and explained below
         if not e.args[0] == 2:
             warning(e)
 
