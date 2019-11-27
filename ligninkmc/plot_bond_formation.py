@@ -2,9 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Goals:
-1) find num monos vs. num oligomers over time, for given number of repeats, sg ratios, and addition rates
-2) compare bond types vs. sg ratios (performing repeats) over a range of addition rates
+Launches steps required to build lignin
+Multiple output options, from tcl files to plots
 """
 
 import argparse
@@ -18,7 +17,7 @@ from ligninkmc.create_lignin import (DEF_ADD_RATE, DEF_SIM_TIME, DEF_SG, OPENING
                                      create_initial_events, create_initial_state, get_bond_type_v_time_dict)
 from ligninkmc.kmc_common import (Event, S, G, GROW, DEF_RXN_RATES, ADJ_MATRIX, BO4, BB, B5, B1, C5O4, AO4, C5C5, BONDS,
                                   INI_MONOS, MAX_MONOS, RANDOM_SEED, SIM_TIME, MAX_NUM_DECIMAL, MON_MON, MON_OLI,
-                                  OLI_MON, OLI_OLI, MONOMER, OLIGOMER, OX, Q)
+                                  OLI_MON, OLI_OLI, MONOMER, OLIGOMER, OX, Q, MANUSCRIPT_RATES)
 from ligninkmc.kmc_functions import (run_kmc, analyze_adj_matrix)
 
 
@@ -29,116 +28,10 @@ SG_RATIOS = 'sg_ratio_list'
 NUM_REPEATS = 'num_repeats'
 
 BOND_TYPE_LIST = [BO4, BB, B5, B1, C5O4, AO4, C5C5]
-COLORS = [(0, 0, 0), (1, 0, 0), (0, 0, 1), (0, 0.6, 0), (0.6, 0, 0.6), (1, 0.549, 0),
-          (0, 0.6, 0.6), (1, 0.8, 0), (0.6078, 0.2980, 0), (0.6, 0, 0), (0, 0, 0.6)]
+
 DEF_INI_MONOS = 5
 DEF_MAX_MONOS = 200
 DEF_NUM_REPEATS = 5
-
-ORELLA_RATES = {C5O4: {(0, 0): {MON_MON: 5904261.55598695, MON_OLI: 80333.560184945, OLI_MON: 80333.560184945,
-                                OLI_OLI: 31893540751.2937},
-                       (1, 0): {MON_MON: 8626534.12830123, MON_OLI: 80333.560184945, OLI_MON: 80333.560184945,
-                                OLI_OLI: 31893540751.2937}},
-                C5C5: {(0, 0): {MON_MON: 1141805.97148106, MON_OLI: 22698.3606666981, OLI_MON: 22698.3606666981,
-                                OLI_OLI: 68083872447.6958}},
-                B5: {(0, 0): {MON_MON: 7941635722.59467, MON_OLI: 5435496317.66216, OLI_MON: 5435496317.66216,
-                              OLI_OLI: 5435496317.66216},
-                     (0, 1): {MON_MON: 7941635722.59467, MON_OLI: 5435496317.66216, OLI_MON: 5435496317.66216,
-                              OLI_OLI: 5435496317.66216}},
-                BB: {(0, 0): {MON_MON: 11603278571.9039, MON_OLI: 11603278571.9039, OLI_MON: 11603278571.9039,
-                              OLI_OLI: 11603278571.9039},
-                     (1, 0): {MON_MON: 2243920367.77638, MON_OLI: 2243920367.77638, OLI_MON: 2243920367.77638,
-                              OLI_OLI: 2243920367.77638},
-                     (1, 1): {MON_MON: 11603278571.9039, MON_OLI: 11603278571.9039, OLI_MON: 11603278571.9039,
-                              OLI_OLI: 11603278571.9039},
-                     (0, 1): {MON_MON: 2243920367.77638, MON_OLI: 2243920367.77638, OLI_MON: 2243920367.77638,
-                              OLI_OLI: 2243920367.77638}},
-                BO4: {(0, 0): {MON_MON: 2889268780.92427, MON_OLI: 3278522716.22094, OLI_MON: 3278522716.22094,
-                               OLI_OLI: 3278522716.22094},
-                      (1, 0): {MON_MON: 83919112.8376677, MON_OLI: 3278522716.22094, OLI_MON: 3278522716.22094,
-                               OLI_OLI: 3278522716.22094},
-                      (0, 1): {MON_MON: 108054134.329644, MON_OLI: 3278522716.22094, OLI_MON: 3278522716.22094,
-                               OLI_OLI: 3278522716.22094},
-                      # below is where an entry is missing
-                      (1, 1): {MON_MON: 34644086.8574001, MON_OLI: 16228844.7506668, OLI_MON: 16228844.7506668}},
-                AO4: {(0, 0): {MON_MON: 36.0239749057507, MON_OLI: 36.0239749057507, OLI_MON: 36.0239749057507,
-                               OLI_OLI: 36.0239749057507},
-                      (1, 0): {MON_MON: 36.0239749057507, MON_OLI: 36.0239749057507, OLI_MON: 36.0239749057507,
-                               OLI_OLI: 36.0239749057507},
-                      (0, 1): {MON_MON: 36.0239749057507, MON_OLI: 36.0239749057507, OLI_MON: 36.0239749057507,
-                               OLI_OLI: 36.0239749057507},
-                      (1, 1): {MON_MON: 36.0239749057507, MON_OLI: 36.0239749057507, OLI_MON: 36.0239749057507,
-                               OLI_OLI: 36.0239749057507}},
-                B1: {(0, 0): {MON_OLI: 44607678.613794, OLI_MON: 44607678.613794, OLI_OLI: 44607678.613794},
-                     (1, 0): {MON_OLI: 3138443.59211371, OLI_MON: 3138443.59211371, OLI_OLI: 3138443.59211371},
-                     (0, 1): {MON_OLI: 11107513.4850607, OLI_MON: 11107513.4850607, OLI_OLI: 11107513.4850607},
-                     (1, 1): {MON_OLI: 2437439.37772669, OLI_MON: 2437439.37772669, OLI_OLI: 2437439.37772669}},
-                OX: {0: {MONOMER: 2659877051606.15, OLIGOMER: 2889268780.92427},
-                     1: {MONOMER: 3886264174644.99, OLIGOMER: 514384986527.191}},
-                Q: {0: {MONOMER: 6699707.46979824, OLIGOMER: 6699707.46979824},
-                    1: {MONOMER: 3138443.59211371, OLIGOMER: 3138443.59211371}}}
-
-
-# noinspection DuplicatedCode
-def plot_mono_olig_v_time(x_axis, avg_num_monos, std_dev_monos, avg_num_oligs, std_dev_oligs, plot_title, plot_fname):
-    plt.figure(figsize=(3.5, 3.5))
-    plt.errorbar(x_axis, avg_num_monos, yerr=std_dev_monos, linestyle='none', marker='.',
-                 markersize=10, markerfacecolor=COLORS[0], markeredgecolor=COLORS[0], label='monomers',
-                 capsize=3, ecolor=COLORS[0])
-    plt.errorbar(x_axis, avg_num_oligs, yerr=std_dev_oligs, linestyle='none', marker='.', markersize=10,
-                 markerfacecolor=COLORS[1], markeredgecolor=COLORS[1], label='oligomers', capsize=3, ecolor=COLORS[1])
-    if len(x_axis) > 1:
-        plt.xscale('log')
-
-    [plt.gca().spines[i].set_linewidth(1.5) for i in ['top', 'right', 'bottom', 'left']]
-    plt.gca().tick_params(axis='both', which='major', labelsize=14, direction='in', pad=8, top=True, right=True,
-                          width=1.5, length=6)
-    plt.gca().tick_params(axis='both', which='minor', labelsize=14, direction='in', pad=8, top=True, right=True,
-                          width=1, length=4)
-    plt.ylabel('Number', fontsize=14)
-    plt.xlabel('Time step', fontsize=14)
-    # plt.ylim([0.0, 1.0])
-    plt.legend(fontsize=14, loc='upper center', bbox_to_anchor=(1.2, 1.05), frameon=False)
-    plt.title(plot_title)
-    plt.savefig(plot_fname, bbox_inches='tight', transparent=True)
-    print(f"Wrote file: {plot_fname}")
-    plt.close()
-
-
-# noinspection DuplicatedCode
-def plot_bond_error_bars(x_axis, avg_bond_info, std_bond_info, plot_title, plot_fname):
-    plt.figure(figsize=(3.5, 3.5))
-    plt.errorbar(x_axis, avg_bond_info[BO4], yerr=std_bond_info[BO4], linestyle='none', marker='.',
-                 markersize=10, markerfacecolor=COLORS[0], markeredgecolor=COLORS[0], label=BO4,
-                 capsize=3, ecolor=COLORS[0])
-    plt.errorbar(x_axis, avg_bond_info[BB], yerr=std_bond_info[BB], linestyle='none', marker='.', markersize=10,
-                 markerfacecolor=COLORS[1], markeredgecolor=COLORS[1], label=BB, capsize=3, ecolor=COLORS[1])
-    plt.errorbar(x_axis, avg_bond_info[B5], yerr=std_bond_info[B5], linestyle='none', marker='.', markersize=10,
-                 markerfacecolor=COLORS[2], markeredgecolor=COLORS[2], label=B5, capsize=3, ecolor=COLORS[2])
-    plt.errorbar(x_axis, avg_bond_info[B1], yerr=std_bond_info[B1], linestyle='none', marker='.', markersize=10,
-                 markerfacecolor=COLORS[3], markeredgecolor=COLORS[3], label=B1, capsize=3, ecolor=COLORS[3])
-    plt.errorbar(x_axis, avg_bond_info[C5O4], yerr=std_bond_info[C5O4], linestyle='none', marker='.', markersize=10,
-                 markerfacecolor=COLORS[4], markeredgecolor=COLORS[4], label=C5O4, capsize=3, ecolor=COLORS[4])
-    plt.errorbar(x_axis, avg_bond_info[AO4], yerr=std_bond_info[AO4], linestyle='none', marker='.', markersize=10,
-                 markerfacecolor=COLORS[5], markeredgecolor=COLORS[5], label=AO4, capsize=3, ecolor=COLORS[5])
-    plt.errorbar(x_axis, avg_bond_info[C5C5], yerr=std_bond_info[C5C5], linestyle='none', marker='.', markersize=10,
-                 markerfacecolor=COLORS[6], markeredgecolor=COLORS[6], label=C5C5, capsize=3, ecolor=COLORS[6])
-    if len(x_axis) > 1:
-        plt.xscale('log')
-
-    [plt.gca().spines[i].set_linewidth(1.5) for i in ['top', 'right', 'bottom', 'left']]
-    plt.gca().tick_params(axis='both', which='major', labelsize=14, direction='in', pad=8, top=True, right=True,
-                          width=1.5, length=6)
-    plt.gca().tick_params(axis='both', which='minor', labelsize=14, direction='in', pad=8, top=True, right=True,
-                          width=1, length=4)
-    plt.ylabel('Bond Type Yield (%)', fontsize=14)
-    plt.xlabel('SG Ratio', fontsize=14)
-    plt.ylim([0.0, 1.0])
-    plt.legend(fontsize=14, loc='upper center', bbox_to_anchor=(1.2, 1.05), frameon=False)
-    plt.title(plot_title)
-    plt.savefig(plot_fname, bbox_inches='tight', transparent=True)
-    print(f"Wrote file: {plot_fname}")
-    plt.close()
 
 
 def get_avg_percent_bonds(bond_list, num_opts, adj_lists, num_trials):
@@ -188,36 +81,11 @@ def parse_cmdline(argv=None):
                                                  '  number of monomers and oligomers, and on bond type distribution, '
                                                  'as a function of S:G ratio and monomer \n  addition rate.',
                                      formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-a", "--add_rates", help=f"A comma-separated list of the rates of monomer addition to the "
-                                                  f"system (in monomers/second). \nIf there are spaces, the list must "
-                                                  f"be enclosed in quotes to be read as a single string. \nThe default "
-                                                  f"list contains the single addition rate of {DEF_ADD_RATE} "
-                                                  f"monomers/s.", default=[DEF_ADD_RATE])
-    parser.add_argument("-d", "--out_dir", help="The directory where output files will be saved. The default is "
-                                                "the current directory.", default=None)
-    parser.add_argument("-e", "--energy_barriers", help=f"By default, the reaction rates will be based on the energy "
-                                                        f"barriers in kcal/mol to be used to calculate reaction "
-                                                        f"rates at {DEF_TEMP} K. If this flag is used, the rates used "
-                                                        f"to produce the original manuscript plots will be used "
-                                                        f"(missing one term).", action="store_true")
-    parser.add_argument("-i", "--initial_num_monomers", help=f"The initial number of monomers to be included in the "
-                                                             f"simulation. The default is {DEF_INI_MONOS}.",
-                        default=DEF_INI_MONOS)
-    parser.add_argument("-l", "--length_simulation", help=f"The length of simulation (simulation time) in seconds. The "
-                                                          f"default is {DEF_SIM_TIME*1000} s.",
-                        default=DEF_SIM_TIME*1000)
-    parser.add_argument("-m", "--max_num_monomers", help=f"The maximum number of monomers to be studied. The default "
-                                                         f"value is {DEF_MAX_MONOS}.", default=DEF_MAX_MONOS)
+
     parser.add_argument("-n", "--num_repeats", help=f"The number of times each sg_ratio and add_rate will be tested. "
                                                     f"The default is {DEF_NUM_REPEATS}. The minimum value is 3.",
                         default=DEF_NUM_REPEATS)
-    parser.add_argument("-r", "--random_seed", help="Optional: a positive integer to be used as a seed value for "
-                                                    "testing.", default=None)
-    parser.add_argument("-dy", "--dynamics", help=f"Select this option if dynamics are requested.", action="store_true")
-    parser.add_argument("-sg", "--sg_ratios", help=f"A comma-separated list of the S:G (guaiacol:syringyl) ratios to "
-                                                   f"be tested. \nIf there are spaces, the list must be enclosed in "
-                                                   f"quotes to be read as a single string. \nThe default list "
-                                                   f"contains the single value {DEF_SG}.", default=[DEF_SG])
+
     args = None
     try:
         args = parser.parse_args(argv)
@@ -255,37 +123,9 @@ def validate_input(args):
     :return: config: dict of configuration values
     """
     cfg = {}
-    # Convert list entries. Will already be lists if defaults are used. Otherwise, they will be strings.
-    list_args = {ADD_RATES: args.add_rates,
-                 SG_RATIOS: args.sg_ratios}
-    arg_dict = {ADD_RATES: 'add_rates',
-                SG_RATIOS: 'sg_ratios'}
-    arg, arg_val = "", ""  # to make IDE happy
-    try:
-        for arg, arg_val in list_args.items():
-            # Will be a string to process unless it is the default
-            if isinstance(arg_val, str):
-                raw_vals = arg_val.replace(",", " ").replace("(", "").replace(")", "").split()
-                cfg[arg] = [float(val) for val in raw_vals]
-            else:
-                cfg[arg] = arg_val
-            for val in cfg[arg]:
-                if val < 0:
-                    raise ValueError
-                # okay for sg_ratio to be zero, but not add_rate
-                elif val == 0 and arg == ADD_RATES:
-                    raise ValueError
-    except ValueError:
-        raise InvalidDataError(f"Found {arg_val} for '--{arg_dict[ADD_RATES]}'. This entry must be able to be "
-                               f"converted to a list of positive floats.")
-
-    # if out_dir does not already exist, recreate it, only if we will actually need it
-    if args.out_dir:
-        make_dir(args.out_dir)
-    cfg[OUT_DIR] = args.out_dir
 
     if args.energy_barriers:
-        cfg[RXN_RATES] = ORELLA_RATES
+        cfg[RXN_RATES] = MANUSCRIPT_RATES
     else:
         cfg[RXN_RATES] = DEF_RXN_RATES
 
@@ -356,7 +196,7 @@ def main(argv=None):
         for add_rate in cfg[ADD_RATES]:
             sg_adjs = []
             add_rate_str = f'{add_rate:.{3}g}'.replace("+", "").replace(".", "-")
-            if cfg[RXN_RATES] == ORELLA_RATES:
+            if cfg[RXN_RATES] == MANUSCRIPT_RATES:
                 add_rate_str += "_e"
             for sg_ratio in cfg[SG_RATIOS]:
                 num_monos = []
