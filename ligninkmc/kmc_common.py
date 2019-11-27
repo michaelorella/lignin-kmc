@@ -38,7 +38,7 @@ C5C5 = '55'
 C5O4 = '5o4'
 BOND_TYPE_LIST = [BO4, BB, B5, B1, C5O4, AO4, C5C5]
 
-# reaction types
+# reaction types other than bond formation
 Q = 'hydration'
 OX = 'oxidation'
 GROW = 'grow'
@@ -331,18 +331,18 @@ class Monomer:
     polymerization.
 
     ATTRIBUTES:
-        identity    -- uint     --  unique integer for indexing monomer (also the hash value)
-        type        -- uint     --  monolignol variety
+        identity    -- int     --  unique integer for indexing monomer (also the hash value)
+        type        -- str     --  monolignol variety
                                         G = coniferyl alcohol
                                         S = sinapyl alcohol
                                         C = caffeoyl alcohol
-        parent      -- Monomer  --  monomer object that has the smallest unique identifier in a chain (can be used for
+        parent      -- Monomer --  monomer object that has the smallest unique identifier in a chain (can be used for
                                     sizing fragments)
-        size        -- uint     --  integer with the size of the fragment if parent == self
-        active      -- int      --  integer with the location [1-9] of the active site on the monomer (-1 means
+        size        -- int     --  integer with the size of the fragment if parent == self
+        active      -- int     --  integer with the location [1-9] of the active site on the monomer (-1 means
                                     inactive)
-        open        -- set      --  set of units with location [1-9] of open positions on the monomer
-        connectedTo -- set      --  set of integer identities of other monomers that this monomer is connected to
+        open        -- set     --  set of units with location [1-9] of open positions on the monomer
+        connectedTo -- set     --  set of integer identities of other monomers that this monomer is connected to
 
     METHODS:
         N/A - no defined public methods
@@ -365,8 +365,8 @@ class Monomer:
             mon = Monomer(H, 0) # Makes a caffeoyl unit monomer with ID = 0
             mon = Monomer(S, n) # Makes a sinapyl alcohol with ID = n
 
-        :param unit_type: int    -- integer switch of the monomer type
-        :param i: int    -- unique identifier for the monomer
+        :param unit_type: str, monomer type
+        :param i: int, unique identifier for the monomer
         Outputs:
             New instance of a monomer object with the desired attributes
         """

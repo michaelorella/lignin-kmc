@@ -253,15 +253,15 @@ class TestRunKMC(unittest.TestCase):
 
     def testSampleRunKMCCLignin(self):
         result = create_sample_kmc_result_c_lignin()
-        self.assertTrue(len(result[TIME]) == 54)
-        self.assertAlmostEqual(result[TIME][-1], 0.002518515254173007)
+        self.assertTrue(len(result[TIME]) == 45)
+        self.assertAlmostEqual(result[TIME][-1], 0.002274158825206313)
         self.assertTrue(len(result[MONO_LIST]) == 12)
         self.assertTrue(str(result[MONO_LIST][-1]) == '11: caffeoyl alcohol is connected to '
                                                       '{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11} and active at position 4')
-        good_dok_keys = [(1, 0), (0, 1), (0, 2), (2, 0), (2, 3), (3, 2), (3, 4), (4, 3), (4, 5), (5, 4), (6, 5),
-                         (5, 6), (6, 7), (7, 6), (8, 9), (9, 8), (7, 9), (9, 7), (7, 10), (10, 7), (9, 11), (11, 9)]
-        good_dok_vals = [5.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 8.0, 8.0, 4.0, 4.0, 8.0, 5.0, 8.0, 5.0, 5.0,
-                         4.0, 8.0, 4.0, 8.0]
+        good_dok_keys = [(1, 0), (0, 1), (0, 2), (2, 0), (2, 3), (3, 2), (3, 4), (4, 3), (5, 4), (4, 5), (6, 5),
+                         (5, 6), (7, 6), (6, 7), (7, 8), (8, 7), (8, 9), (9, 8), (9, 10), (10, 9), (11, 10), (10, 11)]
+        good_dok_vals = [5.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 8.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 4.0, 8.0, 4.0, 8.0,
+                         4.0, 8.0, 8.0, 4.0]
         self.assertTrue(list(result[ADJ_MATRIX].keys()) == good_dok_keys)
         self.assertTrue(list(result[ADJ_MATRIX].values()) == good_dok_vals)
 
@@ -584,7 +584,7 @@ class TestVisualization(unittest.TestCase):
             monos = 7
             silent_remove(TCL_FILE_LOC)
             result = create_sample_kmc_result_c_lignin(num_monos=monos, max_monos=monos*2, seed=seed)
-            good_last_time = 0.004396366118395674
+            good_last_time = 0.0034410593070561706
             self.assertAlmostEqual(result[TIME][-1], good_last_time)
             gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", toppar_dir=None,
                     out_dir=SUB_DATA_DIR)

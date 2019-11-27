@@ -565,11 +565,11 @@ def do_event(event, state, adj, sg_ratio=None, random_seed=None):
         mon0.open |= set(vals[1 + order[0]])
         mon1.open |= set(vals[1 + order[1]])
 
-        if mon0.active == 7 and mon1.type == 2:
+        if mon0.active == 7 and mon1.type == C:
             mon0.active = 0
             mon0.open -= {7}
 
-        if mon1.active == 7 and mon0.type == 2:
+        if mon1.active == 7 and mon0.type == C:
             mon1.active = 0
             mon1.open -= {7}
 
