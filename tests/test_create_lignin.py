@@ -36,6 +36,9 @@ TEST_SMI_OUT = os.path.join(SUB_DATA_DIR, TEST_SMI_BASENAME)
 GOOD_TEST_SMI_OUT = os.path.join(SUB_DATA_DIR, "good_test_lignin.smi")
 TEST_SMI_OUT_TEMP_DIR = os.path.join(TEMP_DIR, TEST_SMI_BASENAME)
 
+BOND_V_STEP_PNG = os.path.join(MAIN_DIR, "bond_dist_v_step_1_1e06.png")
+MONO_V_STEP_PNG = os.path.join(MAIN_DIR, "mono_olig_v_step_1_1e06.png")
+
 
 # Data #
 
@@ -212,8 +215,6 @@ class TestCreateLigninNoOutput(unittest.TestCase):
         with capture_stderr(main, test_input) as output:
             self.assertTrue("positive" in output)
 
-
-class TestMoreWarnings(unittest.TestCase):
     def testFewerMaxThanMinMonos(self):
         test_input = ["-r", "10", "-i", "20", "-m", "10", ]
         # main(test_input)
@@ -399,43 +400,78 @@ class TestCreateLigninNormalUse(unittest.TestCase):
 
 
 class TestDynamics(unittest.TestCase):
-    def testRepeat1(self):
+    def testDyn1(self):
+        expected_files = [BOND_V_STEP_PNG, MONO_V_STEP_PNG]
         try:
-            # for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
-            #     silent_remove(fname)
+            for fname in expected_files:
+                silent_remove(fname)
             test_input = ["-r", "10", "-i", "3", "-m", "20", "-dy", "-a", "1e6"]
-            main(test_input)
-#             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
-#                 self.assertTrue(os.path.isfile(fname))
+            # main(test_input)
+            with capture_stdout(main, test_input) as output:
+                self.assertTrue("1 oligomer(s) of chain length 20, with branching coefficient 0.15" in output)
+            for fname in expected_files:
+                self.assertTrue(os.path.isfile(fname))
         finally:
-            # for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
-            #     silent_remove(fname, disable=DISABLE_REMOVE)
+            for fname in expected_files:
+                silent_remove(fname, disable=DISABLE_REMOVE)
             pass
 
-    def testRepeat2(self):
+    def testDyn2(self):
+        expected_files = [BOND_V_STEP_PNG, MONO_V_STEP_PNG]
         try:
-            # for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
-            #     silent_remove(fname)
+            for fname in expected_files:
+                silent_remove(fname)
             test_input = ["-r", "10", "-i", "3", "-m", "20", "-dy", "-a", "1e6", "-n", "2"]
-            main(test_input)
-        #             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
-        #                 self.assertTrue(os.path.isfile(fname))
+            # main(test_input)
+            # testing a piece of output from each of 2 repeats
+            with capture_stdout(main, test_input) as output:
+                self.assertTrue("BB:    3     B5:    4" in output)
+                self.assertTrue("BB:    5     B5:    2" in output)
+            for fname in expected_files:
+                self.assertTrue(os.path.isfile(fname))
         finally:
-            # for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
-            #     silent_remove(fname, disable=DISABLE_REMOVE)
+            for fname in expected_files:
+                silent_remove(fname, disable=DISABLE_REMOVE)
             pass
 
-    def testRepeat10(self):
+    def testDyn4(self):
+        # also has multiple sg_ratio
+        expected_files = [BOND_V_STEP_PNG, MONO_V_STEP_PNG]
         try:
-            # for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
-            #     silent_remove(fname)
-            test_input = ["-r", "10", "-i", "3", "-m", "20", "-dy", "-a", "1e6", "-n", "10"]
-            main(test_input)
-        #             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
-        #                 self.assertTrue(os.path.isfile(fname))
+            for fname in expected_files:
+                silent_remove(fname)
+            test_input = ["-r", "10", "-i", "3", "-m", "20", "-dy", "-a", "1e6", "-n", "4"]
+            # main(test_input)
+            with capture_stdout(main, test_input) as output:
+                self.assertTrue("BO4:    7     BB:    3     B5:    4     B1:    0    5O4:    5" in output)
+                self.assertTrue("BO4:    7     BB:    5     B5:    2     B1:    0    5O4:    5" in output)
+                self.assertTrue("BO4:    8     BB:    3     B5:    3     B1:    0    5O4:    5" in output)
+                self.assertTrue("BO4:    6     BB:    4     B5:    3     B1:    0    5O4:    5" in output)
+            for fname in expected_files:
+                self.assertTrue(os.path.isfile(fname))
         finally:
-            # for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
-            #     silent_remove(fname, disable=DISABLE_REMOVE)
+            for fname in expected_files:
+                silent_remove(fname, disable=DISABLE_REMOVE)
+            pass
+
+    def testDynPlot1(self):
+        # also has multiple sg_ratio
+        expected_files = [BOND_V_STEP_PNG, MONO_V_STEP_PNG]
+        try:
+            for fname in expected_files:
+                silent_remove(fname)
+            test_input = ["-r", "10", "-i", "3", "-m", "20", "-dy", "-a", "1e6", "-p", "-e", "-d", PLOT_DIR]
+            main(test_input)
+            # with capture_stdout(main, test_input) as output:
+            #     self.assertTrue("BO4:    7     BB:    3     B5:    4     B1:    0    5O4:    5" in output)
+            #     self.assertTrue("BO4:    7     BB:    5     B5:    2     B1:    0    5O4:    5" in output)
+            #     self.assertTrue("BO4:    8     BB:    3     B5:    3     B1:    0    5O4:    5" in output)
+            #     self.assertTrue("BO4:    6     BB:    4     B5:    3     B1:    0    5O4:    5" in output)
+            # for fname in expected_files:
+            #     self.assertTrue(os.path.isfile(fname))
+        finally:
+            for fname in expected_files:
+                silent_remove(fname, disable=DISABLE_REMOVE)
             pass
 
 #     def testSmallNumMonosNoDynamics(self):

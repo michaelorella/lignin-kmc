@@ -21,4 +21,5 @@ plots/
 /tests/test_data/orella_plots/
 /tests/test_data/new_plots/
 /tests/test_bond_formation.py
-/mono_v_olig_*.png
+/mono_olig_v_step*.png
+/bond_dist_v_step*.png

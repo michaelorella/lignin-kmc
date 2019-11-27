@@ -43,12 +43,16 @@ SAVE_TCL = 'tcl'
 OUT_TYPE_LIST = [SAVE_JSON, SAVE_PNG,  SAVE_SMI, SAVE_SVG, SAVE_TCL]
 OUT_TYPE_STR = "', '".join(OUT_TYPE_LIST)
 SAVE_FILES = 'save_files_boolean'
-ENERGY_BARRIER_FLAG = 'energy_barriers_flag'
 ADD_RATES = 'add_rates_list'
 RXN_RATES = 'reaction_rates_at_298K'
 SG_RATIOS = 'sg_ratio_list'
 NUM_REPEATS = 'num_repeats'
 DYNAMICS = 'dynamics_flag'
+OLIGOMERS = 'oligomers'
+MONOMERS = 'monomers'
+PLOT_BONDS = 'plot_bonds'
+# todo: remove ENERGY_BARRIER_FLAG option when debugging is complete
+ENERGY_BARRIER_FLAG = 'energy_barriers_flag'
 
 PLOT_COLORS = [(0, 0, 0), (1, 0, 0), (0, 0, 1), (0, 0.6, 0), (0.6, 0, 0.6), (1, 0.549, 0),
                (0, 0.6, 0.6), (1, 0.8, 0), (0.6078, 0.2980, 0), (0.6, 0, 0), (0, 0, 0.6)]
@@ -75,8 +79,10 @@ DEF_CFG_VALS = {OUT_DIR: None, OUT_FORMAT_LIST: None, ADD_RATES: [DEF_ADD_RATE],
                 RANDOM_SEED: None, BASENAME: DEF_BASENAME, IMAGE_SIZE: DEF_IMAGE_SIZE, DYNAMICS: False,
                 E_BARRIER_KCAL_MOL: DEF_E_BARRIER_KCAL_MOL, E_BARRIER_J_PART: None, SAVE_FILES: False,
                 SAVE_JSON: False, SAVE_PNG: False, SAVE_SMI: False, SAVE_SVG: False, SAVE_TCL: False,
-                CHAIN_ID: DEF_CHAIN_ID, PSF_FNAME: DEF_PSF_FNAME, TOPPAR_DIR: DEF_TOPPAR, ENERGY_BARRIER_FLAG: False,
-                NUM_REPEATS: DEF_NUM_REPEATS,
+                CHAIN_ID: DEF_CHAIN_ID, PSF_FNAME: DEF_PSF_FNAME, TOPPAR_DIR: DEF_TOPPAR,
+                NUM_REPEATS: DEF_NUM_REPEATS, PLOT_BONDS: False,
+                # todo: remove ENERGY_BARRIER_FLAG option when debugging is complete
+                ENERGY_BARRIER_FLAG: False,
                 }
 
 REQ_KEYS = {}
@@ -103,17 +109,47 @@ def plot_bond_error_bars(x_axis, y_axis_val_dicts, y_axis_std_dev_dicts, y_val_k
                           width=1, length=4)
     plt.ylabel(y_axis_label, fontsize=14)
     plt.xlabel(x_axis_label, fontsize=14)
-    if y_axis_label[0] in BOND_TYPE_LIST:
-        # with bond_types, we want y between 0 and 1
+
+    if '%' in y_axis_label:
         plt.ylim([0.0, 1.0])
-        plt.legend(fontsize=14, loc='upper right', bbox_to_anchor=(1.2, 1.05), frameon=False)
+    # needed to adjust legends differently for two types of plot
+    if y_val_key_list[0] in BOND_TYPE_LIST:
+        plt.legend(fontsize=14, loc='upper right', bbox_to_anchor=(1.45, 1.05), frameon=False)
     else:
-        # with monomers and oligomers, need to adjust legend location
         plt.legend(fontsize=14, loc='upper right', bbox_to_anchor=(1.7, 1.05), frameon=False)
+
     plt.title(plot_title)
     plt.savefig(plot_fname, bbox_inches='tight', transparent=True)
     print(f"Wrote file: {plot_fname}")
     plt.close()
+
+
+def get_avg_percent_bonds(bond_list, num_opts, adj_lists, num_trials):
+    """
+    Given adj_list for a set of options, with repeats for each option, find the avg and std dev of percent of each
+    bond type
+    :param bond_list: list of strings representing each bond type
+    :param num_opts: number of options specified (should be length of adj_lists)
+    :param adj_lists: list of lists of adjs: outer is for each option, inner is for each repeat
+    :param num_trials: number of repeats (should be length of inner adj_lists list)
+    :return: avg_bonds, std_bonds: list of floats, list of floats: for each option tested, the average and std dev
+                  of bond distributions (percentages)
+    """
+    analysis = []
+    for i in range(num_opts):
+        cur_adjs = adj_lists[i]
+        analysis.append([analyze_adj_matrix(cur_adjs[j]) for j in range(num_trials)])
+
+    bond_percents = {}
+    avg_bonds = {}
+    std_bonds = {}
+
+    for bond_type in bond_list:
+        bond_percents[bond_type] = [[analysis[j][i][BONDS][bond_type]/sum(analysis[j][i][BONDS].values())
+                                     for i in range(num_trials)] for j in range(num_opts)]
+        avg_bonds[bond_type] = [np.mean(bond_pcts) for bond_pcts in bond_percents[bond_type]]
+        std_bonds[bond_type] = [np.sqrt(np.var(bond_pcts)) for bond_pcts in bond_percents[bond_type]]
+    return avg_bonds, std_bonds
 
 
 def adj_analysis_to_stdout(adj_results):
@@ -306,12 +342,15 @@ def parse_cmdline(argv=None):
                         default=None, type=read_cfg)
     parser.add_argument("-d", "--out_dir", help="The directory where output files will be saved. The default is "
                                                 "the current directory.", default=DEF_CFG_VALS[OUT_DIR])
-    # Todo: add this functionality
     parser.add_argument("-dy", "--dynamics_flag", help=f"Select this option if dynamics (results per timestep) are "
                                                        f"requested. If chosen, plots of \nmonomers and oligomers vs "
                                                        f"timestep, and bond type percent vs timestep, will be saved. "
+                                                       f"\nThey will be named 'bond_dist_v_step_*_#.png' and "
+                                                       f"'mono_olig_v_step_*_#.png', where * represents the S:G ratio "
+                                                       f"and # represents the addition rate."
                                                        f"\nNote that this option significantly increases simulation "
                                                        f"time.", action="store_true")
+    # todo: remove -e option when debugging is complete
     parser.add_argument("-e", "--energy_barriers_flag", help=f"By default, the reaction rates will be based on the "
                                                              f"energy barriers in kcal/mol to be used \nto calculate "
                                                              f"reaction rates at {DEF_TEMP} K. If this flag is used, "
@@ -351,6 +390,10 @@ def parse_cmdline(argv=None):
                                                         f"the '-f' option is selected and no output base name "
                                                         f"provided, a default \nbase name of '{DEF_BASENAME}' will be "
                                                         f"used.", default=DEF_BASENAME)
+    parser.add_argument("-p", "--plot_bonds", help=f"Flag to produce plots of the percent of each bond type versus S:G "
+                                                   f"ratio(s). One plot will be created per addition rate, named "
+                                                   f"'bond_dist_v_sg_#.png', where # represents the addition rate.",
+                        action="store_true")
     parser.add_argument("-r", "--random_seed", help="A positive integer to be used as a seed value for testing. The "
                                                     "default is not to use a \nseed, to allow pseudorandom lignin "
                                                     "creation.", default=DEF_CFG_VALS[RANDOM_SEED])
@@ -389,7 +432,6 @@ def parse_cmdline(argv=None):
                          OUT_FORMAT_LIST: args.output_format_list,
                          ADD_RATES: args.add_rates,
                          DYNAMICS: args.dynamics_flag,
-                         ENERGY_BARRIER_FLAG: args.energy_barriers_flag,
                          INI_MONOS: args.initial_num_monomers,
                          SIM_TIME: args.length_simulation,
                          MAX_MONOS: args.max_num_monomers,
@@ -402,6 +444,9 @@ def parse_cmdline(argv=None):
                          PSF_FNAME: args.psf_fname,
                          TOPPAR_DIR: args.toppar_dir,
                          NUM_REPEATS: args.num_repeats,
+                         PLOT_BONDS: args.plot_bonds,
+                         # todo: remove -e option when debugging is complete
+                         ENERGY_BARRIER_FLAG: args.energy_barriers_flag,
                          }
         if args.config is None:
             args.config = DEF_CFG_VALS.copy()
@@ -606,11 +651,13 @@ def validate_input(cfg):
     # determine rates to use
     if cfg[E_BARRIER_KCAL_MOL] == DEF_CFG_VALS[E_BARRIER_KCAL_MOL] and (cfg[E_BARRIER_J_PART] ==
                                                                         DEF_CFG_VALS[E_BARRIER_J_PART]):
+        # todo: remove ENERGY_BARRIER_FLAG option when debugging is complete
         if cfg[ENERGY_BARRIER_FLAG]:
             cfg[RXN_RATES] = MANUSCRIPT_RATES
         else:
             cfg[RXN_RATES] = DEF_RXN_RATES
     else:
+        # todo: remove ENERGY_BARRIER_FLAG option when debugging is complete
         if cfg[ENERGY_BARRIER_FLAG]:
             warning("Both the {ENERGY_BARRIER_FLAG} option and energy barriers have been provided. The "
                     "{ENERGY_BARRIER_FLAG} option will be ignored, and reaction rates will be calculated from the "
@@ -679,10 +726,12 @@ def main(argv=None):
         for add_rate in cfg[ADD_RATES]:
             sg_adjs = []
             add_rate_str = f'{add_rate:.{3}g}'.replace("+", "").replace(".", "-")
+            # todo: remove MANUSCRIPT_RATES when debugging done
             if cfg[RXN_RATES] == MANUSCRIPT_RATES:
-                add_rate_str += "_e"
+                add_rate_str += "_m"
             for sg_ratio in cfg[SG_RATIOS]:
                 # the initialized lists below are for storing repeats
+                bond_types = defaultdict(list)
                 num_monos = []
                 num_oligs = []
                 adj_repeats = []
@@ -718,10 +767,11 @@ def main(argv=None):
                     if cfg[DYNAMICS]:
                         last_adj = result[ADJ_MATRIX][-1]
                         last_mono_list = result[MONO_LIST][-1]
-                        # TODO: discuss if we want just monomer vs. oligomer.... that's what is on offer now
                         (bond_type_dict, olig_monos_dict, sum_monos_list, olig_count_dict,
                          sum_count_list) = get_bond_type_v_time_dict(result[ADJ_MATRIX], sum_len_larger_than=2)
 
+                        for bond_type in BOND_TYPE_LIST:
+                            bond_types[bond_type].append(bond_type_dict[bond_type])
                         num_monos.append(olig_count_dict[1])
                         num_oligs.append(sum_count_list)
 
@@ -745,8 +795,10 @@ def main(argv=None):
                 if cfg[DYNAMICS]:
                     # create plots of num mon & olig vs timestep, and % bond time v timestep
                     # Starting with num mon & olig vs timestep:
-                    y_val_key_list = ['monomers', 'oligomers']
+                    len_y_val_key_list = [MONOMERS, OLIGOMERS]
                     min_len = len(num_monos[0])
+                    avg_bond_types = {}
+                    std_bond_types = {}
                     if cfg[NUM_REPEATS] > 1:
                         # If there are multiple runs, arrays may be different lengths, so find shortest array
                         min_len = len(num_monos[0])
@@ -764,26 +816,49 @@ def main(argv=None):
                         std_num_monos = np.std(sg_num_monos, axis=0)
                         std_num_oligs = np.std(sg_num_oligs, axis=0)
 
-                        y_axis_val_dicts = {'monomers': av_num_monos, 'oligomers': av_num_oligs}
-                        y_axis_std_dev_dicts = {'monomers': std_num_monos, 'oligomers': std_num_oligs}
+                        len_y_axis_val_dicts = {MONOMERS: av_num_monos, OLIGOMERS: av_num_oligs}
+                        len_y_axis_std_dev_dicts = {MONOMERS: std_num_monos, OLIGOMERS: std_num_oligs}
+
+                        for bond_type in BOND_TYPE_LIST:
+                            sg_bond_dist = np.asarray([np.array(bond_list[:min_len]) for
+                                                       bond_list in bond_types[bond_type]])
+                            avg_bond_types[bond_type] = np.mean(sg_bond_dist, axis=0)
+                            std_bond_types[bond_type] = np.std(sg_bond_dist, axis=0)
+
                     else:
-                        y_axis_val_dicts = {'monomers': num_monos[0], 'oligomers': num_oligs[0]}
-                        y_axis_std_dev_dicts = {'monomers': None, 'oligomers': None}
+                        len_y_axis_val_dicts = {MONOMERS: num_monos[0], OLIGOMERS: num_oligs[0]}
+                        len_y_axis_std_dev_dicts = {MONOMERS: None, OLIGOMERS: None}
+
+                        for bond_type in BOND_TYPE_LIST:
+                            avg_bond_types[bond_type] = bond_types[bond_type]
+                            std_bond_types[bond_type] = None
 
                     timesteps = list(range(min_len))
                     title = f"S:G Ratio {sg_ratio}, Add rate {add_rate_str} monomer/s"
                     sg_str = f'{sg_ratio:.{3}g}'.replace("+", "").replace(".", "-")
-                    fname = create_out_fname(f'mono_v_olig_{sg_str}_{add_rate_str}', base_dir=cfg[OUT_DIR],
+                    fname = create_out_fname(f'mono_olig_v_step_{sg_str}_{add_rate_str}', base_dir=cfg[OUT_DIR],
                                              ext='.png')
                     x_axis_label = 'Time step'
                     y_axis_label = 'Number'
-                    plot_bond_error_bars(timesteps, y_axis_val_dicts, y_axis_std_dev_dicts, y_val_key_list,
+                    plot_bond_error_bars(timesteps, len_y_axis_val_dicts, len_y_axis_std_dev_dicts, len_y_val_key_list,
                                          x_axis_label, y_axis_label, title, fname)
 
-                # y_val_key_list=BOND_TYPE_LIST
-                # x_axis_label='SG Ratio'
-                # y_axis_label='Bond Type Yield (%)'
+                    fname = create_out_fname(f'bond_dist_v_step_{sg_str}_{add_rate_str}', base_dir=cfg[OUT_DIR],
+                                             ext='.png')
+                    x_axis_label = 'Time step'
+                    y_axis_label = 'Number of Bonds'
+                    plot_bond_error_bars(timesteps, avg_bond_types, std_bond_types, BOND_TYPE_LIST,
+                                         x_axis_label, y_axis_label, title, fname)
+            if cfg[PLOT_BONDS]:
+                all_avg_bonds, all_std_bonds = get_avg_percent_bonds(BOND_TYPE_LIST, len(cfg[SG_RATIOS]), sg_adjs,
+                                                                     cfg[NUM_REPEATS])
 
+                title = f"Add rate {add_rate_str} monomer/s"
+                x_axis_label = 'SG Ratio'
+                y_axis_label = 'Bond Type Yield (%)'
+                fname = create_out_fname(f'bond_dist_v_sg_{add_rate_str}', base_dir=cfg[OUT_DIR], ext='.png')
+                plot_bond_error_bars(cfg[SG_RATIOS], all_avg_bonds, all_std_bonds, BOND_TYPE_LIST,
+                                     x_axis_label, y_axis_label, title, fname)
 
     except (InvalidDataError, KeyError) as e:
         warning(e)

@@ -34,32 +34,7 @@ DEF_MAX_MONOS = 200
 DEF_NUM_REPEATS = 5
 
 
-def get_avg_percent_bonds(bond_list, num_opts, adj_lists, num_trials):
-    """
-    Given adj_list for a set of options, with repeats for each option, find the avg and std dev of percent of each
-    bond type
-    :param bond_list: list of strings representing each bond type
-    :param num_opts: number of options specified (should be length of adj_lists)
-    :param adj_lists: list of lists of adjs: outer is for each option, inner is for each repeat
-    :param num_trials: number of repeats (should be length of inner adj_lists list)
-    :return: avg_bonds, std_bonds: list of floats, list of floats: for each option tested, the average and std dev
-                  of bond distributions (percentages)
-    """
-    analysis = []
-    for i in range(num_opts):
-        cur_adjs = adj_lists[i]
-        analysis.append([analyze_adj_matrix(cur_adjs[j]) for j in range(num_trials)])
 
-    bond_percents = {}
-    avg_bonds = {}
-    std_bonds = {}
-
-    for bond_type in bond_list:
-        bond_percents[bond_type] = [[analysis[j][i][BONDS][bond_type]/sum(analysis[j][i][BONDS].values())
-                                     for i in range(num_trials)] for j in range(num_opts)]
-        avg_bonds[bond_type] = [np.mean(bond_pcts) for bond_pcts in bond_percents[bond_type]]
-        std_bonds[bond_type] = [np.sqrt(np.var(bond_pcts)) for bond_pcts in bond_percents[bond_type]]
-    return avg_bonds, std_bonds
 
 
 def main(argv=None):
@@ -95,12 +70,7 @@ def main(argv=None):
                     adj_repeats.append(adj_list)
 
 
-        all_avg_bonds, all_std_bonds = get_avg_percent_bonds(BOND_TYPE_LIST, len(cfg[SG_RATIOS]), sg_adjs,
-                                                             cfg[NUM_REPEATS])
 
-        title = f"Add rate {add_rate_str} monomer/second"
-        fname = create_out_fname(f'bond_v_add_rate_{add_rate_str}', base_dir=cfg[OUT_DIR], ext='.png')
-        plot_bond_error_bars(cfg[SG_RATIOS], all_avg_bonds, all_std_bonds, title, fname)
 
     except (InvalidDataError, KeyError) as e:
         warning(e)
