@@ -67,6 +67,7 @@ DEF_INI_MONOS = 2
 DEF_ADD_RATE = 1.0
 DEF_IMAGE_SIZE = (1200, 300)
 DEF_BASENAME = 'lignin-kmc-out'
+DEF_NUM_REPEATS = 1
 
 DEF_VAL = 'default_value'
 DEF_CFG_VALS = {OUT_DIR: None, OUT_FORMAT_LIST: None, ADD_RATES: [DEF_ADD_RATE], INI_MONOS: DEF_INI_MONOS,
@@ -75,6 +76,7 @@ DEF_CFG_VALS = {OUT_DIR: None, OUT_FORMAT_LIST: None, ADD_RATES: [DEF_ADD_RATE],
                 E_BARRIER_KCAL_MOL: DEF_E_BARRIER_KCAL_MOL, E_BARRIER_J_PART: None, SAVE_FILES: False,
                 SAVE_JSON: False, SAVE_PNG: False, SAVE_SMI: False, SAVE_SVG: False, SAVE_TCL: False,
                 CHAIN_ID: DEF_CHAIN_ID, PSF_FNAME: DEF_PSF_FNAME, TOPPAR_DIR: DEF_TOPPAR, ENERGY_BARRIER_FLAG: False,
+                NUM_REPEATS: DEF_NUM_REPEATS,
                 }
 
 REQ_KEYS = {}
@@ -344,6 +346,8 @@ def parse_cmdline(argv=None):
                                                           f"default is {DEF_SIM_TIME} s.", default=DEF_SIM_TIME)
     parser.add_argument("-m", "--max_num_monomers", help=f"The maximum number of monomers to be studied. The default "
                                                          f"value is {DEF_MAX_MONOS}.", default=DEF_MAX_MONOS)
+    parser.add_argument("-n", "--num_repeats", help=f"The number of times each sg_ratio and add_rate will be tested. "
+                                                    f"The default is {DEF_NUM_REPEATS}.", default=DEF_NUM_REPEATS)
     parser.add_argument("-o", "--output_basename", help=f"The base name for output file(s). If an extension is "
                                                         f"provided, it will determine \nthe type of output. Currently "
                                                         f"supported output types are: \n'{OUT_TYPE_STR}'. Multiple "
@@ -420,7 +424,8 @@ def parse_cmdline(argv=None):
 
         # Easy possible error is to have a space in a list; check for it
         check_arg_list = []
-        for arg_str in ['-f', '--output_format_list', '-s', '--image_size']:
+
+        for arg_str in ['-f', '--output_format_list', '-s', '--image_size', "-a", "--add_rates", "-sg", "--sg_ratio"]:
             if arg_str in argv:
                 check_arg_list.append(arg_str)
         if len(check_arg_list) > 0:
@@ -567,23 +572,25 @@ def validate_input(cfg):
         raise InvalidDataError(f"Found {arg_val} for '{arg}'. This entry must be able to be "
                                f"converted to a list of positive floats.")
 
+    # now testing for positive floats
     for req_pos_num in [SIM_TIME]:
         try:
             cfg[req_pos_num] = float(cfg[req_pos_num])
-            if cfg[req_pos_num] < 0:
+            if cfg[req_pos_num] <= 0:
                 raise ValueError
         except ValueError:
             raise InvalidDataError(f"Found '{cfg[req_pos_num]}' input for '{req_pos_num}'. The {req_pos_num} must be "
                                    f"a positive number.")
 
-    for num_monos in [INI_MONOS, MAX_MONOS]:
+    # Required ints
+    for req_pos_int_arg in [INI_MONOS, MAX_MONOS, NUM_REPEATS]:
         try:
-            cfg[num_monos] = int(cfg[num_monos])
-            if cfg[num_monos] < 0:
+            cfg[req_pos_int_arg] = int(cfg[req_pos_int_arg])
+            if cfg[req_pos_int_arg] < 0:
                 raise ValueError
         except ValueError:
-            raise InvalidDataError(f"Found '{cfg[num_monos]}' input for '{num_monos}'. The {num_monos} must be a "
-                                   f"positive integer.")
+            raise InvalidDataError(f"Found '{cfg[req_pos_int_arg]}' input for '{req_pos_int_arg}'. The "
+                                   f"{req_pos_int_arg} must be a positive integer.")
 
     try:
         # Will be a string to process unless it is the default

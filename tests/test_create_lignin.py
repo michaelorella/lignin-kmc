@@ -13,8 +13,10 @@ DISABLE_REMOVE = logger.isEnabledFor(logging.DEBUG)
 
 # Constants #
 TEST_DIR = os.path.dirname(__file__)
+MAIN_DIR = os.path.abspath(os.path.join(TEST_DIR, '..'))
 DATA_DIR = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'run_kmc')
+PLOT_DIR = os.path.join(DATA_DIR, 'plots')
 TEMP_DIR = os.path.join("..", TEST_DIR, 'temp_dir/temp_dir')
 INNER_TEMP_DIR = os.path.join("..", TEST_DIR, 'temp_dir/')
 
@@ -150,6 +152,11 @@ class TestCreateLigninNoOutput(unittest.TestCase):
         with capture_stderr(main, test_input) as output:
             self.assertTrue('must be a positive integer' in output)
 
+    def testZeroSimTime(self):
+        test_input = ["-r", "10", "-l", "0"]
+        with capture_stderr(main, test_input) as output:
+            self.assertTrue('positive' in output)
+
     def testAlphaIniMonos(self):
         test_input = ["-r", "10", "-i", "ghost"]
         with capture_stderr(main, test_input) as output:
@@ -196,6 +203,42 @@ class TestCreateLigninNoOutput(unittest.TestCase):
         # main(test_input)
         with capture_stderr(main, test_input) as output:
             self.assertTrue("spaces" in output)
+
+    def testNegListVal(self):
+        test_input = ["-sg", "0, -0.1"]
+        # main(test_input)
+        with capture_stderr(main, test_input) as output:
+            self.assertTrue("positive" in output)
+
+    def testZeroListVal(self):
+        test_input = ["-a", "1.0, 0"]
+        # main(test_input)
+        with capture_stderr(main, test_input) as output:
+            self.assertTrue("positive" in output)
+
+
+# class TestWarnings(unittest.TestCase):
+#     def testFewerMaxThanMinMonos(self):
+#         try:
+#             test_input = ["-r", "10", "-i", "20", "-m", "10", "-dy"]
+#             # main(test_input)
+#             with capture_stderr(main, test_input) as output:
+#                 self.assertTrue("initial" in output)
+#         finally:
+#             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
+#                 silent_remove(fname, disable=DISABLE_REMOVE)
+#             pass
+#
+#     def testFewerThanMinRepeats(self):
+#         try:
+#             test_input = ["-r", "10", "-n", "1", "-m", "10", "-dy"]
+#             # main(test_input)
+#             with capture_stderr(main, test_input) as output:
+#                 self.assertTrue("at least 3" in output)
+#         finally:
+#             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
+#                 silent_remove(fname, disable=DISABLE_REMOVE)
+#             pass
 
 
 class TestCreateLigninNormalUse(unittest.TestCase):
@@ -373,3 +416,74 @@ class TestCreateLigninNormalUse(unittest.TestCase):
         finally:
             silent_remove(DEF_TCL_OUT, disable=DISABLE_REMOVE)
             pass
+
+# class TestPlots(unittest.TestCase):
+#     def testSmallNumMonos(self):
+#         try:
+#             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
+#                 silent_remove(fname)
+#             test_input = ["-r", "10", "-m", "20", "-dy"]
+#             main(test_input)
+#             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
+#                 self.assertTrue(os.path.isfile(fname))
+#         finally:
+#             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
+#                 silent_remove(fname, disable=DISABLE_REMOVE)
+#             pass
+#
+#     def testSmallNumMonosNoDynamics(self):
+#         try:
+#             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
+#                 silent_remove(fname)
+#             test_input = ["-r", "10", "-m", "20"]
+#             main(test_input)
+#             self.assertTrue(os.path.isfile(DEF_BOND_PNG))
+#             self.assertFalse(os.path.isfile(DEF_MONO_PNG))
+#         finally:
+#             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
+#                 silent_remove(fname, disable=DISABLE_REMOVE)
+#             pass
+#
+#     def testMultOptions(self):
+#         expected_pngs = [BOND_OPT_1_PNG, BOND_OPT_2_PNG,
+#                          MONO_OPT_1_PNG, MONO_OPT_2_PNG, MONO_OPT_3_PNG, MONO_OPT_4_PNG]
+#         try:
+#             for fname in expected_pngs:
+#                 silent_remove(fname)
+#             test_input = ["-r", "10", "-m", "20", "-a", "1e8, 1e4", "-sg", "0.25, 3", "-d", SUB_DATA_DIR, "-dy"]
+#             main(test_input)
+#             for fname in expected_pngs:
+#                 self.assertTrue(os.path.isfile(fname))
+#         finally:
+#             for fname in expected_pngs:
+#                 silent_remove(fname, disable=DISABLE_REMOVE)
+#             pass
+#
+#     # Do not include the following in test coverage--just a quick way to run this for its production output
+#     def testProduction(self):
+#         new_out_dir = os.path.join(DATA_DIR, 'new_plots')
+#
+#         # more efficient to just look at "1e8, 1e6, 1e4" and "1,  3, 5, 10"
+#         input_base = ["-i", "5", "-m", "200", "-a", "1e8, 1e6, 1e4, 1e2, 1",
+#                       # "-sg", "0.1, 1, 10", "-d", new_out_dir]
+#                       "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10", "-d", new_out_dir]
+#         input_1 = input_base
+#         input_2 = input_base + ["-e"]
+#
+#         for prod_input in [input_1, input_2]:
+#             main(prod_input)
+#
+#     def testProduction2(self):
+#         new_out_dir = os.path.join(DATA_DIR, 'new_plots')
+#
+#         # Is the S-S oligomer-oligomer bond actually being created????
+#
+#         # more efficient to just look at "1e8, 1e6, 1e4" and "1,  3, 5, 10"
+#         input_base = ["-i", "5", "-m", "200", "-a", "1e8, 1e6",
+#                       # "-sg", "0.1, 1, 10", "-d", new_out_dir]
+#                       "-sg", "5, 10", "-d", new_out_dir]
+#         input_1 = input_base
+#         input_2 = input_base + ["-e"]
+#
+#         for prod_input in [input_1, input_2]:
+#             main(prod_input)
