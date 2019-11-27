@@ -868,12 +868,12 @@ def generate_mol(adj, node_list):
     mono_start_idx_atom = []
     removed = {BONDS: 0, ATOMS: 0}
 
-    site_positions = {1: {x: 0 for x in [0, 1, 2]},
-                      4: {2: 11, 1: 12, 0: 12},
-                      5: {x: 4 for x in [0, 1, 2]},
-                      7: {x: 6 for x in [0, 1, 2]},
-                      8: {x: 7 for x in [0, 1, 2]},
-                      10: {x: 9 for x in [0, 1, 2]}}
+    site_positions = {1: {x: 0 for x in [G, S, C]},
+                      4: {C: 11, S: 12, G: 12},
+                      5: {x: 4 for x in [G, S, C]},
+                      7: {x: 6 for x in [G, S, C]},
+                      8: {x: 7 for x in [G, S, C]},
+                      10: {x: 9 for x in [G, S, C]}}
     alpha_beta_alkene_location = 7
     alpha_ring_location = 6
     alpha = 7
