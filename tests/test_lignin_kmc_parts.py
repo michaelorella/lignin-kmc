@@ -584,7 +584,7 @@ class TestVisualization(unittest.TestCase):
             monos = 7
             silent_remove(TCL_FILE_LOC)
             result = create_sample_kmc_result_c_lignin(num_monos=monos, max_monos=monos*2, seed=seed)
-            good_last_time = 0.0034410593070561706
+            good_last_time = 0.004396366118395674
             self.assertAlmostEqual(result[TIME][-1], good_last_time)
             gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", toppar_dir=None,
                     out_dir=SUB_DATA_DIR)
@@ -601,7 +601,7 @@ class TestVisualization(unittest.TestCase):
             with open(C_LIGNIN_MOL_OUT, "w") as f:
                 f.write(block)
             self.assertFalse(diff_lines(C_LIGNIN_MOL_OUT, GOOD_C_LIGNIN_MOL_OUT))
-            # Uncomment below to visually check output
+            # # Uncomment below to visually check output
             # mol = MolFromMolBlock(block)
             # Compute2DCoords(mol)
             # MolToFile(mol, TEST_PNG, size=(2000, 1000))
