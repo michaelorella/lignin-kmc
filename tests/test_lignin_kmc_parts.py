@@ -660,7 +660,7 @@ class TestVisualization(unittest.TestCase):
     def testDynamics(self):
         # Tests procedures in the Dynamics.ipynb
         # minimize number of random calls during testing (here, set monomer type distribution)
-        monomer_type_list = [0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, ]
+        monomer_type_list = [G, S, G, G, S, S, S, G, S, S, G, G, S, G, G, G, G, S, G, G, G, S, S, G, S, S, G, G, ]
         num_monos = len(monomer_type_list)
         initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(monomer_type_list)]
         initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
@@ -805,13 +805,13 @@ class TestVisualization(unittest.TestCase):
         # Increases coverage of gen_tcl
         try:
             # minimize random calls by providing set list of monomer types
-            initial_mono_type_list = [1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1,
-                                      1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0,
-                                      1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0,
-                                      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0,
-                                      0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1,
-                                      1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1,
-                                      1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, ]
+            initial_mono_type_list = [S, S, G, S, S, S, G, S, S, S, G, S, S, G, S, G, S, G, G, S, S, S, S, S, S, S,
+                                      S, S, S, G, S, G, S, S, S, S, G, S, S, S, G, S, G, S, G, S, G, S, S, S, S, G,
+                                      S, S, G, G, S, G, S, S, G, S, S, S, S, S, S, S, G, S, S, S, S, S, S, G, G, G,
+                                      S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, G, S, S, S, S, G, S, S, G,
+                                      G, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, G, S, G, S, S, S, S, S, S, S,
+                                      S, S, S, G, G, S, S, S, G, S, G, S, G, S, S, S, S, S, S, S, S, S, G, S, G, S,
+                                      S, S, S, S, S, S, S, G, S, S, S, G, S, G, G, S, G, S, S, G, S, S, S, S, G, S, ]
             num_monos = len(initial_mono_type_list)
             initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(initial_mono_type_list)]
             initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
@@ -834,7 +834,7 @@ class TestVisualization(unittest.TestCase):
         try:
             # easier to run_kmc to create monomer_list than recreate it here (adj easier) so doing so
             # minimize random calls by providing set list of monomer types
-            initial_mono_type_list = [1, 1, 0, 1, 1, 1, 0, 1]
+            initial_mono_type_list = [S, S, G, S, S, S, G, S]
             num_monos = len(initial_mono_type_list)
             initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(initial_mono_type_list)]
             initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
