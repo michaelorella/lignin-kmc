@@ -94,29 +94,6 @@ def main(argv=None):
                 else:
                     adj_repeats.append(adj_list)
 
-            sg_adjs.append(adj_repeats)
-            if args.dynamics:
-                # Arrays may be different lengths, so find shortest array
-                min_len = len(num_monos[0])
-                for mono_list in num_monos[1:]:
-                    if len(mono_list) < min_len:
-                        min_len = len(mono_list)
-                # make lists of lists into np array
-                sg_num_monos = np.asarray([np.array(num_list[:min_len]) for num_list in num_monos])
-                # could save, but I'm just going to print
-                av_num_monos = np.mean(sg_num_monos, axis=0)
-                std_num_monos = np.std(sg_num_monos, axis=0)
-
-                sg_num_oligs = np.asarray([np.array(num_list[:min_len]) for num_list in num_oligs])
-                av_num_oligs = np.mean(sg_num_oligs, axis=0)
-                std_num_oligs = np.std(sg_num_oligs, axis=0)
-
-                timesteps = list(range(min_len))
-                title = f"S:G Ratio {sg_ratio}, Add rate {add_rate_str} monomer/s"
-                sg_str = f'{sg_ratio:.{3}g}'.replace("+", "").replace(".", "-")
-                fname = create_out_fname(f'mono_v_olig_{sg_str}_{add_rate_str}', base_dir=cfg[OUT_DIR], ext='.png')
-                plot_mono_olig_v_time(timesteps, av_num_monos, std_num_monos, av_num_oligs,
-                                      std_num_oligs, title, fname)
 
         all_avg_bonds, all_std_bonds = get_avg_percent_bonds(BOND_TYPE_LIST, len(cfg[SG_RATIOS]), sg_adjs,
                                                              cfg[NUM_REPEATS])

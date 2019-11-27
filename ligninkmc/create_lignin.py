@@ -84,16 +84,6 @@ REQ_KEYS = {}
 OPENING_MSG = f"Running Lignin-KMC version {__version__}. " \
               f"Please cite: https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.9b03534\n"
 
-# y_axis_val_dicts={'monomers': avg_num_monos, oligomers': avg_num_oligs}
-# y_axis_std_dev_dicts={'monomers': std_dev_monos, oligomers': std_dev_oligs}
-# y_val_key_list=['monomers', 'oligomers']
-# x_axis_label='Time step'
-# y_axis_label='Number'
-
-# y_val_key_list=BOND_TYPE_LIST
-# x_axis_label='SG Ratio'
-# y_axis_label='Bond Type Yield (%)'
-
 
 def plot_bond_error_bars(x_axis, y_axis_val_dicts, y_axis_std_dev_dicts, y_val_key_list, x_axis_label, y_axis_label,
                          plot_title, plot_fname):
@@ -735,6 +725,38 @@ def main(argv=None):
 
                     # save for potential plotting
                     sg_adjs.append(last_adj)
+                    if cfg[DYNAMICS]:
+                        # Arrays may be different lengths, so find shortest array
+                        min_len = len(num_monos[0])
+                        for mono_list in num_monos[1:]:
+                            if len(mono_list) < min_len:
+                                min_len = len(mono_list)
+                        # make lists of lists into np array
+                        sg_num_monos = np.asarray([np.array(num_list[:min_len]) for num_list in num_monos])
+                        # could save, but I'm just going to print
+                        av_num_monos = np.mean(sg_num_monos, axis=0)
+                        std_num_monos = np.std(sg_num_monos, axis=0)
+
+                        sg_num_oligs = np.asarray([np.array(num_list[:min_len]) for num_list in num_oligs])
+                        av_num_oligs = np.mean(sg_num_oligs, axis=0)
+                        std_num_oligs = np.std(sg_num_oligs, axis=0)
+
+                        timesteps = list(range(min_len))
+                        title = f"S:G Ratio {sg_ratio}, Add rate {add_rate_str} monomer/s"
+                        sg_str = f'{sg_ratio:.{3}g}'.replace("+", "").replace(".", "-")
+                        fname = create_out_fname(f'mono_v_olig_{sg_str}_{add_rate_str}', base_dir=cfg[OUT_DIR],
+                                                 ext='.png')
+                        y_val_key_list = ['monomers', 'oligomers']
+                        y_axis_val_dicts = {'monomers': av_num_monos, 'oligomers': av_num_oligs}
+                        y_axis_std_dev_dicts = {'monomers': std_num_monos, 'oligomers': std_num_oligs}
+                        x_axis_label = 'Time step'
+                        y_axis_label = 'Number'
+                        plot_bond_error_bars(timesteps, y_axis_val_dicts, y_axis_std_dev_dicts, y_val_key_list,
+                                             x_axis_label, y_axis_label, title, fname)
+
+                    # y_val_key_list=BOND_TYPE_LIST
+                    # x_axis_label='SG Ratio'
+                    # y_axis_label='Bond Type Yield (%)'
 
                     # show results
                     summary = analyze_adj_matrix(last_adj)
