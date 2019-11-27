@@ -18,7 +18,7 @@ from ligninkmc.kmc_common import (Event, Monomer, AO4, B1, B5, BB, BO4, C5C5, C5
                                   MONOMER, AFFECTED, ADJ_MATRIX, MONO_LIST, MAX_NUM_DECIMAL, ATOMS, BONDS,
                                   G, S, C, S4, G4, G7, B1_ALT, CHAIN_LEN, CHAIN_MONOS, CHAIN_BRANCHES,
                                   CHAIN_BRANCH_COEFF, RCF_BONDS, RCF_YIELDS, RCF_MONOS, RCF_BRANCHES, RCF_BRANCH_COEFF,
-                                  DEF_TCL_FNAME, DEF_CHAIN_ID, DEF_PSF_FNAME, DEF_TOPPAR)
+                                  DEF_TCL_FNAME, DEF_CHAIN_ID, DEF_PSF_FNAME, DEF_TOPPAR, INT_TO_TYPE_DICT)
 
 DrawingOptions.bondLineWidth = 1.2
 S7 = 'S7'
@@ -125,11 +125,11 @@ def quick_frag_size(monomer):
     :return: string, either 'monomer' or 'oligomer' (as the global variable) if it is connected to nothing else,
              or isn't respectively
     """
-    if monomer.type == 0 and monomer.open == {4, 5, 8}:  # Guaiacol monomer
+    if monomer.type == G and monomer.open == {4, 5, 8}:  # Guaiacol monomer
         return MONOMER
-    elif monomer.type == 1 and monomer.open == {4, 8}:  # Syringol monomer
+    elif monomer.type == S and monomer.open == {4, 8}:  # Syringol monomer
         return MONOMER
-    elif monomer.type == 2 and monomer.open == {4, 5, 8}:  # Caffeoyl monomer
+    elif monomer.type == C and monomer.open == {4, 5, 8}:  # Caffeoyl monomer
         return MONOMER
     return OLIGOMER
 
@@ -602,8 +602,8 @@ def do_event(event, state, adj, sg_ratio=None, random_seed=None):
             adj.resize((current_size + 1, current_size + 1))
 
             # Add another monomer to the state
-            if monomers and monomers[-1].type == 2:
-                mon_type = 2
+            if monomers and monomers[-1].type == C:
+                mon_type = C
             else:
                 try:
                     pct = sg_ratio / (1 + sg_ratio)
@@ -613,7 +613,7 @@ def do_event(event, state, adj, sg_ratio=None, random_seed=None):
                         rand_num = np.around(np.random.rand(), MAX_NUM_DECIMAL)
                     else:
                         rand_num = np.random.rand()
-                    mon_type = int(rand_num < pct)
+                    mon_type = INT_TO_TYPE_DICT[int(rand_num < pct)]
                 except TypeError:
                     if sg_ratio is None:
                         sg_note = " the default value 'None'."
@@ -884,29 +884,29 @@ def generate_mol(adj, node_list):
 
     # Build the individual monomers before they are linked by anything
     for i, mon in enumerate(node_list):
-        if mon.type == 0 or mon.type == 1:
+        if mon.type == G or mon.type == S:
             if mon.active == 0 or mon.active == -1:
-                if mon.type == 0:
+                if mon.type == G:
                     atom_block = atom_blocks[G]
                     bond_block = bond_blocks[G]
                 else:
                     atom_block = atom_blocks[S]
                     bond_block = bond_blocks[S]
             elif mon.active == 4:
-                if mon.type == 0:
+                if mon.type == G:
                     atom_block = atom_blocks[G4]
                     bond_block = bond_blocks[G]
                 else:
                     atom_block = atom_blocks[S4]
                     bond_block = bond_blocks[S]
             elif mon.active == 7:
-                if mon.type == 0:
+                if mon.type == G:
                     atom_block = atom_blocks[G]
                     bond_block = bond_blocks[G7]
                 else:
                     atom_block = atom_blocks[S]
                     bond_block = bond_blocks[S7]
-        elif mon.type == 2:
+        elif mon.type == C:
             atom_block = atom_blocks[C]
             bond_block = bond_blocks[C]
         else:
@@ -1015,7 +1015,7 @@ def generate_mol(adj, node_list):
         # Check if we need to add water to the alpha position
         if hydrate[bond_loc_tuple] and 7 not in adj[mono_indices[beta[tuple(bond_loc)]]].values() and \
                 mons[beta[tuple(bond_loc)]].active != 7:
-            if mons[int(not beta[tuple(bond_loc)])].type != 2:
+            if mons[int(not beta[tuple(bond_loc)])].type != C:
                 # We should actually only be hydrating BO4 bonds when the alpha position is unoccupied (handled by
                 # second clause above)
 

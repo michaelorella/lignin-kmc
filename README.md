@@ -83,15 +83,16 @@ options shown below, or by using a configuration file. These options can be view
  
      Running Lignin-KMC version 0.2.2. Please cite: https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.9b03534
      
-     usage: _jb_unittest_runner.py [-h] [-a ADD_RATE] [-c CONFIG] [-d OUT_DIR]
-                                   [-f OUTPUT_FORMAT_LIST]
-                                   [-i INITIAL_NUM_MONOMERS] [-l LENGTH_SIMULATION]
-                                   [-m MAX_NUM_MONOMERS] [-o OUTPUT_BASENAME]
-                                   [-r RANDOM_SEED] [-s IMAGE_SIZE] [-sg SG_RATIO]
-                                   [-t TEMPERATURE_IN_K] [--chain_id CHAIN_ID]
-                                   [--psf_fname PSF_FNAME]
-                                   [--toppar_dir TOPPAR_DIR]
-     
+    usage: _jb_unittest_runner.py [-h] [-a ADD_RATES] [-c CONFIG] [-d OUT_DIR]
+                                  [-dy] [-e] [-f OUTPUT_FORMAT_LIST]
+                                  [-i INITIAL_NUM_MONOMERS] [-l LENGTH_SIMULATION]
+                                  [-m MAX_NUM_MONOMERS] [-n NUM_REPEATS]
+                                  [-o OUTPUT_BASENAME] [-p] [-r RANDOM_SEED]
+                                  [-s IMAGE_SIZE] [-sg SG_RATIOS]
+                                  [-t TEMPERATURE_IN_K] [--chain_id CHAIN_ID]
+                                  [--psf_fname PSF_FNAME]
+                                  [--toppar_dir TOPPAR_DIR]
+
      Create lignin chain(s) composed of 'S' (syringyl) and/or 'G' (guaiacol) monolignols, as described in:
        Orella, M., Gani, T. Z. H., Vermaas, J. V., Stone, M. L., Anderson, E. M., Beckham, G. T., 
        Brushett, Fikile R., Roman-Leshkov, Y. (2019). Lignin-KMC: A Toolkit for Simulating Lignin Biosynthesis.

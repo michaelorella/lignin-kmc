@@ -22,10 +22,10 @@ from rdkit.Chem.rdMolInterchange import MolToJSON
 from ligninkmc import __version__
 from ligninkmc.kmc_common import (Event, Monomer, E_BARRIER_KCAL_MOL, E_BARRIER_J_PART, TEMP, INI_MONOS, MAX_MONOS,
                                   SIM_TIME, AFFECTED, GROW, DEF_E_BARRIER_KCAL_MOL, OX, MONOMER, OLIGOMER,
-                                  LIGNIN_SUBUNITS, ADJ_MATRIX, RANDOM_SEED, S, G, CHAIN_LEN, BONDS,
-                                  RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL, MONO_LIST, CHAIN_MONOS, CHAIN_BRANCH_COEFF,
-                                  RCF_BRANCH_COEFF, CHAIN_ID, DEF_CHAIN_ID, PSF_FNAME, DEF_PSF_FNAME, DEF_TOPPAR,
-                                  TOPPAR_DIR, MANUSCRIPT_RATES, DEF_RXN_RATES, BOND_TYPE_LIST)
+                                  ADJ_MATRIX, RANDOM_SEED, S, G, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS,
+                                  MAX_NUM_DECIMAL, MONO_LIST, CHAIN_MONOS, CHAIN_BRANCH_COEFF, RCF_BRANCH_COEFF,
+                                  CHAIN_ID, DEF_CHAIN_ID, PSF_FNAME, DEF_PSF_FNAME, DEF_TOPPAR, TOPPAR_DIR,
+                                  MANUSCRIPT_RATES, DEF_RXN_RATES, BOND_TYPE_LIST, INT_TO_TYPE_DICT)
 from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_tcl, count_bonds,
                                      count_oligomer_yields, analyze_adj_matrix)
 
@@ -384,14 +384,12 @@ def parse_cmdline(argv=None):
                                                  f"corresponding units (kcal/mol or joules/particle, respectively), in "
                                                  f"a configuration file \n  (see '-c'). The format is (bond_type: "
                                                  f"monomer(s) involved: units involved: ea_vals), for example:\n      "
-                                                 f"ea_dict = {{{OX}: {{0: {{{MONOMER}: 0.9, {OLIGOMER}: 6.3}}, "
-                                                 f"1: ""{{{MONOMER}: 0.6, {OLIGOMER}: " f"2.2}}}}, ...}}\n  "
-                                                 f"where 0: {LIGNIN_SUBUNITS[0]}, 1: {LIGNIN_SUBUNITS[1]}, "
-                                                 f"2: {LIGNIN_SUBUNITS[2]}. The default output is a SMILES string "
-                                                 f"printed to standard out.\n\n  All command-line options may "
-                                                 f"alternatively be specified in a configuration file. Command-line "
-                                                 f"(non-default) \n  selections will override configuration file "
-                                                 f"specifications.",
+                                                 f"ea_dict = {{{OX}: {{'G': {{{MONOMER}: 0.9, {OLIGOMER}: 6.3}}, "
+                                                 f"'S': ""{{{MONOMER}: 0.6, {OLIGOMER}: " f"2.2}}}}, ...}}.\n  "
+                                                 f"The default output is a SMILES string printed to standard out.\n\n"
+                                                 f"  All command-line options may alternatively be specified in a "
+                                                 f"configuration file. Command-line (non-default) \n  selections will "
+                                                 f"override configuration file specifications.",
                                      formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-a", "--add_rates", help=f"A comma-separated list of the rates of monomer addition to the "
                                                   f"system (in monomers/second), \nto be used when the '{MAX_MONOS}' "
@@ -582,9 +580,9 @@ def calc_rates(temp, ea_j_part_dict=None, ea_kcal_mol_dict=None):
 def create_initial_monomers(pct_s, monomer_draw):
     """
     Make a monomer list (length of monomer_draw) based on the types determined by the monomer_draw list and pct_s
-    :param pct_s: float ([0:1]), fraction of  monomers that should be type "1" ("S")
-    :param monomer_draw: a list of floats ([0:1)) to determine if the monomer should be type "0" ("G", val < pct_s) or
-                         "1" ("S", otherwise)
+    :param pct_s: float ([0:1]), fraction of  monomers that should be type "S"
+    :param monomer_draw: a list of floats ([0:1)) to determine if the monomer should be type "G" (val < pct_s) or
+                         "S", otherwise
     :return: list of Monomer objects of specified type
     """
     # TODO: If want more than 2 monomer options, need to change logic; that will require an overhaul, since
@@ -592,7 +590,7 @@ def create_initial_monomers(pct_s, monomer_draw):
     #       just S and G, no need to update
     # if mon_choice < pct_s, make it an S; that is, the evaluation comes back True (=1='S');
     #     otherwise, get False = 0 = 'G'. Since only two options (True/False) only works for 2 monomers
-    return [Monomer(int(mono_type_draw < pct_s), i) for i, mono_type_draw in enumerate(monomer_draw)]
+    return [Monomer(INT_TO_TYPE_DICT[int(mono_type_draw < pct_s)], i) for i, mono_type_draw in enumerate(monomer_draw)]
 
 
 def create_initial_events(initial_monomers, rxn_rates):
