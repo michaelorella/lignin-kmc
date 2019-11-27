@@ -1121,8 +1121,8 @@ def write_patch(open_file, patch_name, segname, resid1, resid2=None):
         open_file.write(f"patch {patch_name} {segname}:{resid1}\n")
 
 
-def gen_psfgen(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FNAME, chain_id=DEF_CHAIN_ID,
-               toppar_dir=DEF_TOPPAR, out_dir=None):
+def gen_tcl(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FNAME, chain_id=DEF_CHAIN_ID,
+            toppar_dir=DEF_TOPPAR, out_dir=None):
     """
     This takes a computed adjacency matrix and monomer list and writes out a script to generate a psf file of the
     associated structure, suitable for feeding into the LigninBuilder plugin of VMD

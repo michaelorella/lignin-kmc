@@ -26,7 +26,7 @@ from ligninkmc.kmc_common import (Event, Monomer, E_BARRIER_KCAL_MOL, E_BARRIER_
                                   RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL, MONO_LIST, CHAIN_MONOS, CHAIN_BRANCH_COEFF,
                                   RCF_BRANCH_COEFF, CHAIN_ID, DEF_CHAIN_ID, PSF_FNAME, DEF_PSF_FNAME, DEF_TOPPAR,
                                   TOPPAR_DIR, MANUSCRIPT_RATES, DEF_RXN_RATES)
-from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_psfgen, count_bonds,
+from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_tcl, count_bonds,
                                      count_oligomer_yields, analyze_adj_matrix)
 
 
@@ -346,8 +346,9 @@ def parse_cmdline(argv=None):
                                                           f"default is {DEF_SIM_TIME} s.", default=DEF_SIM_TIME)
     parser.add_argument("-m", "--max_num_monomers", help=f"The maximum number of monomers to be studied. The default "
                                                          f"value is {DEF_MAX_MONOS}.", default=DEF_MAX_MONOS)
-    parser.add_argument("-n", "--num_repeats", help=f"The number of times each sg_ratio and add_rate will be tested. "
-                                                    f"The default is {DEF_NUM_REPEATS}.", default=DEF_NUM_REPEATS)
+    parser.add_argument("-n", "--num_repeats", help=f"The number of times each combination of sg_ratio and add_rate "
+                                                    f"will be tested. The default is {DEF_NUM_REPEATS}.",
+                        default=DEF_NUM_REPEATS)
     parser.add_argument("-o", "--output_basename", help=f"The base name for output file(s). If an extension is "
                                                         f"provided, it will determine \nthe type of output. Currently "
                                                         f"supported output types are: \n'{OUT_TYPE_STR}'. Multiple "
@@ -519,8 +520,8 @@ def produce_output(adj_matrix, mono_list, cfg):
         if cfg[save_format]:
             fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=save_format)
             if save_format == SAVE_TCL:
-                gen_psfgen(adj_matrix, mono_list, tcl_fname=fname, chain_id=cfg[CHAIN_ID],
-                           psf_fname=cfg[PSF_FNAME], toppar_dir=cfg[TOPPAR_DIR], out_dir=cfg[OUT_DIR])
+                gen_tcl(adj_matrix, mono_list, tcl_fname=fname, chain_id=cfg[CHAIN_ID],
+                        psf_fname=cfg[PSF_FNAME], toppar_dir=cfg[TOPPAR_DIR], out_dir=cfg[OUT_DIR])
             if save_format == SAVE_JSON:
                 json_str = MolToJSON(mol)
                 str_to_file(json_str + '\n', fname)
@@ -685,52 +686,54 @@ def main(argv=None):
             if cfg[RXN_RATES] == MANUSCRIPT_RATES:
                 add_rate_str += "_e"
             for sg_ratio in cfg[SG_RATIOS]:
+                # the initialized lists below are for storing repeats
                 # num_monos = []
                 # num_oligs = []
                 # adj_repeats = []
 
-                # decide on initial monomers, based on given sg_ratio
-                pct_s = sg_ratio / (1 + sg_ratio)
-                ini_num_monos = cfg[INI_MONOS]
-                if cfg[RANDOM_SEED]:
-                    np.random.seed(cfg[RANDOM_SEED])
-                    monomer_draw = np.around(np.random.rand(ini_num_monos), MAX_NUM_DECIMAL)
-                else:
-                    monomer_draw = np.random.rand(ini_num_monos)
-                initial_monomers = create_initial_monomers(pct_s, monomer_draw)
+                for _ in range(cfg[NUM_REPEATS]):
+                    # decide on initial monomers, based on given sg_ratio
+                    pct_s = sg_ratio / (1 + sg_ratio)
+                    ini_num_monos = cfg[INI_MONOS]
+                    if cfg[RANDOM_SEED]:
+                        np.random.seed(cfg[RANDOM_SEED])
+                        monomer_draw = np.around(np.random.rand(ini_num_monos), MAX_NUM_DECIMAL)
+                    else:
+                        monomer_draw = np.random.rand(ini_num_monos)
+                    initial_monomers = create_initial_monomers(pct_s, monomer_draw)
 
-                # initial event must be oxidation to create reactive species; all monomers may be oxidized
-                initial_events = create_initial_events(initial_monomers, cfg[RXN_RATES])
+                    # initial event must be oxidation to create reactive species; all monomers may be oxidized
+                    initial_events = create_initial_events(initial_monomers, cfg[RXN_RATES])
 
-                # initial_monomers and initial_events are grouped into the initial state
-                initial_state = create_initial_state(initial_events, initial_monomers)
-                if cfg[MAX_MONOS] > cfg[INI_MONOS]:
-                    initial_events.append(Event(GROW, [], rate=add_rate))
-                elif cfg[MAX_MONOS] < cfg[INI_MONOS]:
-                    warning(f"The specified maximum number of monomers ({cfg[MAX_MONOS]}) is less than the specified "
-                            f"initial number of monomers ({cfg[INI_MONOS]}). \n The program will proceed with the "
-                            f"with the initial number of monomers with no addition of monomers.")
+                    # initial_monomers and initial_events are grouped into the initial state
+                    initial_state = create_initial_state(initial_events, initial_monomers)
+                    if cfg[MAX_MONOS] > cfg[INI_MONOS]:
+                        initial_events.append(Event(GROW, [], rate=add_rate))
+                    elif cfg[MAX_MONOS] < cfg[INI_MONOS]:
+                        warning(f"The specified maximum number of monomers ({cfg[MAX_MONOS]}) is less than the "
+                                f"specified initial number of monomers ({cfg[INI_MONOS]}). \n The program will "
+                                f"proceed with the with the initial number of monomers with no addition of monomers.")
 
-                # begin simulation
-                result = run_kmc(cfg[RXN_RATES], initial_state, initial_events, n_max=cfg[MAX_MONOS],
-                                 t_max=cfg[SIM_TIME], sg_ratio=sg_ratio, dynamics=cfg[DYNAMICS])
+                    # begin simulation
+                    result = run_kmc(cfg[RXN_RATES], initial_state, initial_events, n_max=cfg[MAX_MONOS],
+                                     t_max=cfg[SIM_TIME], sg_ratio=sg_ratio, dynamics=cfg[DYNAMICS])
 
-                if cfg[DYNAMICS]:
-                    last_adj = result[ADJ_MATRIX][-1]
-                    last_mono_list = result[MONO_LIST][-1]
-                else:
-                    last_adj = result[ADJ_MATRIX]
-                    last_mono_list = result[MONO_LIST]
+                    if cfg[DYNAMICS]:
+                        last_adj = result[ADJ_MATRIX][-1]
+                        last_mono_list = result[MONO_LIST][-1]
+                    else:
+                        last_adj = result[ADJ_MATRIX]
+                        last_mono_list = result[MONO_LIST]
 
-                # save for potential plotting
-                sg_adjs.append(last_adj)
+                    # save for potential plotting
+                    sg_adjs.append(last_adj)
 
-                # show results
-                summary = analyze_adj_matrix(last_adj)
-                adj_analysis_to_stdout(summary)
+                    # show results
+                    summary = analyze_adj_matrix(last_adj)
+                    adj_analysis_to_stdout(summary)
 
-                # Outputs
-                produce_output(last_adj, last_mono_list, cfg)
+                    # Outputs
+                    produce_output(last_adj, last_mono_list, cfg)
 
     except (InvalidDataError, KeyError) as e:
         warning(e)

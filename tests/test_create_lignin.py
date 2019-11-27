@@ -391,7 +391,7 @@ class TestCreateLigninNormalUse(unittest.TestCase):
         with capture_stdout(main, test_input) as output:
             self.assertTrue(good_smiles in output)
 
-    def testPSFGenOptions(self):
+    def testTCLGenOptions(self):
         try:
             test_input = ["-r", "8", "-i", "4", "-m", "4", "-f", "tcl", "-d", SUB_DATA_DIR,
                           "--chain_id", "1", "--psf_fname", "birch", "--toppar_dir", "", "-a", "1.0"]

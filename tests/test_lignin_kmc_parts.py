@@ -17,7 +17,7 @@ from ligninkmc.create_lignin import (DEF_TEMP, calc_rates, create_initial_monome
 from ligninkmc.kmc_common import (Event, Monomer, C5O4, OX, C5C5, B5, BB, BO4, AO4, B1, DEF_RXN_RATES,
                                   MON_OLI, MONOMER, GROW, TIME, MONO_LIST, ADJ_MATRIX, CHAIN_LEN, BONDS,
                                   RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_BARRIER_KCAL_MOL, MAX_NUM_DECIMAL)
-from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_psfgen, find_fragments, fragment_size, break_bond_type,
+from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_tcl, find_fragments, fragment_size, break_bond_type,
                                      analyze_adj_matrix, count_oligomer_yields, count_bonds)
 
 
@@ -37,10 +37,10 @@ GOOD_C_LIGNIN_MOL_OUT = os.path.join(SUB_DATA_DIR, 'c_lignin_molfile_good.txt')
 TCL_FNAME = "psfgen.tcl"
 TCL_FILE_LOC = os.path.join(SUB_DATA_DIR, TCL_FNAME)
 GOOD_TCL_OUT = os.path.join(SUB_DATA_DIR, "good_psfgen.tcl")
-GOOD_TCL_C_LIGNIN_OUT = os.path.join(SUB_DATA_DIR, "good_psfgen_c_lignin.tcl")
-GOOD_TCL_SHORT_SIM_OUT = os.path.join(SUB_DATA_DIR, "good_psfgen_short_sim.tcl")
-GOOD_TCL_NO_GROW_OUT = os.path.join(SUB_DATA_DIR, "good_psfgen_no_grow.tcl")
-GOOD_TCL_SHORT = os.path.join(SUB_DATA_DIR, "good_short_psfgen.tcl")
+GOOD_TCL_C_LIGNIN_OUT = os.path.join(SUB_DATA_DIR, "good_c_lignin.tcl")
+GOOD_TCL_SHORT_SIM_OUT = os.path.join(SUB_DATA_DIR, "good_short_sim.tcl")
+GOOD_TCL_NO_GROW_OUT = os.path.join(SUB_DATA_DIR, "good_no_grow.tcl")
+GOOD_TCL_SHORT = os.path.join(SUB_DATA_DIR, "good_short.tcl")
 
 # Data #
 SHORT_TIME = 0.00001
@@ -557,18 +557,18 @@ class TestVisualization(unittest.TestCase):
             silent_remove(TEST_PNG, disable=DISABLE_REMOVE)
             pass
 
-    def testMakePSFGEN(self):
+    def testMakeTCL(self):
         try:
             silent_remove(TCL_FILE_LOC)
             result = create_sample_kmc_result()
-            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L",
-                       toppar_dir='toppar', out_dir=SUB_DATA_DIR)
+            gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L",
+                    toppar_dir='toppar', out_dir=SUB_DATA_DIR)
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_OUT))
         finally:
             silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
             pass
 
-    def testMakePSFGENCLignin(self):
+    def testMakeTCLCLignin(self):
         # Only adds 3 lines to coverage... oh well! At least it's quick.
         try:
             seed = 1
@@ -577,10 +577,9 @@ class TestVisualization(unittest.TestCase):
             result = create_sample_kmc_result_c_lignin(num_monos=monos, max_monos=monos*2, seed=seed)
             good_last_time = 0.0034410593070561706
             self.assertAlmostEqual(result[TIME][-1], good_last_time)
-            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", toppar_dir=None,
-                       out_dir=SUB_DATA_DIR)
-            # TODO: test tcl after psf_gen updates
-            # self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_C_LIGNIN_OUT))
+            gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", toppar_dir=None,
+                    out_dir=SUB_DATA_DIR)
+            self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_C_LIGNIN_OUT))
         finally:
             silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
             pass
@@ -640,7 +639,7 @@ class TestVisualization(unittest.TestCase):
             MolToFile(mol, TEST_PNG, size=(2000, 1200))
             self.assertTrue(os.path.isfile(TEST_PNG))
             # If desired, also check generated psfgen (may not help coverage... to be seen...)
-            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", out_dir=SUB_DATA_DIR)
+            gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", out_dir=SUB_DATA_DIR)
             # If kept, create and check new "good" file
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
         except InvalidDataError as e:
@@ -794,7 +793,7 @@ class TestVisualization(unittest.TestCase):
 
     def testNoGrowth(self):
         # Here, all the monomers are available at the beginning of the simulation
-        # Increases coverage of gen_psfgen
+        # Increases coverage of gen_tcl
         try:
             # minimize random calls by providing set list of monomer types
             initial_mono_type_list = [1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1,
@@ -815,13 +814,13 @@ class TestVisualization(unittest.TestCase):
             self.assertAlmostEqual(result[TIME][-1], 1.295926885239862)
             self.assertTrue(len(result[MONO_LIST]) == num_monos)
             # the function we want to test here is below
-            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", out_dir=SUB_DATA_DIR)
+            gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", out_dir=SUB_DATA_DIR)
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
         finally:
             silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
             pass
 
-    def testPSFGenTruncateSegname(self):
+    def testTCLTruncateSegname(self):
         # Tests providing a chain_id that is longer than one character
         try:
             # easier to run_kmc to create monomer_list than recreate it here (adj easier) so doing so
@@ -837,7 +836,7 @@ class TestVisualization(unittest.TestCase):
             self.assertAlmostEqual(result[TIME][-1], 0.000715435221919298)
             self.assertTrue(len(result[MONO_LIST]) == num_monos)
             # the function we want to test here is below
-            with capture_stderr(gen_psfgen, result[ADJ_MATRIX], result[MONO_LIST], chain_id="lignin",
+            with capture_stderr(gen_tcl, result[ADJ_MATRIX], result[MONO_LIST], chain_id="lignin",
                                 out_dir=SUB_DATA_DIR) as output:
                 self.assertTrue("should be one character" in output)
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_SHORT))
@@ -845,10 +844,10 @@ class TestVisualization(unittest.TestCase):
             silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
             pass
 
-    def testPSFGenEmptySegname(self):
+    def testTCLGenEmptySegname(self):
         # tcl_fname="psfgen.tcl", psf_fname='lignin', chain_id="L", toppar_dir="toppar/"
         # Here, all the monomers are available at the beginning of the simulation
-        # Increases coverage of gen_psfgen
+        # Increases coverage of gen_tcl
         try:
             # easier to run_kmc to create monomer_list than recreate it here (adj easier) so doing so
             # minimize random calls by providing set list of monomer types
@@ -863,7 +862,7 @@ class TestVisualization(unittest.TestCase):
             self.assertAlmostEqual(result[TIME][-1], 0.000715435221919298)
             self.assertTrue(len(result[MONO_LIST]) == num_monos)
             # the function we want to test here is below
-            with capture_stderr(gen_psfgen, result[ADJ_MATRIX], result[MONO_LIST], chain_id=" ",
+            with capture_stderr(gen_tcl, result[ADJ_MATRIX], result[MONO_LIST], chain_id=" ",
                                 out_dir=SUB_DATA_DIR) as output:
                 self.assertTrue("should be one character" in output)
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_SHORT))

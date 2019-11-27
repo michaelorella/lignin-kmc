@@ -74,81 +74,75 @@ def main(argv=None):
 
     try:
         # tests at the beginning to catch errors early
+        for sg_ratio in cfg[SG_RATIOS]:
+            num_monos = []
+            num_oligs = []
+            adj_repeats = []
 
-        for add_rate in cfg[ADD_RATES]:
-            sg_adjs = []
-            add_rate_str = f'{add_rate:.{3}g}'.replace("+", "").replace(".", "-")
-            if cfg[RXN_RATES] == MANUSCRIPT_RATES:
-                add_rate_str += "_e"
-            for sg_ratio in cfg[SG_RATIOS]:
-                num_monos = []
-                num_oligs = []
-                adj_repeats = []
+            for _ in range(cfg[NUM_REPEATS]):
+                if cfg[RANDOM_SEED]:
+                    np.random.seed(cfg[RANDOM_SEED])
+                    monomer_draw = np.around(np.random.rand(cfg[INI_MONOS]), MAX_NUM_DECIMAL)
+                else:
+                    monomer_draw = np.random.rand(cfg[INI_MONOS])
+                initial_monomers = create_initial_monomers(sg_ratio, monomer_draw)
+                initial_events = create_initial_events(initial_monomers, cfg[RXN_RATES])
+                initial_state = create_initial_state(initial_events, initial_monomers)
+                if cfg[MAX_MONOS] > cfg[INI_MONOS]:
+                    initial_events.append(Event(GROW, [], rate=add_rate))
+                elif cfg[MAX_MONOS] < cfg[INI_MONOS]:
+                    warning(f"The specified {MAX_MONOS} ({cfg[MAX_MONOS]}) is less than the specified {INI_MONOS} "
+                            f"({cfg[INI_MONOS]}). \n          The program will proceed with the initial "
+                            f"number of monomers with no addition of monomers.")
 
-                for _ in range(cfg[NUM_REPEATS]):
-                    if cfg[RANDOM_SEED]:
-                        np.random.seed(cfg[RANDOM_SEED])
-                        monomer_draw = np.around(np.random.rand(cfg[INI_MONOS]), MAX_NUM_DECIMAL)
-                    else:
-                        monomer_draw = np.random.rand(cfg[INI_MONOS])
-                    initial_monomers = create_initial_monomers(sg_ratio, monomer_draw)
-                    initial_events = create_initial_events(initial_monomers, cfg[RXN_RATES])
-                    initial_state = create_initial_state(initial_events, initial_monomers)
-                    if cfg[MAX_MONOS] > cfg[INI_MONOS]:
-                        initial_events.append(Event(GROW, [], rate=add_rate))
-                    elif cfg[MAX_MONOS] < cfg[INI_MONOS]:
-                        warning(f"The specified {MAX_MONOS} ({cfg[MAX_MONOS]}) is less than the specified {INI_MONOS} "
-                                f"({cfg[INI_MONOS]}). \n          The program will proceed with the initial "
-                                f"number of monomers with no addition of monomers.")
-
-                    # todo: delete
-                    print(cfg[RXN_RATES][BO4])
-                    result = run_kmc(cfg[RXN_RATES], initial_state, initial_events,
-                                     n_max=cfg[MAX_MONOS], sg_ratio=sg_ratio, t_max=cfg[SIM_TIME],
-                                     dynamics=args.dynamics, random_seed=cfg[RANDOM_SEED])
-                    adj_list = result[ADJ_MATRIX]
-                    if args.dynamics:
-                        # following will be used to analyze final bonds only
-                        adj_repeats.append(adj_list[-1])
-                        # only need num monos, num oligs, but we'll get everything
-                        (bond_type_dict, olig_monos_dict, sum_monos_list, olig_count_dict,
-                         sum_count_list) = get_bond_type_v_time_dict(adj_list, sum_len_larger_than=2)
-
-                        num_monos.append(olig_count_dict[1])
-                        num_oligs.append(sum_count_list)
-                    else:
-                        adj_repeats.append(adj_list)
-
-                sg_adjs.append(adj_repeats)
+                # todo: delete
+                print(cfg[RXN_RATES][BO4])
+                result = run_kmc(cfg[RXN_RATES], initial_state, initial_events,
+                                 n_max=cfg[MAX_MONOS], sg_ratio=sg_ratio, t_max=cfg[SIM_TIME],
+                                 dynamics=args.dynamics, random_seed=cfg[RANDOM_SEED])
+                adj_list = result[ADJ_MATRIX]
                 if args.dynamics:
-                    # Arrays may be different lengths, so find shortest array
-                    min_len = len(num_monos[0])
-                    for mono_list in num_monos[1:]:
-                        if len(mono_list) < min_len:
-                            min_len = len(mono_list)
-                    # make lists of lists into np array
-                    sg_num_monos = np.asarray([np.array(num_list[:min_len]) for num_list in num_monos])
-                    # could save, but I'm just going to print
-                    av_num_monos = np.mean(sg_num_monos, axis=0)
-                    std_num_monos = np.std(sg_num_monos, axis=0)
+                    # following will be used to analyze final bonds only
+                    adj_repeats.append(adj_list[-1])
+                    # only need num monos, num oligs, but we'll get everything
+                    (bond_type_dict, olig_monos_dict, sum_monos_list, olig_count_dict,
+                     sum_count_list) = get_bond_type_v_time_dict(adj_list, sum_len_larger_than=2)
 
-                    sg_num_oligs = np.asarray([np.array(num_list[:min_len]) for num_list in num_oligs])
-                    av_num_oligs = np.mean(sg_num_oligs, axis=0)
-                    std_num_oligs = np.std(sg_num_oligs, axis=0)
+                    num_monos.append(olig_count_dict[1])
+                    num_oligs.append(sum_count_list)
+                else:
+                    adj_repeats.append(adj_list)
 
-                    timesteps = list(range(min_len))
-                    title = f"S:G Ratio {sg_ratio}, Add rate {add_rate_str} monomer/s"
-                    sg_str = f'{sg_ratio:.{3}g}'.replace("+", "").replace(".", "-")
-                    fname = create_out_fname(f'mono_v_olig_{sg_str}_{add_rate_str}', base_dir=cfg[OUT_DIR], ext='.png')
-                    plot_mono_olig_v_time(timesteps, av_num_monos, std_num_monos, av_num_oligs,
-                                          std_num_oligs, title, fname)
+            sg_adjs.append(adj_repeats)
+            if args.dynamics:
+                # Arrays may be different lengths, so find shortest array
+                min_len = len(num_monos[0])
+                for mono_list in num_monos[1:]:
+                    if len(mono_list) < min_len:
+                        min_len = len(mono_list)
+                # make lists of lists into np array
+                sg_num_monos = np.asarray([np.array(num_list[:min_len]) for num_list in num_monos])
+                # could save, but I'm just going to print
+                av_num_monos = np.mean(sg_num_monos, axis=0)
+                std_num_monos = np.std(sg_num_monos, axis=0)
 
-            all_avg_bonds, all_std_bonds = get_avg_percent_bonds(BOND_TYPE_LIST, len(cfg[SG_RATIOS]), sg_adjs,
-                                                                 cfg[NUM_REPEATS])
+                sg_num_oligs = np.asarray([np.array(num_list[:min_len]) for num_list in num_oligs])
+                av_num_oligs = np.mean(sg_num_oligs, axis=0)
+                std_num_oligs = np.std(sg_num_oligs, axis=0)
 
-            title = f"Add rate {add_rate_str} monomer/second"
-            fname = create_out_fname(f'bond_v_add_rate_{add_rate_str}', base_dir=cfg[OUT_DIR], ext='.png')
-            plot_bond_error_bars(cfg[SG_RATIOS], all_avg_bonds, all_std_bonds, title, fname)
+                timesteps = list(range(min_len))
+                title = f"S:G Ratio {sg_ratio}, Add rate {add_rate_str} monomer/s"
+                sg_str = f'{sg_ratio:.{3}g}'.replace("+", "").replace(".", "-")
+                fname = create_out_fname(f'mono_v_olig_{sg_str}_{add_rate_str}', base_dir=cfg[OUT_DIR], ext='.png')
+                plot_mono_olig_v_time(timesteps, av_num_monos, std_num_monos, av_num_oligs,
+                                      std_num_oligs, title, fname)
+
+        all_avg_bonds, all_std_bonds = get_avg_percent_bonds(BOND_TYPE_LIST, len(cfg[SG_RATIOS]), sg_adjs,
+                                                             cfg[NUM_REPEATS])
+
+        title = f"Add rate {add_rate_str} monomer/second"
+        fname = create_out_fname(f'bond_v_add_rate_{add_rate_str}', base_dir=cfg[OUT_DIR], ext='.png')
+        plot_bond_error_bars(cfg[SG_RATIOS], all_avg_bonds, all_std_bonds, title, fname)
 
     except (InvalidDataError, KeyError) as e:
         warning(e)
