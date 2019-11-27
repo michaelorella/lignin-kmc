@@ -714,7 +714,7 @@ class TestVisualization(unittest.TestCase):
         pct_s = sg_ratio / (1 + sg_ratio)
 
         # minimize random calls
-        monomer_type_list = [1, 0]
+        monomer_type_list = [S, G]
         initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(monomer_type_list)]
         max_monos = 32
         num_repeats = 4

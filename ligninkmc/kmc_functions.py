@@ -16,7 +16,7 @@ from rdkit.Chem.Draw.MolDrawing import DrawingOptions
 from common_wrangler.common import (InvalidDataError, create_out_fname, warning, round_sig_figs)
 from ligninkmc.kmc_common import (Event, Monomer, AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q, GROW, TIME, OLIGOMER,
                                   MONOMER, AFFECTED, ADJ_MATRIX, MONO_LIST, MAX_NUM_DECIMAL, ATOMS, BONDS,
-                                  G, S, C, S4, G4, G7, B1_ALT, CHAIN_LEN, CHAIN_MONOS, CHAIN_BRANCHES,
+                                  G, S, H, C, S4, G4, G7, B1_ALT, CHAIN_LEN, CHAIN_MONOS, CHAIN_BRANCHES,
                                   CHAIN_BRANCH_COEFF, RCF_BONDS, RCF_YIELDS, RCF_MONOS, RCF_BRANCHES, RCF_BRANCH_COEFF,
                                   DEF_TCL_FNAME, DEF_CHAIN_ID, DEF_PSF_FNAME, DEF_TOPPAR, INT_TO_TYPE_DICT)
 
@@ -1149,7 +1149,7 @@ def gen_tcl(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FNAME
         else:
             chain_id = DEF_CHAIN_ID
         warning(f"ChainID's for PDBs should be one character. Will use: '{chain_id}' as the chainID.")
-    resnames = {0: 'G', 1: 'S', 2: 'C'}
+    residue_letter = {G: 'G', S: 'S', H: 'H', C: 'C'}
     f_out = create_out_fname(tcl_fname, base_dir=out_dir)
     # add a mac/linux dir separator if there isn't already a directory separator, and if there is to be a subdirectory
     #   (not None or "")
@@ -1165,7 +1165,7 @@ def gen_tcl(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FNAME
                 f"segment {chain_id} {{\n")
         for monomer in monomers:
             resid = monomer.identity + 1
-            res_name = resnames[monomer.type]
+            res_name = residue_letter[monomer.type]
             f.write(f"    residue {resid} {res_name}\n")
         f.write(f"}}\n")
 
@@ -1186,13 +1186,13 @@ def gen_tcl(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FNAME
                 write_patch(f, "BO4", chain_id, psf_patch_resid1, psf_patch_resid2)
             elif bond_loc1 == 4 and bond_loc2 == 8:  # Reverse beta-O-4 linkage.
                 write_patch(f, "BO4", chain_id, psf_patch_resid2, psf_patch_resid1)
-            elif bond_loc1 == 8 and bond_loc2 == 5 and monomers[bond_matrix_tuple[1]].type == 0:  # B5G linkage
+            elif bond_loc1 == 8 and bond_loc2 == 5 and monomers[bond_matrix_tuple[1]].type == G:  # B5G linkage
                 write_patch(f, "B5G", chain_id, psf_patch_resid1, psf_patch_resid2)
-            elif bond_loc1 == 5 and bond_loc2 == 8 and monomers[bond_matrix_tuple[0]].type == 0:  # Reverse B5G linkage
+            elif bond_loc1 == 5 and bond_loc2 == 8 and monomers[bond_matrix_tuple[0]].type == G:  # Reverse B5G linkage
                 write_patch(f, "B5G", chain_id, psf_patch_resid2, psf_patch_resid1)
-            elif bond_loc1 == 8 and bond_loc2 == 5 and monomers[bond_matrix_tuple[1]].type == 2:  # B5C linkage
+            elif bond_loc1 == 8 and bond_loc2 == 5 and monomers[bond_matrix_tuple[1]].type == C:  # B5C linkage
                 write_patch(f, "B5C", chain_id, psf_patch_resid1, psf_patch_resid2)
-            elif bond_loc1 == 5 and bond_loc2 == 8 and monomers[bond_matrix_tuple[0]].type == 2:  # Reverse B5C linkage
+            elif bond_loc1 == 5 and bond_loc2 == 8 and monomers[bond_matrix_tuple[0]].type == C:  # Reverse B5C linkage
                 write_patch(f, "B5C", chain_id, psf_patch_resid2, psf_patch_resid1)
             elif bond_loc1 == 5 and bond_loc2 == 5:  # 55 linkage
                 write_patch(f, "B5C", chain_id, psf_patch_resid2, psf_patch_resid1)
