@@ -742,7 +742,7 @@ def main(argv=None):
                     ini_num_monos = cfg[INI_MONOS]
                     if cfg[RANDOM_SEED]:
                         # we don't want the same random seed for every iteration
-                        np.random.seed(cfg[RANDOM_SEED] + int(sg_ratio * 10) + rep)
+                        np.random.seed(cfg[RANDOM_SEED] + int(add_rate/100 + sg_ratio * 10) + rep)
                         monomer_draw = np.around(np.random.rand(ini_num_monos), MAX_NUM_DECIMAL)
                     else:
                         monomer_draw = np.random.rand(ini_num_monos)
@@ -789,7 +789,7 @@ def main(argv=None):
                     produce_output(last_adj, last_mono_list, cfg)
 
                     # save for potential plotting
-                    sg_adjs.append(last_adj)
+                sg_adjs.append(adj_repeats)
 
                 # Now that all repeats done, create plots for dynamics, if applicable
                 if cfg[DYNAMICS]:

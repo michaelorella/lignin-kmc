@@ -39,6 +39,13 @@ TEST_SMI_OUT_TEMP_DIR = os.path.join(TEMP_DIR, TEST_SMI_BASENAME)
 BOND_V_STEP_PNG = os.path.join(MAIN_DIR, "bond_dist_v_step_1_1e06.png")
 MONO_V_STEP_PNG = os.path.join(MAIN_DIR, "mono_olig_v_step_1_1e06.png")
 
+PLOT_BOND_V_SG_PNG = os.path.join(PLOT_DIR, "bond_dist_v_sg_1e06_m.png")
+PLOT_BOND_V_STEP_PNG = os.path.join(PLOT_DIR, "bond_dist_v_step_1_1e06_m.png")
+PLOT_MONO_V_STEP_PNG = os.path.join(PLOT_DIR, "mono_olig_v_step_1_1e06_m.png")
+
+PLOT_BOND_V_SG6_PNG = os.path.join(PLOT_DIR, "bond_dist_v_sg_1e06.png")
+PLOT_BOND_V_SG8_PNG = os.path.join(PLOT_DIR, "bond_dist_v_sg_1e08.png")
+
 
 # Data #
 
@@ -405,10 +412,10 @@ class TestDynamics(unittest.TestCase):
         try:
             for fname in expected_files:
                 silent_remove(fname)
-            test_input = ["-r", "10", "-i", "3", "-m", "20", "-dy", "-a", "1e6"]
+            test_input = ["-r", "10", "-i", "3", "-m", "15", "-dy", "-a", "1e6"]
             # main(test_input)
             with capture_stdout(main, test_input) as output:
-                self.assertTrue("1 oligomer(s) of chain length 20, with branching coefficient 0.15" in output)
+                self.assertTrue("BO4:    7     BB:    4     B5:    0     B1:    0    5O4:    3" in output)
             for fname in expected_files:
                 self.assertTrue(os.path.isfile(fname))
         finally:
@@ -425,8 +432,8 @@ class TestDynamics(unittest.TestCase):
             # main(test_input)
             # testing a piece of output from each of 2 repeats
             with capture_stdout(main, test_input) as output:
-                self.assertTrue("BB:    3     B5:    4" in output)
-                self.assertTrue("BB:    5     B5:    2" in output)
+                self.assertTrue("BO4:    7     BB:    6     B5:    1     B1:    0    5O4:    5" in output)
+                self.assertTrue("BO4:    6     BB:    4     B5:    3     B1:    0    5O4:    6" in output)
             for fname in expected_files:
                 self.assertTrue(os.path.isfile(fname))
         finally:
@@ -443,10 +450,10 @@ class TestDynamics(unittest.TestCase):
             test_input = ["-r", "10", "-i", "3", "-m", "20", "-dy", "-a", "1e6", "-n", "4"]
             # main(test_input)
             with capture_stdout(main, test_input) as output:
-                self.assertTrue("BO4:    7     BB:    3     B5:    4     B1:    0    5O4:    5" in output)
-                self.assertTrue("BO4:    7     BB:    5     B5:    2     B1:    0    5O4:    5" in output)
-                self.assertTrue("BO4:    8     BB:    3     B5:    3     B1:    0    5O4:    5" in output)
-                self.assertTrue("BO4:    6     BB:    4     B5:    3     B1:    0    5O4:    5" in output)
+                self.assertTrue("BO4:    7     BB:    6     B5:    1     B1:    0    5O4:    5" in output)
+                self.assertTrue("BO4:    6     BB:    4     B5:    3     B1:    0    5O4:    6" in output)
+                self.assertTrue("BO4:    8     BB:    4     B5:    2     B1:    0    5O4:    5" in output)
+                self.assertTrue("BO4:    6     BB:    6     B5:    1     B1:    0    5O4:    4" in output)
             for fname in expected_files:
                 self.assertTrue(os.path.isfile(fname))
         finally:
@@ -455,76 +462,45 @@ class TestDynamics(unittest.TestCase):
             pass
 
     def testDynPlot1(self):
-        # also has multiple sg_ratio
-        expected_files = [BOND_V_STEP_PNG, MONO_V_STEP_PNG]
+        expected_files = [PLOT_BOND_V_SG_PNG, PLOT_BOND_V_STEP_PNG, PLOT_MONO_V_STEP_PNG]
         try:
             for fname in expected_files:
                 silent_remove(fname)
-            test_input = ["-r", "10", "-i", "3", "-m", "20", "-dy", "-a", "1e6", "-p", "-e", "-d", PLOT_DIR]
-            main(test_input)
-            # with capture_stdout(main, test_input) as output:
-            #     self.assertTrue("BO4:    7     BB:    3     B5:    4     B1:    0    5O4:    5" in output)
-            #     self.assertTrue("BO4:    7     BB:    5     B5:    2     B1:    0    5O4:    5" in output)
-            #     self.assertTrue("BO4:    8     BB:    3     B5:    3     B1:    0    5O4:    5" in output)
-            #     self.assertTrue("BO4:    6     BB:    4     B5:    3     B1:    0    5O4:    5" in output)
-            # for fname in expected_files:
-            #     self.assertTrue(os.path.isfile(fname))
+            test_input = ["-r", "10", "-i", "6", "-m", "18", "-a", "1e6", "-e", "-dy", "-p", "-d", PLOT_DIR]
+            # main(test_input)
+            with capture_stdout(main, test_input) as output:
+                self.assertTrue("1 oligomer(s) of chain length 16, with branching coefficient 0.125" in output)
+            for fname in expected_files:
+                self.assertTrue(os.path.isfile(fname))
         finally:
             for fname in expected_files:
                 silent_remove(fname, disable=DISABLE_REMOVE)
             pass
 
-#     def testSmallNumMonosNoDynamics(self):
-#         try:
-#             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
-#                 silent_remove(fname)
-#             test_input = ["-r", "10", "-m", "20"]
-#             main(test_input)
-#             self.assertTrue(os.path.isfile(DEF_BOND_PNG))
-#             self.assertFalse(os.path.isfile(DEF_MONO_PNG))
-#         finally:
-#             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
-#                 silent_remove(fname, disable=DISABLE_REMOVE)
-#             pass
-#
-#     def testMultOptions(self):
-#         expected_pngs = [BOND_OPT_1_PNG, BOND_OPT_2_PNG,
-#                          MONO_OPT_1_PNG, MONO_OPT_2_PNG, MONO_OPT_3_PNG, MONO_OPT_4_PNG]
-#         try:
-#             for fname in expected_pngs:
-#                 silent_remove(fname)
-#             test_input = ["-r", "10", "-m", "20", "-a", "1e8, 1e4", "-sg", "0.25, 3", "-d", SUB_DATA_DIR, "-dy"]
-#             main(test_input)
-#             for fname in expected_pngs:
-#                 self.assertTrue(os.path.isfile(fname))
-#         finally:
-#             for fname in expected_pngs:
-#                 silent_remove(fname, disable=DISABLE_REMOVE)
-#             pass
-#
-#     # Do not include the following in test coverage--just a quick way to run this for its production output
+    def testSGPlot3(self):
+        # also has multiple sg_ratio; smoke test only (that files are created, but not testing content
+        expected_files = [PLOT_BOND_V_SG6_PNG, PLOT_BOND_V_SG8_PNG]
+        try:
+            for fname in expected_files:
+                silent_remove(fname)
+            test_input = ["-r", "6", "-i", "8", "-m", "16", "-a", "1e8, 1e6", "-sg", "5,10",
+                          "-n", "3", "-p", "-d", PLOT_DIR]
+            main(test_input)
+            for fname in expected_files:
+                self.assertTrue(os.path.isfile(fname))
+        finally:
+            for fname in expected_files:
+                silent_remove(fname, disable=DISABLE_REMOVE)
+            pass
+
+#     # Do not include the following in test coverage--just an easy way to run this for its production output
 #     def testProduction(self):
 #         new_out_dir = os.path.join(DATA_DIR, 'new_plots')
 #
 #         # more efficient to just look at "1e8, 1e6, 1e4" and "1,  3, 5, 10"
 #         input_base = ["-i", "5", "-m", "200", "-a", "1e8, 1e6, 1e4, 1e2, 1",
-#                       # "-sg", "0.1, 1, 10", "-d", new_out_dir]
-#                       "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10", "-d", new_out_dir]
-#         input_1 = input_base
-#         input_2 = input_base + ["-e"]
-#
-#         for prod_input in [input_1, input_2]:
-#             main(prod_input)
-#
-#     def testProduction2(self):
-#         new_out_dir = os.path.join(DATA_DIR, 'new_plots')
-#
-#         # Is the S-S oligomer-oligomer bond actually being created????
-#
-#         # more efficient to just look at "1e8, 1e6, 1e4" and "1,  3, 5, 10"
-#         input_base = ["-i", "5", "-m", "200", "-a", "1e8, 1e6",
-#                       # "-sg", "0.1, 1, 10", "-d", new_out_dir]
-#                       "-sg", "5, 10", "-d", new_out_dir]
+#                       "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10",
+#                           "-n", "5", "-p", "-d", new_out_dir]
 #         input_1 = input_base
 #         input_2 = input_base + ["-e"]
 #
