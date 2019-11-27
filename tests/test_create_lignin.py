@@ -217,28 +217,12 @@ class TestCreateLigninNoOutput(unittest.TestCase):
             self.assertTrue("positive" in output)
 
 
-# class TestWarnings(unittest.TestCase):
-#     def testFewerMaxThanMinMonos(self):
-#         try:
-#             test_input = ["-r", "10", "-i", "20", "-m", "10", "-dy"]
-#             # main(test_input)
-#             with capture_stderr(main, test_input) as output:
-#                 self.assertTrue("initial" in output)
-#         finally:
-#             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
-#                 silent_remove(fname, disable=DISABLE_REMOVE)
-#             pass
-#
-#     def testFewerThanMinRepeats(self):
-#         try:
-#             test_input = ["-r", "10", "-n", "1", "-m", "10", "-dy"]
-#             # main(test_input)
-#             with capture_stderr(main, test_input) as output:
-#                 self.assertTrue("at least 3" in output)
-#         finally:
-#             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
-#                 silent_remove(fname, disable=DISABLE_REMOVE)
-#             pass
+class TestMoreWarnings(unittest.TestCase):
+    def testFewerMaxThanMinMonos(self):
+        test_input = ["-r", "10", "-i", "20", "-m", "10", ]
+        # main(test_input)
+        with capture_stderr(main, test_input) as output:
+            self.assertTrue("initial" in output)
 
 
 class TestCreateLigninNormalUse(unittest.TestCase):
