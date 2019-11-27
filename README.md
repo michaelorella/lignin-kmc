@@ -23,12 +23,12 @@ The following sections contain information on how to use lignin-KMC.
 
 ## Framework
 This project runs on Python ≥3.6 with the following packages installed:
+- rdKit (>= 2018.03.4.0; must be installed via conda; see below)
+- common-wrangler (common_wrangler >= 0.2.4)
 - SciPy
 - NumPy
 - MatPlotLib
 - JobLib
-- rdKit (must be installed via conda; see below)
-- common-wrangler
 
 ## Installation
 
@@ -72,7 +72,6 @@ This will use all default values (see below) and output which will look somethin
     
     SMILES representation: 
      COc1cc(C(O)C(CO)Oc2c(OC)cc(C3OCC4C(c5cc(OC)c(OC(CO)C(O)c6cc(OC)c(OC(CO)C(O)c7cc(OC)c([O])c(OC)c7)c(-c7cc(C(O)C(CO)Oc8c(OC)cc(C(O)C(CO)Oc9c(OC)cc(C%10Oc%11c(OC)cc(/C=C/CO)cc%11C%10CO)cc9OC)cc8OC)cc(OC)c7OC(CO)C(O)c7cc(OC)c([O])c(OC)c7)c6)c(OC)c5)OCC34)cc2OC)ccc1[O] 
-
 
 
 Your output will differ as a pseudo-random number generator is used to model the stochastic nature of chemical reactions.
@@ -377,7 +376,7 @@ following points and be as detailed as possible:
 Pull requests are always welcome for suggestions to improve either the code or usability. Before submitting the pull 
 request, please ensure that your standalone code is working properly by both running the existing tests and adding 
 tests of any new functionality (at least 90% coverage). To run the existing tests, from the main directory, run `pytest`. 
-Currently (2019-11-19), test coverage is 98% for create_lignin.py, 100% for kmc_common.py, and 95% for kmc_functions.py.
+Currently (2019-11-27), test coverage is 98% for create_lignin.py, 100% for kmc_common.py, and 95% for kmc_functions.py.
 
 # License
 MIT © Michael Orella

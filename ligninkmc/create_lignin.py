@@ -152,6 +152,73 @@ def get_avg_percent_bonds(bond_list, num_opts, adj_lists, num_trials):
     return avg_bonds, std_bonds
 
 
+def create_bond_v_sg_plots(add_rate_str, cfg, sg_adjs):
+    all_avg_bonds, all_std_bonds = get_avg_percent_bonds(BOND_TYPE_LIST, len(cfg[SG_RATIOS]), sg_adjs,
+                                                         cfg[NUM_REPEATS])
+    title = f"Add rate {add_rate_str} monomer/s"
+    x_axis_label = 'SG Ratio'
+    y_axis_label = 'Bond Type Yield (%)'
+    fname = create_out_fname(f'bond_dist_v_sg_{add_rate_str}', base_dir=cfg[OUT_DIR], ext='.png')
+    plot_bond_error_bars(cfg[SG_RATIOS], all_avg_bonds, all_std_bonds, BOND_TYPE_LIST,
+                         x_axis_label, y_axis_label, title, fname)
+
+
+def create_dynamics_plots(add_rate_str, bond_types, cfg, num_monos, num_oligs, sg_ratio):
+    # Starting with num mon & olig vs timestep:
+    len_y_val_key_list = [MONOMERS, OLIGOMERS]
+    min_len = len(num_monos[0])
+    avg_bond_types = {}
+    std_bond_types = {}
+    if cfg[NUM_REPEATS] > 1:
+        # If there are multiple runs, arrays may be different lengths, so find shortest array
+        min_len = len(num_monos[0])
+        for mono_list in num_monos[1:]:
+            if len(mono_list) < min_len:
+                min_len = len(mono_list)
+        # make lists of lists into np array
+        sg_num_monos = np.asarray([np.array(num_list[:min_len]) for num_list in num_monos])
+        # could save; for now, use to make images
+        av_num_monos = np.mean(sg_num_monos, axis=0)
+
+        sg_num_oligs = np.asarray([np.array(num_list[:min_len]) for num_list in num_oligs])
+        av_num_oligs = np.mean(sg_num_oligs, axis=0)
+
+        std_num_monos = np.std(sg_num_monos, axis=0)
+        std_num_oligs = np.std(sg_num_oligs, axis=0)
+
+        len_y_axis_val_dicts = {MONOMERS: av_num_monos, OLIGOMERS: av_num_oligs}
+        len_y_axis_std_dev_dicts = {MONOMERS: std_num_monos, OLIGOMERS: std_num_oligs}
+
+        for bond_type in BOND_TYPE_LIST:
+            sg_bond_dist = np.asarray([np.array(bond_list[:min_len]) for
+                                       bond_list in bond_types[bond_type]])
+            avg_bond_types[bond_type] = np.mean(sg_bond_dist, axis=0)
+            std_bond_types[bond_type] = np.std(sg_bond_dist, axis=0)
+
+    else:
+        len_y_axis_val_dicts = {MONOMERS: num_monos[0], OLIGOMERS: num_oligs[0]}
+        len_y_axis_std_dev_dicts = {MONOMERS: None, OLIGOMERS: None}
+
+        for bond_type in BOND_TYPE_LIST:
+            avg_bond_types[bond_type] = bond_types[bond_type]
+            std_bond_types[bond_type] = None
+    timesteps = list(range(min_len))
+    title = f"S:G Ratio {sg_ratio}, Add rate {add_rate_str} monomer/s"
+    sg_str = f'{sg_ratio:.{3}g}'.replace("+", "").replace(".", "-")
+    fname = create_out_fname(f'mono_olig_v_step_{sg_str}_{add_rate_str}', base_dir=cfg[OUT_DIR],
+                             ext='.png')
+    x_axis_label = 'Time step'
+    y_axis_label = 'Number'
+    plot_bond_error_bars(timesteps, len_y_axis_val_dicts, len_y_axis_std_dev_dicts, len_y_val_key_list,
+                         x_axis_label, y_axis_label, title, fname)
+    fname = create_out_fname(f'bond_dist_v_step_{sg_str}_{add_rate_str}', base_dir=cfg[OUT_DIR],
+                             ext='.png')
+    x_axis_label = 'Time step'
+    y_axis_label = 'Number of Bonds'
+    plot_bond_error_bars(timesteps, avg_bond_types, std_bond_types, BOND_TYPE_LIST,
+                         x_axis_label, y_axis_label, title, fname)
+
+
 def adj_analysis_to_stdout(adj_results):
     """
     Describe the meaning of the summary dictionary
@@ -571,6 +638,29 @@ def produce_output(adj_matrix, mono_list, cfg):
             print(f"Wrote file: {fname}")
 
 
+def initiate_state(add_rate, cfg, rep, sg_ratio):
+    pct_s = sg_ratio / (1 + sg_ratio)
+    ini_num_monos = cfg[INI_MONOS]
+    if cfg[RANDOM_SEED]:
+        # we don't want the same random seed for every iteration
+        np.random.seed(cfg[RANDOM_SEED] + int(add_rate / 100 + sg_ratio * 10) + rep)
+        monomer_draw = np.around(np.random.rand(ini_num_monos), MAX_NUM_DECIMAL)
+    else:
+        monomer_draw = np.random.rand(ini_num_monos)
+    initial_monomers = create_initial_monomers(pct_s, monomer_draw)
+    # initial event must be oxidation to create reactive species; all monomers may be oxidized
+    initial_events = create_initial_events(initial_monomers, cfg[RXN_RATES])
+    # initial_monomers and initial_events are grouped into the initial state
+    initial_state = create_initial_state(initial_events, initial_monomers)
+    if cfg[MAX_MONOS] > cfg[INI_MONOS]:
+        initial_events.append(Event(GROW, [], rate=add_rate))
+    elif cfg[MAX_MONOS] < cfg[INI_MONOS]:
+        warning(f"The specified maximum number of monomers ({cfg[MAX_MONOS]}) is less than the "
+                f"specified initial number of monomers ({cfg[INI_MONOS]}). \n The program will "
+                f"proceed with the with the initial number of monomers with no addition of monomers.")
+    return initial_events, initial_state
+
+
 def validate_input(cfg):
     """
     Checking for errors at the beginning, so don't waste time starting calculations that will not be able to complete
@@ -737,28 +827,9 @@ def main(argv=None):
                 adj_repeats = []
 
                 for rep in range(cfg[NUM_REPEATS]):
-                    # decide on initial monomers, based on given sg_ratio
-                    pct_s = sg_ratio / (1 + sg_ratio)
-                    ini_num_monos = cfg[INI_MONOS]
-                    if cfg[RANDOM_SEED]:
-                        # we don't want the same random seed for every iteration
-                        np.random.seed(cfg[RANDOM_SEED] + int(add_rate/100 + sg_ratio * 10) + rep)
-                        monomer_draw = np.around(np.random.rand(ini_num_monos), MAX_NUM_DECIMAL)
-                    else:
-                        monomer_draw = np.random.rand(ini_num_monos)
-                    initial_monomers = create_initial_monomers(pct_s, monomer_draw)
 
-                    # initial event must be oxidation to create reactive species; all monomers may be oxidized
-                    initial_events = create_initial_events(initial_monomers, cfg[RXN_RATES])
-
-                    # initial_monomers and initial_events are grouped into the initial state
-                    initial_state = create_initial_state(initial_events, initial_monomers)
-                    if cfg[MAX_MONOS] > cfg[INI_MONOS]:
-                        initial_events.append(Event(GROW, [], rate=add_rate))
-                    elif cfg[MAX_MONOS] < cfg[INI_MONOS]:
-                        warning(f"The specified maximum number of monomers ({cfg[MAX_MONOS]}) is less than the "
-                                f"specified initial number of monomers ({cfg[INI_MONOS]}). \n The program will "
-                                f"proceed with the with the initial number of monomers with no addition of monomers.")
+                    # decide on initial monomers, based on given sg_ratio, and create initial oxidation events
+                    initial_events, initial_state = initiate_state(add_rate, cfg, rep, sg_ratio)
 
                     # begin simulation
                     result = run_kmc(cfg[RXN_RATES], initial_state, initial_events, n_max=cfg[MAX_MONOS],
@@ -794,71 +865,9 @@ def main(argv=None):
                 # Now that all repeats done, create plots for dynamics, if applicable
                 if cfg[DYNAMICS]:
                     # create plots of num mon & olig vs timestep, and % bond time v timestep
-                    # Starting with num mon & olig vs timestep:
-                    len_y_val_key_list = [MONOMERS, OLIGOMERS]
-                    min_len = len(num_monos[0])
-                    avg_bond_types = {}
-                    std_bond_types = {}
-                    if cfg[NUM_REPEATS] > 1:
-                        # If there are multiple runs, arrays may be different lengths, so find shortest array
-                        min_len = len(num_monos[0])
-                        for mono_list in num_monos[1:]:
-                            if len(mono_list) < min_len:
-                                min_len = len(mono_list)
-                        # make lists of lists into np array
-                        sg_num_monos = np.asarray([np.array(num_list[:min_len]) for num_list in num_monos])
-                        # could save; for now, use to make images
-                        av_num_monos = np.mean(sg_num_monos, axis=0)
-
-                        sg_num_oligs = np.asarray([np.array(num_list[:min_len]) for num_list in num_oligs])
-                        av_num_oligs = np.mean(sg_num_oligs, axis=0)
-
-                        std_num_monos = np.std(sg_num_monos, axis=0)
-                        std_num_oligs = np.std(sg_num_oligs, axis=0)
-
-                        len_y_axis_val_dicts = {MONOMERS: av_num_monos, OLIGOMERS: av_num_oligs}
-                        len_y_axis_std_dev_dicts = {MONOMERS: std_num_monos, OLIGOMERS: std_num_oligs}
-
-                        for bond_type in BOND_TYPE_LIST:
-                            sg_bond_dist = np.asarray([np.array(bond_list[:min_len]) for
-                                                       bond_list in bond_types[bond_type]])
-                            avg_bond_types[bond_type] = np.mean(sg_bond_dist, axis=0)
-                            std_bond_types[bond_type] = np.std(sg_bond_dist, axis=0)
-
-                    else:
-                        len_y_axis_val_dicts = {MONOMERS: num_monos[0], OLIGOMERS: num_oligs[0]}
-                        len_y_axis_std_dev_dicts = {MONOMERS: None, OLIGOMERS: None}
-
-                        for bond_type in BOND_TYPE_LIST:
-                            avg_bond_types[bond_type] = bond_types[bond_type]
-                            std_bond_types[bond_type] = None
-
-                    timesteps = list(range(min_len))
-                    title = f"S:G Ratio {sg_ratio}, Add rate {add_rate_str} monomer/s"
-                    sg_str = f'{sg_ratio:.{3}g}'.replace("+", "").replace(".", "-")
-                    fname = create_out_fname(f'mono_olig_v_step_{sg_str}_{add_rate_str}', base_dir=cfg[OUT_DIR],
-                                             ext='.png')
-                    x_axis_label = 'Time step'
-                    y_axis_label = 'Number'
-                    plot_bond_error_bars(timesteps, len_y_axis_val_dicts, len_y_axis_std_dev_dicts, len_y_val_key_list,
-                                         x_axis_label, y_axis_label, title, fname)
-
-                    fname = create_out_fname(f'bond_dist_v_step_{sg_str}_{add_rate_str}', base_dir=cfg[OUT_DIR],
-                                             ext='.png')
-                    x_axis_label = 'Time step'
-                    y_axis_label = 'Number of Bonds'
-                    plot_bond_error_bars(timesteps, avg_bond_types, std_bond_types, BOND_TYPE_LIST,
-                                         x_axis_label, y_axis_label, title, fname)
+                    create_dynamics_plots(add_rate_str, bond_types, cfg, num_monos, num_oligs, sg_ratio)
             if cfg[PLOT_BONDS]:
-                all_avg_bonds, all_std_bonds = get_avg_percent_bonds(BOND_TYPE_LIST, len(cfg[SG_RATIOS]), sg_adjs,
-                                                                     cfg[NUM_REPEATS])
-
-                title = f"Add rate {add_rate_str} monomer/s"
-                x_axis_label = 'SG Ratio'
-                y_axis_label = 'Bond Type Yield (%)'
-                fname = create_out_fname(f'bond_dist_v_sg_{add_rate_str}', base_dir=cfg[OUT_DIR], ext='.png')
-                plot_bond_error_bars(cfg[SG_RATIOS], all_avg_bonds, all_std_bonds, BOND_TYPE_LIST,
-                                     x_axis_label, y_axis_label, title, fname)
+                create_bond_v_sg_plots(add_rate_str, cfg, sg_adjs)
 
     except (InvalidDataError, KeyError) as e:
         warning(e)
