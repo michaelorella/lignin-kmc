@@ -128,12 +128,12 @@ class TestCreateLigninNoOutput(unittest.TestCase):
     def testAlphaSGRatio(self):
         test_input = ["-r", "10", "-sg", "ghost"]
         with capture_stderr(main, test_input) as output:
-            self.assertTrue('must be a positive number' in output)
+            self.assertTrue('positive floats' in output)
 
     def testNegSGRatio(self):
         test_input = ["-r", "10", "-sg", "-0.1"]
         with capture_stderr(main, test_input) as output:
-            self.assertTrue('must be a positive number' in output)
+            self.assertTrue('positive floats' in output)
 
     def testNegSimLen(self):
         test_input = ["-r", "10", "-l", "-0.1"]
@@ -183,13 +183,13 @@ class TestCreateLigninNoOutput(unittest.TestCase):
         test_input = ["-a", "ghost"]
         # main(test_input)
         with capture_stderr(main, test_input) as output:
-            self.assertTrue("A positive number" in output)
+            self.assertTrue("positive floats" in output)
 
     def testZeroAddRate(self):
         test_input = ["-a", "0"]
         # main(test_input)
         with capture_stderr(main, test_input) as output:
-            self.assertTrue("A positive number" in output)
+            self.assertTrue("positive floats" in output)
 
     def testSizeWithSpace(self):
         test_input = ["-o", DEF_PNG_OUT, "-s", "300", "400"]

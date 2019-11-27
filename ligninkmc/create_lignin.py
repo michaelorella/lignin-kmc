@@ -22,7 +22,7 @@ from rdkit.Chem.rdMolInterchange import MolToJSON
 from ligninkmc import __version__
 from ligninkmc.kmc_common import (Event, Monomer, E_BARRIER_KCAL_MOL, E_BARRIER_J_PART, TEMP, INI_MONOS, MAX_MONOS,
                                   SIM_TIME, AFFECTED, GROW, DEF_E_BARRIER_KCAL_MOL, OX, MONOMER, OLIGOMER,
-                                  LIGNIN_SUBUNITS, ADJ_MATRIX, RANDOM_SEED, S, G, CHAIN_LEN, BONDS, ADD_RATE,
+                                  LIGNIN_SUBUNITS, ADJ_MATRIX, RANDOM_SEED, S, G, CHAIN_LEN, BONDS,
                                   RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL, MONO_LIST, CHAIN_MONOS, CHAIN_BRANCH_COEFF,
                                   RCF_BRANCH_COEFF, CHAIN_ID, DEF_CHAIN_ID, PSF_FNAME, DEF_PSF_FNAME, DEF_TOPPAR,
                                   TOPPAR_DIR, MANUSCRIPT_RATES, DEF_RXN_RATES)
@@ -74,7 +74,7 @@ DEF_CFG_VALS = {OUT_DIR: None, OUT_FORMAT_LIST: None, ADD_RATES: [DEF_ADD_RATE],
                 RANDOM_SEED: None, BASENAME: DEF_BASENAME, IMAGE_SIZE: DEF_IMAGE_SIZE, DYNAMICS: False,
                 E_BARRIER_KCAL_MOL: DEF_E_BARRIER_KCAL_MOL, E_BARRIER_J_PART: None, SAVE_FILES: False,
                 SAVE_JSON: False, SAVE_PNG: False, SAVE_SMI: False, SAVE_SVG: False, SAVE_TCL: False,
-                CHAIN_ID: DEF_CHAIN_ID, PSF_FNAME: DEF_PSF_FNAME, TOPPAR_DIR: DEF_TOPPAR,
+                CHAIN_ID: DEF_CHAIN_ID, PSF_FNAME: DEF_PSF_FNAME, TOPPAR_DIR: DEF_TOPPAR, ENERGY_BARRIER_FLAG: False,
                 }
 
 REQ_KEYS = {}
@@ -698,7 +698,7 @@ def main(argv=None):
                 # initial_monomers and initial_events are grouped into the initial state
                 initial_state = create_initial_state(initial_events, initial_monomers)
                 if cfg[MAX_MONOS] > cfg[INI_MONOS]:
-                    initial_events.append(Event(GROW, [], rate=cfg[ADD_RATE]))
+                    initial_events.append(Event(GROW, [], rate=add_rate))
                 elif cfg[MAX_MONOS] < cfg[INI_MONOS]:
                     warning(f"The specified maximum number of monomers ({cfg[MAX_MONOS]}) is less than the specified "
                             f"initial number of monomers ({cfg[INI_MONOS]}). \n The program will proceed with the "
