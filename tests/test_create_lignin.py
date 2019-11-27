@@ -401,19 +401,20 @@ class TestCreateLigninNormalUse(unittest.TestCase):
             silent_remove(DEF_TCL_OUT, disable=DISABLE_REMOVE)
             pass
 
-# class TestPlots(unittest.TestCase):
-#     def testSmallNumMonos(self):
-#         try:
-#             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
-#                 silent_remove(fname)
-#             test_input = ["-r", "10", "-m", "20", "-dy"]
-#             main(test_input)
+
+class TestDynamics(unittest.TestCase):
+    def testSmallNumMonos(self):
+        try:
+            # for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
+            #     silent_remove(fname)
+            test_input = ["-r", "10", "-m", "20", "-dy"]
+            main(test_input)
 #             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
 #                 self.assertTrue(os.path.isfile(fname))
-#         finally:
-#             for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
-#                 silent_remove(fname, disable=DISABLE_REMOVE)
-#             pass
+        finally:
+            # for fname in [DEF_BOND_PNG, DEF_MONO_PNG]:
+            #     silent_remove(fname, disable=DISABLE_REMOVE)
+            pass
 #
 #     def testSmallNumMonosNoDynamics(self):
 #         try:

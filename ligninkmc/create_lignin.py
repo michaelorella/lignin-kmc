@@ -500,9 +500,9 @@ def create_initial_state(initial_events, initial_monomers):
     return {i: {MONOMER: initial_monomers[i], AFFECTED: {initial_events[i]}} for i in range(len(initial_monomers))}
 
 
-def produce_output(result, cfg):
+def produce_output(adj_matrix, mono_list, cfg):
     # Default out is SMILES
-    block = generate_mol(result[ADJ_MATRIX], result[MONO_LIST])
+    block = generate_mol(adj_matrix, mono_list)
     mol = MolFromMolBlock(block)
     smi_str = MolToSmiles(mol) + '\n'
     # if SMI is to be saved, don't output to stdout
@@ -519,7 +519,7 @@ def produce_output(result, cfg):
         if cfg[save_format]:
             fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=save_format)
             if save_format == SAVE_TCL:
-                gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=fname, chain_id=cfg[CHAIN_ID],
+                gen_psfgen(adj_matrix, mono_list, tcl_fname=fname, chain_id=cfg[CHAIN_ID],
                            psf_fname=cfg[PSF_FNAME], toppar_dir=cfg[TOPPAR_DIR], out_dir=cfg[OUT_DIR])
             if save_format == SAVE_JSON:
                 json_str = MolToJSON(mol)
@@ -715,15 +715,22 @@ def main(argv=None):
                 result = run_kmc(cfg[RXN_RATES], initial_state, initial_events, n_max=cfg[MAX_MONOS],
                                  t_max=cfg[SIM_TIME], sg_ratio=sg_ratio, dynamics=cfg[DYNAMICS])
 
+                if cfg[DYNAMICS]:
+                    last_adj = result[ADJ_MATRIX][-1]
+                    last_mono_list = result[MONO_LIST][-1]
+                else:
+                    last_adj = result[ADJ_MATRIX]
+                    last_mono_list = result[MONO_LIST]
+
                 # save for potential plotting
-                sg_adjs.append(result[ADJ_MATRIX])
+                sg_adjs.append(last_adj)
 
                 # show results
-                summary = analyze_adj_matrix(result[ADJ_MATRIX])
+                summary = analyze_adj_matrix(last_adj)
                 adj_analysis_to_stdout(summary)
 
                 # Outputs
-                produce_output(result, cfg)
+                produce_output(last_adj, last_mono_list, cfg)
 
     except (InvalidDataError, KeyError) as e:
         warning(e)
