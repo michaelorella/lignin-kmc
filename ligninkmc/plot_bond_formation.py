@@ -80,26 +80,7 @@ def main(argv=None):
             adj_repeats = []
 
             for _ in range(cfg[NUM_REPEATS]):
-                if cfg[RANDOM_SEED]:
-                    np.random.seed(cfg[RANDOM_SEED])
-                    monomer_draw = np.around(np.random.rand(cfg[INI_MONOS]), MAX_NUM_DECIMAL)
-                else:
-                    monomer_draw = np.random.rand(cfg[INI_MONOS])
-                initial_monomers = create_initial_monomers(sg_ratio, monomer_draw)
-                initial_events = create_initial_events(initial_monomers, cfg[RXN_RATES])
-                initial_state = create_initial_state(initial_events, initial_monomers)
-                if cfg[MAX_MONOS] > cfg[INI_MONOS]:
-                    initial_events.append(Event(GROW, [], rate=add_rate))
-                elif cfg[MAX_MONOS] < cfg[INI_MONOS]:
-                    warning(f"The specified {MAX_MONOS} ({cfg[MAX_MONOS]}) is less than the specified {INI_MONOS} "
-                            f"({cfg[INI_MONOS]}). \n          The program will proceed with the initial "
-                            f"number of monomers with no addition of monomers.")
 
-                # todo: delete
-                print(cfg[RXN_RATES][BO4])
-                result = run_kmc(cfg[RXN_RATES], initial_state, initial_events,
-                                 n_max=cfg[MAX_MONOS], sg_ratio=sg_ratio, t_max=cfg[SIM_TIME],
-                                 dynamics=args.dynamics, random_seed=cfg[RANDOM_SEED])
                 adj_list = result[ADJ_MATRIX]
                 if args.dynamics:
                     # following will be used to analyze final bonds only

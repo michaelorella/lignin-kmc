@@ -687,9 +687,9 @@ def main(argv=None):
                 add_rate_str += "_e"
             for sg_ratio in cfg[SG_RATIOS]:
                 # the initialized lists below are for storing repeats
-                # num_monos = []
-                # num_oligs = []
-                # adj_repeats = []
+                num_monos = []
+                num_oligs = []
+                adj_repeats = []
 
                 for _ in range(cfg[NUM_REPEATS]):
                     # decide on initial monomers, based on given sg_ratio
@@ -719,11 +719,19 @@ def main(argv=None):
                                      t_max=cfg[SIM_TIME], sg_ratio=sg_ratio, dynamics=cfg[DYNAMICS])
 
                     if cfg[DYNAMICS]:
+                        # TODO: discuss if we want just monomer vs. oligomer.... that's what is on offer now
+                        (bond_type_dict, olig_monos_dict, sum_monos_list, olig_count_dict,
+                         sum_count_list) = get_bond_type_v_time_dict(result[ADJ_MATRIX], sum_len_larger_than=2)
+
+                        num_monos.append(olig_count_dict[1])
+                        num_oligs.append(sum_count_list)
                         last_adj = result[ADJ_MATRIX][-1]
                         last_mono_list = result[MONO_LIST][-1]
+                        adj_repeats.append(last_adj)
                     else:
                         last_adj = result[ADJ_MATRIX]
                         last_mono_list = result[MONO_LIST]
+                        adj_repeats.append(last_adj)
 
                     # save for potential plotting
                     sg_adjs.append(last_adj)
