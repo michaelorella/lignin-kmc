@@ -411,10 +411,10 @@ def parse_cmdline(argv=None):
                                                        f"requested. If chosen, plots of \nmonomers and oligomers vs "
                                                        f"timestep, and bond type percent vs timestep, will be saved. "
                                                        f"\nThey will be named 'bond_dist_v_step_*_#.png' and "
-                                                       f"'mono_olig_v_step_*_#.png', where * represents the S:G ratio "
-                                                       f"and # represents the addition rate."
-                                                       f"\nNote that this option significantly increases simulation "
-                                                       f"time.", action="store_true")
+                                                       f"'mono_olig_v_step_*_#.png', where * \nrepresents the S:G "
+                                                       f"ratio and # represents the addition rate. Note that this "
+                                                       f"option \nsignificantly increases simulation time.",
+                        action="store_true")
     # todo: remove -e option when debugging is complete
     parser.add_argument("-e", "--energy_barriers_flag", help=f"By default, the reaction rates will be based on the "
                                                              f"energy barriers in kcal/mol to be used \nto calculate "
@@ -456,8 +456,8 @@ def parse_cmdline(argv=None):
                                                         f"provided, a default \nbase name of '{DEF_BASENAME}' will be "
                                                         f"used.", default=DEF_BASENAME)
     parser.add_argument("-p", "--plot_bonds", help=f"Flag to produce plots of the percent of each bond type versus S:G "
-                                                   f"ratio(s). One plot will be created per addition rate, named "
-                                                   f"'bond_dist_v_sg_#.png', where # represents the addition rate.",
+                                                   f"ratio(s). One plot will \nbe created per addition rate, named "
+                                                   f"'bond_dist_v_sg_#.png', where # represents \nthe addition rate.",
                         action="store_true")
     parser.add_argument("-r", "--random_seed", help="A positive integer to be used as a seed value for testing. The "
                                                     "default is not to use a \nseed, to allow pseudorandom lignin "
