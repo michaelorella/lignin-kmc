@@ -473,7 +473,9 @@ def parse_cmdline(argv=None):
                                                    f"quotes to be read as a single string. \nThe default list "
                                                    f"contains the single value {DEF_SG}.", default=[DEF_SG])
     parser.add_argument("-t", "--temperature_in_k", help=f"The temperature (in K) at which to model lignin "
-                                                         f"biosynthesis. The default is {DEF_TEMP} K.",
+                                                         f"biosynthesis. The default is {DEF_TEMP} K.\nNote: this "
+                                                         f"temperature must match the temperature at which the "
+                                                         f"energy barriers were calculated. ",
                         default=DEF_TEMP)
     parser.add_argument("--chain_id", help=f"Option for use when generating a tcl script: the chainID to be used in "
                                            f"generating a psf \nand/or pdb file from a tcl script (see LigninBuilder). "
@@ -738,7 +740,8 @@ def validate_input(cfg):
 
     # determine rates to use
     if cfg[E_BARRIER_KCAL_MOL] == DEF_CFG_VALS[E_BARRIER_KCAL_MOL] and (cfg[E_BARRIER_J_PART] ==
-                                                                        DEF_CFG_VALS[E_BARRIER_J_PART]):
+                                                                        DEF_CFG_VALS[E_BARRIER_J_PART]
+                                                                        ) and (cfg[TEMP] == DEF_TEMP):
         # todo: remove ENERGY_BARRIER_FLAG option when debugging is complete
         if cfg[ENERGY_BARRIER_FLAG]:
             cfg[RXN_RATES] = MANUSCRIPT_RATES
@@ -750,6 +753,10 @@ def validate_input(cfg):
             warning("Both the {ENERGY_BARRIER_FLAG} option and energy barriers have been provided. The "
                     "{ENERGY_BARRIER_FLAG} option will be ignored, and reaction rates will be calculated from the "
                     "provided energy barriers.")
+        if int(cfg[TEMP]) != int(DEF_TEMP):
+            warning(f"The program will continue, using a temperature other than {DEF_TEMP}. Ensure that the energy "
+                    f"barriers being used where calculated at the provided temperature ({cfg[TEMP]}), otherwise "
+                    f"cancel this run.")
         cfg[RXN_RATES] = calc_rates(cfg[TEMP], ea_j_part_dict=cfg[E_BARRIER_J_PART],
                                     ea_kcal_mol_dict=cfg[E_BARRIER_KCAL_MOL])
 

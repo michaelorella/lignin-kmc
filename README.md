@@ -92,9 +92,6 @@ options shown below, or by using a configuration file. These options can be view
                                   [-t TEMPERATURE_IN_K] [--chain_id CHAIN_ID]
                                   [--psf_fname PSF_FNAME]
                                   [--toppar_dir TOPPAR_DIR]
-
-
-     
      
     Create lignin chain(s) composed of 'S' (syringyl) and/or 'G' (guaiacol) monolignols, as described in:
        Orella, M., Gani, T. Z. H., Vermaas, J. V., Stone, M. L., Anderson, E. M., Beckham, G. T., 
@@ -180,6 +177,7 @@ options shown below, or by using a configuration file. These options can be view
                              The default list contains the single value 1.
        -t TEMPERATURE_IN_K, --temperature_in_k TEMPERATURE_IN_K
                              The temperature (in K) at which to model lignin biosynthesis. The default is 298.15 K.
+                             Note: this temperature must match the temperature at which the energy barriers were calculated. 
        --chain_id CHAIN_ID   Option for use when generating a tcl script: the chainID to be used in generating a psf 
                              and/or pdb file from a tcl script (see LigninBuilder). This should be one character. If a 
                              longer ID is provided, it will be truncated to the first character. The default value is L.
@@ -332,7 +330,7 @@ __update_events__(monomers, adj, last_event, events, rate_vec, rate_dict, max_mo
 - event_dict = dict() = map the hash value of each event to the unique event - this is all of the possible events at the 
   current state after the method is run
 - rate_vec = dict() = map the hash value of each event to the rate of that event
-- rate_dict = dict() = the reaction rates for all possible reactions, in 1/s or 1/monomer-second
+- rate_dict = dict() = the reaction rates for all possible reactions, in  monomer/second
 - max_mon = int = the maximum number of monomers in the simulation
 - return = None
 
@@ -357,7 +355,7 @@ __run_kmc__(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
 -      and the set of events that a change to this monomer would impact
 - initial_events: dictionary -- The dictionary mapping event hash values to those events
 - n_max: int   -- The maximum number of monomers in the simulation
-- t_max: float -- The final simulation time (units depend on units of rates)
+- t_max: float -- The final simulation time (units depend on units of rates; seconds if using the default rates)
 - dynamics: boolean -- if True, will keep values for every time step
 - random_seed: None or hashable value to aid testing
 - return: dict with the simulation times, adjacency matrix, and list of monomers at the end of the simulation

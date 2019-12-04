@@ -285,13 +285,13 @@ class TestCreateLigninNormalUse(unittest.TestCase):
         # main(test_input)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n" \
                              "       1 oligomer(s) of chain length 10, with branching coefficient 0.0"
-        good_bond_summary = "composed of the following bond types and number:\n    BO4:    6" \
-                            "     BB:    1     B5:    2     B1:    0    5O4:    0    AO4:    0     55:    0"
+        good_bond_summary = "composed of the following bond types and number:\n    BO4:    7" \
+                            "     BB:    1     B5:    1     B1:    0    5O4:    0    AO4:    0     55:    0"
         good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n" \
-                                 "       4 monomer(s) (chain length 1)\n" \
-                                 "       3 dimer(s) (chain length 2)"
-        good_rcf_bond_summary = "with the following remaining bond types and number:\n    BO4:    0" \
-                                "     BB:    1     B5:    2     B1:    0    5O4:    0    AO4:    0     55:    0"
+                                 "       6 monomer(s) (chain length 1)\n" \
+                                 "       2 dimer(s) (chain length 2)"
+        good_rcf_bond_summary = "with the following remaining bond types and number:\n    BO4:    0    " \
+                                " BB:    1     B5:    1     B1:    0    5O4:    0    AO4:    0     55:    0"
         with capture_stdout(main, test_input) as output:
             self.assertTrue(good_chain_summary in output)
             self.assertTrue(good_bond_summary in output)
