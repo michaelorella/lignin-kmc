@@ -105,8 +105,8 @@ options shown below, or by using a configuration file. These options can be view
        Alternately, the user may specify values, which should be specified as a dict of dict of dicts in a 
        specified configuration file (specified with '-c') using the 'e_barrier_in_kcal_mol' or 'e_barrier_in_j_particle'
        parameters with corresponding units (kcal/mol or joules/particle, respectively), in a configuration file 
-       (see '-c'). The format is (bond_type: monomer(s) involved: units involved: ea_vals), for example:
-           ea_dict = {oxidation: {'G': {monomer: 0.9, oligomer: 6.3}, 'S': {{{MONOMER}: 0.6, {OLIGOMER}: 2.2}}, ...}.
+       (see '-c'). The format is (bond_type: monomer(s) involved: units involved: delta_g_298), for example:
+           barriers_kcalmol = {oxidation: {'G': {monomer: 0.9, oligomer: 6.3}, 'S': {{{MONOMER}: 0.6, {OLIGOMER}: 2.2}}, ...}.
        The default output is a SMILES string printed to standard out.
      
        All command-line options may alternatively be specified in a configuration file. Command-line (non-default) 
@@ -373,8 +373,6 @@ by `run_kmc`. This file can then be used together with rdKit for further visuali
 favorite chemical drawing software packages.
 
 # Credits
-[<img src="https://avatars0.githubusercontent.com/u/40570716?s=400&u=7bde054e05bbba59c19cefd3aa2f4c84e2a9dfc6&v=4" height="150" width="150">](https://github.com/michaelorella) | [<img src="https://avatars0.githubusercontent.com/u/17909849?s=460&v=4" height="150" width="150">](https://github.com/terrygani)
---- | --- | ---
 [Michael Orella](https://github.com/michaelorella) | [Terry Gani](https://github.com/terrygani) | 
 [Heather Mayes](https://github.com/team-mayes)
 
