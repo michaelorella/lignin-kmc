@@ -14,10 +14,10 @@ from common_wrangler.common import (InvalidDataError, capture_stdout, silent_rem
 from ligninkmc.create_lignin import (DEF_TEMP, calc_rates, create_initial_monomers, create_initial_events,
                                      degree, create_initial_state, overall_branching_coefficient,
                                      adj_analysis_to_stdout, get_bond_type_v_time_dict)
-from ligninkmc.kmc_common import (Event, Monomer, C5O4, OX, C5C5, B5, BB, BO4, AO4, B1, DEF_RXN_RATES,
+from ligninkmc.kmc_common import (Event, Monomer, G, S, H, C, C5O4, OX, C5C5, B5, BB, BO4, AO4, B1, DEF_RXN_RATES,
                                   MON_OLI, MONOMER, GROW, TIME, MONO_LIST, ADJ_MATRIX, CHAIN_LEN, BONDS,
                                   RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_BARRIER_KCAL_MOL, MAX_NUM_DECIMAL)
-from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_psfgen, find_fragments, fragment_size, break_bond_type,
+from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_tcl, find_fragments, fragment_size, break_bond_type,
                                      analyze_adj_matrix, count_oligomer_yields, count_bonds)
 
 
@@ -37,10 +37,10 @@ GOOD_C_LIGNIN_MOL_OUT = os.path.join(SUB_DATA_DIR, 'c_lignin_molfile_good.txt')
 TCL_FNAME = "psfgen.tcl"
 TCL_FILE_LOC = os.path.join(SUB_DATA_DIR, TCL_FNAME)
 GOOD_TCL_OUT = os.path.join(SUB_DATA_DIR, "good_psfgen.tcl")
-GOOD_TCL_C_LIGNIN_OUT = os.path.join(SUB_DATA_DIR, "good_psfgen_c_lignin.tcl")
-GOOD_TCL_SHORT_SIM_OUT = os.path.join(SUB_DATA_DIR, "good_psfgen_short_sim.tcl")
-GOOD_TCL_NO_GROW_OUT = os.path.join(SUB_DATA_DIR, "good_psfgen_no_grow.tcl")
-GOOD_TCL_SHORT = os.path.join(SUB_DATA_DIR, "good_short_psfgen.tcl")
+GOOD_TCL_C_LIGNIN_OUT = os.path.join(SUB_DATA_DIR, "good_c_lignin.tcl")
+GOOD_TCL_SHORT_SIM_OUT = os.path.join(SUB_DATA_DIR, "good_short_sim.tcl")
+GOOD_TCL_NO_GROW_OUT = os.path.join(SUB_DATA_DIR, "good_no_grow.tcl")
+GOOD_TCL_SHORT = os.path.join(SUB_DATA_DIR, "good_short.tcl")
 
 # Data #
 SHORT_TIME = 0.00001
@@ -106,7 +106,7 @@ def create_sample_kmc_result(max_time=1., num_initial_monos=3, max_monos=10, sg_
 
 
 def create_sample_kmc_result_c_lignin(num_monos=2, max_monos=12, seed=10):
-    initial_monomers = [Monomer(2, i) for i in range(num_monos)]
+    initial_monomers = [Monomer(C, i) for i in range(num_monos)]
     # noinspection PyTypeChecker
     initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
     initial_state = create_initial_state(initial_events, initial_monomers)
@@ -138,28 +138,37 @@ class TestCalcRates(unittest.TestCase):
 
 class TestMonomers(unittest.TestCase):
     def testCreateConiferyl(self):
-        mon = Monomer(0, 0)  # Makes a guaiacol type monomer with ID = 0
+        mon = Monomer(G, 0)  # Makes a guaiacol type monomer with ID = 0
         self.assertTrue(mon.open == {8, 4, 5})
         self.assertTrue(str(mon) == '0: coniferyl alcohol is connected to {0} and active at position 0')
 
     def testCreateSyringol(self):
-        mon = Monomer(1, 2)  # Makes a syringol type monomer with ID = 2
+        mon = Monomer(S, 2)  # Makes a syringol type monomer with ID = 2
         self.assertTrue(mon.open == {4, 8})
         self.assertTrue(mon.connectedTo == {2})
         self.assertTrue(str(mon) == '2: sinapyl alcohol is connected to {2} and active at position 0')
         self.assertTrue(repr(mon) == '2: sinapyl alcohol \n')
 
-    def testUnknownUnit(self):
+    def testHUnit(self):
+        # todo: update once H is added
         try:
-            mon = Monomer(3, 2)
+            mon = Monomer(H, 2)
             # type type 3 is not currently implemented
             self.assertFalse(mon)  # should not be reached
         except InvalidDataError as e:
             self.assertTrue("only the following" in e.args[0])
 
+    def testUnknownUnit(self):
+        try:
+            mon = Monomer("@", 2)
+            # not a real type
+            self.assertFalse(mon)  # should not be reached
+        except InvalidDataError as e:
+            self.assertTrue("only the following" in e.args[0])
+
     def testHash(self):
-        mon1 = Monomer(1, 5)
-        mon2 = Monomer(1, 5)
+        mon1 = Monomer(S, 5)
+        mon2 = Monomer(S, 5)
         check_set = {mon1, mon2}
         self.assertTrue(len(check_set) == 1)
 
@@ -168,20 +177,20 @@ class TestEvent(unittest.TestCase):
     def testIDRepr(self):
         rxn = OX
         # noinspection PyTypeChecker
-        event1 = Event(rxn, [2], DEF_RXN_RATES[rxn][0][MONOMER])
+        event1 = Event(rxn, [2], DEF_RXN_RATES[rxn][G][MONOMER])
         self.assertTrue(str(event1) == "Performing oxidation on index 2")
 
     def testIDReprBond(self):
         rxn = BO4
         # noinspection PyTypeChecker
-        event1 = Event(rxn, [1, 2], DEF_RXN_RATES[rxn][(0, 1)][MON_OLI], (4, 8))
+        event1 = Event(rxn, [1, 2], DEF_RXN_RATES[rxn][(G, S)][MON_OLI], (4, 8))
         good_str = "Forming bo4 bond between indices [1, 2] (adjacency_matrix update (4, 8))"
         self.assertTrue(str(event1) == good_str)
         self.assertTrue(repr(event1) == good_str)
 
     def testEventIDHash(self):
-        monomer_a = Monomer(1, 4)
-        monomer_b = Monomer(1, 4)
+        monomer_a = Monomer(S, 4)
+        monomer_b = Monomer(S, 4)
         events_a = create_initial_events([monomer_a], DEF_RXN_RATES)
         events_b = create_initial_events([monomer_b], DEF_RXN_RATES)
         self.assertTrue(events_a == events_b)
@@ -193,9 +202,9 @@ class TestCreateInitialMonomers(unittest.TestCase):
     def testCreate3Monomers(self):
         initial_monomers = create_initial_monomers(0.75, [0.48772, 0.15174, 0.7886])
         self.assertTrue(len(initial_monomers) == 3)
-        self.assertTrue(initial_monomers[0].type == 1)
-        self.assertTrue(initial_monomers[1].type == 1)
-        self.assertTrue(initial_monomers[2].type == 0)
+        self.assertTrue(initial_monomers[0].type == S)
+        self.assertTrue(initial_monomers[1].type == S)
+        self.assertTrue(initial_monomers[2].type == G)
         self.assertTrue(initial_monomers[1] < initial_monomers[2])
         self.assertFalse(initial_monomers[0] == initial_monomers[1])
 
@@ -557,18 +566,18 @@ class TestVisualization(unittest.TestCase):
             silent_remove(TEST_PNG, disable=DISABLE_REMOVE)
             pass
 
-    def testMakePSFGEN(self):
+    def testMakeTCL(self):
         try:
             silent_remove(TCL_FILE_LOC)
             result = create_sample_kmc_result()
-            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L",
-                       toppar_dir='toppar', out_dir=SUB_DATA_DIR)
+            gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L",
+                    toppar_dir='toppar', out_dir=SUB_DATA_DIR)
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_OUT))
         finally:
             silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
             pass
 
-    def testMakePSFGENCLignin(self):
+    def testMakeTCLCLignin(self):
         # Only adds 3 lines to coverage... oh well! At least it's quick.
         try:
             seed = 1
@@ -577,10 +586,9 @@ class TestVisualization(unittest.TestCase):
             result = create_sample_kmc_result_c_lignin(num_monos=monos, max_monos=monos*2, seed=seed)
             good_last_time = 0.0034410593070561706
             self.assertAlmostEqual(result[TIME][-1], good_last_time)
-            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", toppar_dir=None,
-                       out_dir=SUB_DATA_DIR)
-            # TODO: test tcl after psf_gen updates
-            # self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_C_LIGNIN_OUT))
+            gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", toppar_dir=None,
+                    out_dir=SUB_DATA_DIR)
+            self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_C_LIGNIN_OUT))
         finally:
             silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
             pass
@@ -593,7 +601,7 @@ class TestVisualization(unittest.TestCase):
             with open(C_LIGNIN_MOL_OUT, "w") as f:
                 f.write(block)
             self.assertFalse(diff_lines(C_LIGNIN_MOL_OUT, GOOD_C_LIGNIN_MOL_OUT))
-            # Uncomment below to visually check output
+            # # Uncomment below to visually check output
             # mol = MolFromMolBlock(block)
             # Compute2DCoords(mol)
             # MolToFile(mol, TEST_PNG, size=(2000, 1000))
@@ -607,17 +615,17 @@ class TestVisualization(unittest.TestCase):
         #       program to be visited. Currently, the test passes when the expected error message is returned.
         #       When fixed, this test can be updated to pass when expected results are returned.
         # Here, all the monomers are available at the beginning of the simulation; set type list for reproducibility
-        full_mono_type_list = [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                               1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1,
-                               1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                               1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                               1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                               1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                               1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
-                               1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                               1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                               1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                               1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ]
+        full_mono_type_list = [S, S, S, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
+                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, S,
+                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
+                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S,
+                               S, S, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
+                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
+                               S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, S, S, S, G, S, S, S, S, S, S,
+                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
+                               S, S, S, S, S, G, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
+                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
+                               S, S, S, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, ]
         try:
             seed = 1
             num_monos = 15
@@ -640,7 +648,7 @@ class TestVisualization(unittest.TestCase):
             MolToFile(mol, TEST_PNG, size=(2000, 1200))
             self.assertTrue(os.path.isfile(TEST_PNG))
             # If desired, also check generated psfgen (may not help coverage... to be seen...)
-            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", out_dir=SUB_DATA_DIR)
+            gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", out_dir=SUB_DATA_DIR)
             # If kept, create and check new "good" file
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
         except InvalidDataError as e:
@@ -652,7 +660,7 @@ class TestVisualization(unittest.TestCase):
     def testDynamics(self):
         # Tests procedures in the Dynamics.ipynb
         # minimize number of random calls during testing (here, set monomer type distribution)
-        monomer_type_list = [0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, ]
+        monomer_type_list = [G, S, G, G, S, S, S, G, S, S, G, G, S, G, G, G, G, S, G, G, G, S, S, G, S, S, G, G, ]
         num_monos = len(monomer_type_list)
         initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(monomer_type_list)]
         initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
@@ -706,7 +714,7 @@ class TestVisualization(unittest.TestCase):
         pct_s = sg_ratio / (1 + sg_ratio)
 
         # minimize random calls
-        monomer_type_list = [1, 0]
+        monomer_type_list = [S, G]
         initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(monomer_type_list)]
         max_monos = 32
         num_repeats = 4
@@ -794,16 +802,16 @@ class TestVisualization(unittest.TestCase):
 
     def testNoGrowth(self):
         # Here, all the monomers are available at the beginning of the simulation
-        # Increases coverage of gen_psfgen
+        # Increases coverage of gen_tcl
         try:
             # minimize random calls by providing set list of monomer types
-            initial_mono_type_list = [1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1,
-                                      1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0,
-                                      1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0,
-                                      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0,
-                                      0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1,
-                                      1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1,
-                                      1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, ]
+            initial_mono_type_list = [S, S, G, S, S, S, G, S, S, S, G, S, S, G, S, G, S, G, G, S, S, S, S, S, S, S,
+                                      S, S, S, G, S, G, S, S, S, S, G, S, S, S, G, S, G, S, G, S, G, S, S, S, S, G,
+                                      S, S, G, G, S, G, S, S, G, S, S, S, S, S, S, S, G, S, S, S, S, S, S, G, G, G,
+                                      S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, G, S, S, S, S, G, S, S, G,
+                                      G, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, G, S, G, S, S, S, S, S, S, S,
+                                      S, S, S, G, G, S, S, S, G, S, G, S, G, S, S, S, S, S, S, S, S, S, G, S, G, S,
+                                      S, S, S, S, S, S, S, G, S, S, S, G, S, G, G, S, G, S, S, G, S, S, S, S, G, S, ]
             num_monos = len(initial_mono_type_list)
             initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(initial_mono_type_list)]
             initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
@@ -815,18 +823,18 @@ class TestVisualization(unittest.TestCase):
             self.assertAlmostEqual(result[TIME][-1], 1.295926885239862)
             self.assertTrue(len(result[MONO_LIST]) == num_monos)
             # the function we want to test here is below
-            gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", out_dir=SUB_DATA_DIR)
+            gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", out_dir=SUB_DATA_DIR)
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
         finally:
             silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
             pass
 
-    def testPSFGenTruncateSegname(self):
+    def testTCLTruncateSegname(self):
         # Tests providing a chain_id that is longer than one character
         try:
             # easier to run_kmc to create monomer_list than recreate it here (adj easier) so doing so
             # minimize random calls by providing set list of monomer types
-            initial_mono_type_list = [1, 1, 0, 1, 1, 1, 0, 1]
+            initial_mono_type_list = [S, S, G, S, S, S, G, S]
             num_monos = len(initial_mono_type_list)
             initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(initial_mono_type_list)]
             initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
@@ -837,7 +845,7 @@ class TestVisualization(unittest.TestCase):
             self.assertAlmostEqual(result[TIME][-1], 0.000715435221919298)
             self.assertTrue(len(result[MONO_LIST]) == num_monos)
             # the function we want to test here is below
-            with capture_stderr(gen_psfgen, result[ADJ_MATRIX], result[MONO_LIST], chain_id="lignin",
+            with capture_stderr(gen_tcl, result[ADJ_MATRIX], result[MONO_LIST], chain_id="lignin",
                                 out_dir=SUB_DATA_DIR) as output:
                 self.assertTrue("should be one character" in output)
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_SHORT))
@@ -845,14 +853,14 @@ class TestVisualization(unittest.TestCase):
             silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
             pass
 
-    def testPSFGenEmptySegname(self):
+    def testTCLGenEmptySegname(self):
         # tcl_fname="psfgen.tcl", psf_fname='lignin', chain_id="L", toppar_dir="toppar/"
         # Here, all the monomers are available at the beginning of the simulation
-        # Increases coverage of gen_psfgen
+        # Increases coverage of gen_tcl
         try:
             # easier to run_kmc to create monomer_list than recreate it here (adj easier) so doing so
             # minimize random calls by providing set list of monomer types
-            initial_mono_type_list = [1, 1, 0, 1, 1, 1, 0, 1]
+            initial_mono_type_list = [S, S, G, S, S, S, G, S]
             num_monos = len(initial_mono_type_list)
             initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(initial_mono_type_list)]
             initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
@@ -863,7 +871,7 @@ class TestVisualization(unittest.TestCase):
             self.assertAlmostEqual(result[TIME][-1], 0.000715435221919298)
             self.assertTrue(len(result[MONO_LIST]) == num_monos)
             # the function we want to test here is below
-            with capture_stderr(gen_psfgen, result[ADJ_MATRIX], result[MONO_LIST], chain_id=" ",
+            with capture_stderr(gen_tcl, result[ADJ_MATRIX], result[MONO_LIST], chain_id=" ",
                                 out_dir=SUB_DATA_DIR) as output:
                 self.assertTrue("should be one character" in output)
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_SHORT))

@@ -23,12 +23,12 @@ The following sections contain information on how to use lignin-KMC.
 
 ## Framework
 This project runs on Python ≥3.6 with the following packages installed:
+- rdKit (>= 2018.03.4.0; must be installed via conda; see below)
+- common-wrangler (common_wrangler >= 0.2.4)
 - SciPy
 - NumPy
 - MatPlotLib
 - JobLib
-- rdKit (must be installed via conda; see below)
-- common-wrangler
 
 ## Installation
 
@@ -74,7 +74,6 @@ This will use all default values (see below) and output which will look somethin
      COc1cc(C(O)C(CO)Oc2c(OC)cc(C3OCC4C(c5cc(OC)c(OC(CO)C(O)c6cc(OC)c(OC(CO)C(O)c7cc(OC)c([O])c(OC)c7)c(-c7cc(C(O)C(CO)Oc8c(OC)cc(C(O)C(CO)Oc9c(OC)cc(C%10Oc%11c(OC)cc(/C=C/CO)cc%11C%10CO)cc9OC)cc8OC)cc(OC)c7OC(CO)C(O)c7cc(OC)c([O])c(OC)c7)c6)c(OC)c5)OCC34)cc2OC)ccc1[O] 
 
 
-
 Your output will differ as a pseudo-random number generator is used to model the stochastic nature of chemical reactions.
 
 The default options (number of initial and final monomers, S:G ratio, etc.) can be changed either by the command line 
@@ -82,18 +81,19 @@ options shown below, or by using a configuration file. These options can be view
 
  `> create_lignin -h`
  
-     Running Lignin-KMC version 0.2.2. Please cite: https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.9b03534
+    Running Lignin-KMC version 0.2.2. Please cite: https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.9b03534
      
-     usage: _jb_unittest_runner.py [-h] [-a ADD_RATE] [-c CONFIG] [-d OUT_DIR]
-                                   [-f OUTPUT_FORMAT_LIST]
-                                   [-i INITIAL_NUM_MONOMERS] [-l LENGTH_SIMULATION]
-                                   [-m MAX_NUM_MONOMERS] [-o OUTPUT_BASENAME]
-                                   [-r RANDOM_SEED] [-s IMAGE_SIZE] [-sg SG_RATIO]
-                                   [-t TEMPERATURE_IN_K] [--chain_id CHAIN_ID]
-                                   [--psf_fname PSF_FNAME]
-                                   [--toppar_dir TOPPAR_DIR]
+    usage: _jb_unittest_runner.py [-h] [-a ADD_RATES] [-c CONFIG] [-d OUT_DIR]
+                                  [-dy] [-e] [-f OUTPUT_FORMAT_LIST]
+                                  [-i INITIAL_NUM_MONOMERS] [-l LENGTH_SIMULATION]
+                                  [-m MAX_NUM_MONOMERS] [-n NUM_REPEATS]
+                                  [-o OUTPUT_BASENAME] [-p] [-r RANDOM_SEED]
+                                  [-s IMAGE_SIZE] [-sg SG_RATIOS]
+                                  [-t TEMPERATURE_IN_K] [--chain_id CHAIN_ID]
+                                  [--psf_fname PSF_FNAME]
+                                  [--toppar_dir TOPPAR_DIR]
      
-     Create lignin chain(s) composed of 'S' (syringyl) and/or 'G' (guaiacol) monolignols, as described in:
+    Create lignin chain(s) composed of 'S' (syringyl) and/or 'G' (guaiacol) monolignols, as described in:
        Orella, M., Gani, T. Z. H., Vermaas, J. V., Stone, M. L., Anderson, E. M., Beckham, G. T., 
        Brushett, Fikile R., Roman-Leshkov, Y. (2019). Lignin-KMC: A Toolkit for Simulating Lignin Biosynthesis.
        ACS Sustainable Chemistry & Engineering. https://doi.org/10.1021/acssuschemeng.9b03534. C-Lignin can be 
@@ -105,29 +105,42 @@ options shown below, or by using a configuration file. These options can be view
        Alternately, the user may specify values, which should be specified as a dict of dict of dicts in a 
        specified configuration file (specified with '-c') using the 'e_barrier_in_kcal_mol' or 'e_barrier_in_j_particle'
        parameters with corresponding units (kcal/mol or joules/particle, respectively), in a configuration file 
-       (see '-c'). The format is (bond_type: monomer(s) involved: units involved: ea_vals), for example:
-           ea_dict = {oxidation: {0: {monomer: 0.9, oligomer: 6.3}, 1: {{{MONOMER}: 0.6, {OLIGOMER}: 2.2}}, ...}
-       where 0: guaiacol, 1: syringyl, 2: caffeoyl. The default output is a SMILES string printed to standard out.
+       (see '-c'). The format is (bond_type: monomer(s) involved: units involved: delta_g_298), for example:
+           barriers_kcalmol = {oxidation: {'G': {monomer: 0.9, oligomer: 6.3}, 'S': {{{MONOMER}: 0.6, {OLIGOMER}: 2.2}}, ...}.
+       The default output is a SMILES string printed to standard out.
      
        All command-line options may alternatively be specified in a configuration file. Command-line (non-default) 
        selections will override configuration file specifications.
      
-     optional arguments:
+    optional arguments:
        -h, --help            show this help message and exit
-       -a ADD_RATE, --add_rate ADD_RATE
-                             The rate of monomer addition to the system (in monomers/second) to be used when the 
-                             'max_num_monomers' ('-m' option) is larger than 'initial_num_monomers' ('-i' option), 
-                             thus specifying monomer addition. The simulation will end when either there are no more 
-                             possible reactions (including monomer addition) or when the 'length_simulation' 
-                             ('-l' option) is reached, whichever comes first.
+       -a ADD_RATES, --add_rates ADD_RATES
+                             A comma-separated list of the rates of monomer addition to the system (in monomers/second), 
+                             to be used when the 'max_num_monomers' ('-m' option) is larger than 'initial_num_monomers' 
+                             ('-i' option), thus specifying monomer addition. The simulation will end when either there 
+                             are no more possible reactions (including monomer addition) or when the 'length_simulation' 
+                             ('-l' option) is reached, whichever comes first. Note: if there are spaces in the list of 
+                             addition rates, the list must be enclosed in quotes to be read as a single string. The 
+                             default list contains the single addition rate of 1.0 monomers/s.
        -c CONFIG, --config CONFIG
                              The location of the configuration file in the 'ini' format. This file can be used to 
                              overwrite default values such as for energies.
        -d OUT_DIR, --out_dir OUT_DIR
                              The directory where output files will be saved. The default is the current directory.
+       -dy, --dynamics_flag  Select this option if dynamics (results per timestep) are requested. If chosen, plots of 
+                             monomers and oligomers vs timestep, and bond type percent vs timestep, will be saved. 
+                             They will be named 'bond_dist_v_step_*_#.png' and 'mono_olig_v_step_*_#.png', where * 
+                             represents the S:G ratio and # represents the addition rate. Note that this option 
+                             significantly increases simulation time.
+       -e, --energy_barriers_flag
+                             By default, the reaction rates will be based on the energy barriers in kcal/mol to be used 
+                             to calculate reaction rates at 298.15 K. If this flag is used, the rates use to produce the 
+                             original manuscript plots will be used (missing one term). Alternate sets of energy 
+                             barriers can be specified; see the main help message.
        -f OUTPUT_FORMAT_LIST, --output_format_list OUTPUT_FORMAT_LIST
                              The type(s) of output format to be saved. Provide as a space- or comma-separated list. 
-                             The currently supported types are: 'json', 'png', 'smi', 'svg', 'tcl'. 
+                             Note: if the list has spaces, it must be enclosed in quotes, to be treated as a single 
+                             string. The currently supported types are: 'json', 'png', 'smi', 'svg', 'tcl'. 
                              The 'json' option will save a json format of RDKit's 'mol' (molecule) object. The 'tcl' 
                              option will create a file for use with VMD to generate a psf file and 3D molecules, 
                              as described in LigninBuilder, https://github.com/jvermaas/LigninBuilder, 
@@ -137,37 +150,48 @@ options shown below, or by using a configuration file. These options can be view
        -i INITIAL_NUM_MONOMERS, --initial_num_monomers INITIAL_NUM_MONOMERS
                              The initial number of monomers to be included in the simulation. The default is 2.
        -l LENGTH_SIMULATION, --length_simulation LENGTH_SIMULATION
-                             The length of simulation (simulation time) in seconds. The default is 1 s.
+                             The length of simulation (simulation time) in seconds. The default is 3600 s.
        -m MAX_NUM_MONOMERS, --max_num_monomers MAX_NUM_MONOMERS
                              The maximum number of monomers to be studied. The default value is 10.
+       -n NUM_REPEATS, --num_repeats NUM_REPEATS
+                             The number of times each combination of sg_ratio and add_rate will be tested. The default is 1.
        -o OUTPUT_BASENAME, --output_basename OUTPUT_BASENAME
                              The base name for output file(s). If an extension is provided, it will determine 
                              the type of output. Currently supported output types are: 
                              'json', 'png', 'smi', 'svg', 'tcl'. Multiple output formats can be selected with the 
-                             '-f' option. If the '-f' option is selected and no output base name provided, a 
-                             default base name of 'lignin-kmc-out' will be used.
+                             '-f' option. If the '-f' option is selected and no output base name provided, a default 
+                             base name of 'lignin-kmc-out' will be used.
+       -p, --plot_bonds      Flag to produce plots of the percent of each bond type versus S:G ratio(s). One plot will 
+                             be created per addition rate, named 'bond_dist_v_sg_#.png', where # represents 
+                             the addition rate.
        -r RANDOM_SEED, --random_seed RANDOM_SEED
-                             A positive integer to be used as a seed value for testing.
+                             A positive integer to be used as a seed value for testing. The default is not to use a 
+                             seed, to allow pseudorandom lignin creation.
        -s IMAGE_SIZE, --image_size IMAGE_SIZE
-                             The output size of svg or png files in pixels (provide two integers). The default size 
-                             is (1200, 300) pixels.
-       -sg SG_RATIO, --sg_ratio SG_RATIO
-                             The S:G (guaiacol:syringyl) ratio. The default is 1.
+                             The output size of svg or png files in pixels. The default size is (1200, 300) pixels. 
+                             To use a different size, provide two integers, separated by a space or a comma. 
+                             Note: if the list of two numbers has any spaces in it, it must be enclosed in quotes.
+       -sg SG_RATIOS, --sg_ratios SG_RATIOS
+                             A comma-separated list of the S:G (guaiacol:syringyl) ratios to be tested. 
+                             If there are spaces, the list must be enclosed in quotes to be read as a single string. 
+                             The default list contains the single value 1.
        -t TEMPERATURE_IN_K, --temperature_in_k TEMPERATURE_IN_K
                              The temperature (in K) at which to model lignin biosynthesis. The default is 298.15 K.
-       --chain_id CHAIN_ID   The chainID to be used when generating a tcl file, which can be used to generate a pdb file 
-                             (see LigninBuilder). This should be one character. If a longer ID is provided, it will be 
-                             truncated to the first character. The default value is L.
+                             Note: this temperature must match the temperature at which the energy barriers were calculated. 
+       --chain_id CHAIN_ID   Option for use when generating a tcl script: the chainID to be used in generating a psf 
+                             and/or pdb file from a tcl script (see LigninBuilder). This should be one character. If a 
+                             longer ID is provided, it will be truncated to the first character. The default value is L.
        --psf_fname PSF_FNAME
-                             The file name for psf and pdb files, designated when generating a tcl file, which can be used 
-                             to generate the psf and pdb files (see LigninBuilder). The default value is lignin.
+                             Option for use when generating a tcl script: the file name for psf and pdb files that will 
+                             be produced from running a tcl produced by this package (see LigninBuilder). The default 
+                             value is lignin.
        --toppar_dir TOPPAR_DIR
-                             The directory name where VMD should look for the toppar file(s), designated when generating 
-                             a tcl file to be used by VMD (see LigninBuilder). The default value is 'toppar/'.
+                             Option for use when generating a tcl script: the directory name where VMD should look for 
+                             the toppar file(s) when running the tcl file in VMD (see LigninBuilder). The default value 
+                             is 'toppar/'.
 
-For example, to use an S to G ratio of 2.5, 12 initial monomers, and up to 18 monomers (only would not reach this 
-if there was insufficient time; the default 1 s will be plenty), with the remaining variables set as their 
-default values, enter:
+For example, to use an S to G ratio of 2.5, 12 initial monomers, and up to 18 monomers, with the remaining variables 
+left as their default values, enter:
 
  `> create_lignin -sg 2.5 -i 12 -m 18`
 
@@ -187,6 +211,9 @@ default values, enter:
     SMILES representation: 
      COc1cc(C(O)C(CO)Oc2c(OC)cc(C3OCC4C(c5cc(OC)c(Oc6cc(C7OCC8C(c9cc(OC)c(OC(CO)C(O)c%10cc(OC)c(OC(CO)C(O)c%11cc(OC)c%12c(c%11)C(CO)C(c%11cc(OC)c([O])c(OC)c%11)O%12)c(OC)c%10)c(Oc%10c(OC)cc(C%11OCC%12C(c%13cc(OC)c(OC(CO)C(O)c%14cc(OC)c%15c(c%14)C(CO)C(c%14cc(OC)c(OC(CO)C(O)c%16cc(OC)c(OC(CO)C(O)c%17cc(OC)c([O])c(Oc%18c(OC)cc(C(O)C(CO)Oc%19c(OC)cc(C%20OCC%21C(c%22cc(OC)c([O])c(OC)c%22)OCC%20%21)cc%19OC)cc%18OC)c%17)c(OC)c%16)c(OC)c%14)O%15)c(OC)c%13)OCC%11%12)cc%10OC)c9)OCC78)cc(OC)c6OC(CO)C(O)c6cc(OC)c([O])c(OC)c6)c(OC)c5)OCC34)cc2OC)cc(OC)c1[O] 
 
+Note: a simulation may not reach the maximum number of monomers if there is insufficient simulation time. The 
+simulation stops when either the length_simulation is reached or there are no more possible reactions, whichever 
+happens first.
 
 ### Developer Use
 
@@ -214,7 +241,7 @@ Congratulations! Lignin-KMC is now installed! With this basic installation, you 
 therein (such as `run_kmc`, `generate_mol`, and `analyze_adj_matrix`) and the classes `Monomer` and `Event`.
 
 ## Examples
-For examples, see `~/LigninPolymerizationNotebook.ipynb`, `~/Example.ipynb`, and `Dynamics.ipynb`. 
+For examples, see `LigninPolymerizationNotebook.ipynb`, `Example.ipynb`, and `Dynamics.ipynb`. 
 
 ## API Reference
 
@@ -225,17 +252,17 @@ For examples, see `~/LigninPolymerizationNotebook.ipynb`, `~/Example.ipynb`, and
 __Event__(key, index, rate, bond)
 - key = str = name of the event that is taking place (e.g. '5o4', 'ox', etc.)
 - index = [int, int] = list of indices to the monomers that are affected by this event
-- rate = R+ = the rate of the event that is occurring (units consistent with time units in simulation)
+- rate = float = the rate of the event that is occurring (units consistent with time units in simulation)
 - bond = [int, int] = list of changes that need to be made to the adjacency matrix to perform the event
 
 The class that is used to define events, which can be unpacked by the `run` function to execute the events occurring in 
 the simulation.
 
 __Monomer__(type, index)
-- type = {0, 1, 2} = a switch that indicates whether the monomer is G = 0, S = 1, or C = 2. Extensions to include more 
-  monomers would be needed to expand this definition
+- type = str, limited to S, G, or C = indicates the monomer type. This class can be extended to include more monomer 
+  types.
 - index = int = a number that should be unique for all monomers in a simulation. This is returned as the hash value and 
-  is the tie in to the adjacency matrix
+  is used to track individual subunits in the adjacency matrix.
 
 The class that contains information about each monomer in the simulation, most importantly tracking the index and the 
 monomer type.
@@ -270,7 +297,7 @@ __break_bond_type__(adj, bond_type)
 - bond_type = str = the bond that should be broken
 - return = dok_matrix = new adjacency matrix after bonds were broken
 
-Modifies the adjacency matrix to reflect certain bonds specified by `bondType` being broken. This is used primarily 
+Modifies the adjacency matrix to reflect certain bonds specified by `bond_type` being broken. This is used primarily 
 when we are evaluating the effect that reductive cleavage treatment would have on the simulated lignin. As of now, 
 all bonds of a given type are removed without discrimination.
 
@@ -288,7 +315,7 @@ __count_oligomer_yields__(adj)
      total number of branch points in oligomers of that length, and
      the branching coefficient for the oligomers of that length
 
-Used to count the yields of monomers, dimers, etc., when the simulation is complete
+Used to count the yields of monomers, dimers, etc., when the simulation is complete.
 
 __analyze_adj_matrix__(adjacency)
 - adjacency = dok_matrix = adjacency matrix
@@ -303,7 +330,7 @@ __update_events__(monomers, adj, last_event, events, rate_vec, rate_dict, max_mo
 - event_dict = dict() = map the hash value of each event to the unique event - this is all of the possible events at the 
   current state after the method is run
 - rate_vec = dict() = map the hash value of each event to the rate of that event
-- rate_dict = dict() = the reaction rates for all possible reactions, in 1/s or 1/monomer-second
+- rate_dict = dict() = the reaction rates for all possible reactions, in  monomer/second
 - max_mon = int = the maximum number of monomers in the simulation
 - return = None
 
@@ -328,7 +355,7 @@ __run_kmc__(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
 -      and the set of events that a change to this monomer would impact
 - initial_events: dictionary -- The dictionary mapping event hash values to those events
 - n_max: int   -- The maximum number of monomers in the simulation
-- t_max: float -- The final simulation time (units depend on units of rates)
+- t_max: float -- The final simulation time (units depend on units of rates; seconds if using the default rates)
 - dynamics: boolean -- if True, will keep values for every time step
 - random_seed: None or hashable value to aid testing
 - return: dict with the simulation times, adjacency matrix, and list of monomers at the end of the simulation
@@ -346,8 +373,6 @@ by `run_kmc`. This file can then be used together with rdKit for further visuali
 favorite chemical drawing software packages.
 
 # Credits
-[<img src="https://avatars0.githubusercontent.com/u/40570716?s=400&u=7bde054e05bbba59c19cefd3aa2f4c84e2a9dfc6&v=4" height="150" width="150">](https://github.com/michaelorella) | [<img src="https://avatars0.githubusercontent.com/u/17909849?s=460&v=4" height="150" width="150">](https://github.com/terrygani)
---- | --- | ---
 [Michael Orella](https://github.com/michaelorella) | [Terry Gani](https://github.com/terrygani) | 
 [Heather Mayes](https://github.com/team-mayes)
 
@@ -377,7 +402,7 @@ following points and be as detailed as possible:
 Pull requests are always welcome for suggestions to improve either the code or usability. Before submitting the pull 
 request, please ensure that your standalone code is working properly by both running the existing tests and adding 
 tests of any new functionality (at least 90% coverage). To run the existing tests, from the main directory, run `pytest`. 
-Currently (2019-11-19), test coverage is 98% for create_lignin.py, 100% for kmc_common.py, and 95% for kmc_functions.py.
+Currently (2019-11-27), test coverage is 98% for create_lignin.py, 100% for kmc_common.py, and 95% for kmc_functions.py.
 
 # License
-MIT © Michael Orella
+MIT © Michael Orella, Heather Mayes

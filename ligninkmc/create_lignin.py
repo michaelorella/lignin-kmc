@@ -3,11 +3,13 @@
 
 """
 Launches steps required to build lignin
+Multiple output options, from tcl files to plots
 """
 import argparse
 import os
 import sys
 import numpy as np
+import matplotlib.pyplot as plt
 from collections import (defaultdict)
 from configparser import ConfigParser
 from common_wrangler.common import (MAIN_SEC, GOOD_RET, INPUT_ERROR, KB, H, KCAL_MOL_TO_J_PART,
@@ -20,11 +22,11 @@ from rdkit.Chem.rdMolInterchange import MolToJSON
 from ligninkmc import __version__
 from ligninkmc.kmc_common import (Event, Monomer, E_BARRIER_KCAL_MOL, E_BARRIER_J_PART, TEMP, INI_MONOS, MAX_MONOS,
                                   SIM_TIME, AFFECTED, GROW, DEF_E_BARRIER_KCAL_MOL, OX, MONOMER, OLIGOMER,
-                                  LIGNIN_SUBUNITS, ADJ_MATRIX, RANDOM_SEED, S, G, CHAIN_LEN, BONDS, ADD_RATE, SG_RATIO,
-                                  RCF_YIELDS, RCF_BONDS, MAX_NUM_DECIMAL, MONO_LIST, CHAIN_MONOS, CHAIN_BRANCH_COEFF,
-                                  RCF_BRANCH_COEFF, CHAIN_ID,  DEF_CHAIN_ID, PSF_FNAME, DEF_PSF_FNAME, DEF_TOPPAR,
-                                  TOPPAR_DIR)
-from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_psfgen, count_bonds,
+                                  ADJ_MATRIX, RANDOM_SEED, S, G, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS,
+                                  MAX_NUM_DECIMAL, MONO_LIST, CHAIN_MONOS, CHAIN_BRANCH_COEFF, RCF_BRANCH_COEFF,
+                                  CHAIN_ID, DEF_CHAIN_ID, PSF_FNAME, DEF_PSF_FNAME, DEF_TOPPAR, TOPPAR_DIR,
+                                  MANUSCRIPT_RATES, DEF_RXN_RATES, BOND_TYPE_LIST, INT_TO_TYPE_DICT)
+from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_tcl, count_bonds,
                                      count_oligomer_yields, analyze_adj_matrix)
 
 
@@ -41,12 +43,25 @@ SAVE_TCL = 'tcl'
 OUT_TYPE_LIST = [SAVE_JSON, SAVE_PNG,  SAVE_SMI, SAVE_SVG, SAVE_TCL]
 OUT_TYPE_STR = "', '".join(OUT_TYPE_LIST)
 SAVE_FILES = 'save_files_boolean'
+ADD_RATES = 'add_rates_list'
+RXN_RATES = 'reaction_rates_at_298K'
+SG_RATIOS = 'sg_ratio_list'
+NUM_REPEATS = 'num_repeats'
+DYNAMICS = 'dynamics_flag'
+OLIGOMERS = 'oligomers'
+MONOMERS = 'monomers'
+PLOT_BONDS = 'plot_bonds'
+# todo: remove ENERGY_BARRIER_FLAG option when debugging is complete
+ENERGY_BARRIER_FLAG = 'energy_barriers_flag'
+
+PLOT_COLORS = [(0, 0, 0), (1, 0, 0), (0, 0, 1), (0, 0.6, 0), (0.6, 0, 0.6), (1, 0.549, 0),
+               (0, 0.6, 0.6), (1, 0.8, 0), (0.6078, 0.2980, 0), (0.6, 0, 0), (0, 0, 0.6)]
 
 
 # Defaults #
 DEF_TEMP = 298.15  # K
 DEF_MAX_MONOS = 10  # number of monomers
-DEF_SIM_TIME = 3600  # simulation time in seconds
+DEF_SIM_TIME = 3600  # simulation time in seconds (1 hour)
 DEF_SG = 1
 DEF_INI_MONOS = 2
 # Estimated addition rate below is based on: https://www.pnas.org/content/early/2019/10/25/1904643116.abstract
@@ -56,20 +71,152 @@ DEF_INI_MONOS = 2
 DEF_ADD_RATE = 1.0
 DEF_IMAGE_SIZE = (1200, 300)
 DEF_BASENAME = 'lignin-kmc-out'
+DEF_NUM_REPEATS = 1
 
 DEF_VAL = 'default_value'
-DEF_CFG_VALS = {OUT_DIR: None, OUT_FORMAT_LIST: None, ADD_RATE: DEF_ADD_RATE, INI_MONOS: DEF_INI_MONOS,
-                MAX_MONOS: DEF_MAX_MONOS, SIM_TIME: DEF_SIM_TIME, SG_RATIO: DEF_SG, TEMP: DEF_TEMP, RANDOM_SEED: None,
-                BASENAME: DEF_BASENAME, IMAGE_SIZE: DEF_IMAGE_SIZE, E_BARRIER_KCAL_MOL: DEF_E_BARRIER_KCAL_MOL,
-                E_BARRIER_J_PART: None, SAVE_FILES: False, SAVE_JSON: False, SAVE_PNG: False, SAVE_SMI: False,
-                SAVE_SVG: False, SAVE_TCL: False, CHAIN_ID: DEF_CHAIN_ID, PSF_FNAME: DEF_PSF_FNAME,
-                TOPPAR_DIR: DEF_TOPPAR,
+DEF_CFG_VALS = {OUT_DIR: None, OUT_FORMAT_LIST: None, ADD_RATES: [DEF_ADD_RATE], INI_MONOS: DEF_INI_MONOS,
+                MAX_MONOS: DEF_MAX_MONOS, SIM_TIME: DEF_SIM_TIME, SG_RATIOS: [DEF_SG], TEMP: DEF_TEMP,
+                RANDOM_SEED: None, BASENAME: DEF_BASENAME, IMAGE_SIZE: DEF_IMAGE_SIZE, DYNAMICS: False,
+                E_BARRIER_KCAL_MOL: DEF_E_BARRIER_KCAL_MOL, E_BARRIER_J_PART: None, SAVE_FILES: False,
+                SAVE_JSON: False, SAVE_PNG: False, SAVE_SMI: False, SAVE_SVG: False, SAVE_TCL: False,
+                CHAIN_ID: DEF_CHAIN_ID, PSF_FNAME: DEF_PSF_FNAME, TOPPAR_DIR: DEF_TOPPAR,
+                NUM_REPEATS: DEF_NUM_REPEATS, PLOT_BONDS: False,
+                # todo: remove ENERGY_BARRIER_FLAG option when debugging is complete
+                ENERGY_BARRIER_FLAG: False,
                 }
 
 REQ_KEYS = {}
 
 OPENING_MSG = f"Running Lignin-KMC version {__version__}. " \
               f"Please cite: https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.9b03534\n"
+
+
+def plot_bond_error_bars(x_axis, y_axis_val_dicts, y_axis_std_dev_dicts, y_val_key_list, x_axis_label, y_axis_label,
+                         plot_title, plot_fname):
+    plt.figure(figsize=(3.5, 3.5))
+    for y_idx, y_key in enumerate(y_val_key_list):
+        plt.errorbar(x_axis, y_axis_val_dicts[y_key], yerr=y_axis_std_dev_dicts[y_key], linestyle='none', marker='.',
+                     markersize=10, markerfacecolor=PLOT_COLORS[y_idx], markeredgecolor=PLOT_COLORS[y_idx],
+                     label=y_key, capsize=3, ecolor=PLOT_COLORS[y_idx])
+
+    if len(x_axis) > 1:
+        plt.xscale('log')
+
+    [plt.gca().spines[i].set_linewidth(1.5) for i in ['top', 'right', 'bottom', 'left']]
+    plt.gca().tick_params(axis='both', which='major', labelsize=14, direction='in', pad=8, top=True, right=True,
+                          width=1.5, length=6)
+    plt.gca().tick_params(axis='both', which='minor', labelsize=14, direction='in', pad=8, top=True, right=True,
+                          width=1, length=4)
+    plt.ylabel(y_axis_label, fontsize=14)
+    plt.xlabel(x_axis_label, fontsize=14)
+
+    if '%' in y_axis_label:
+        plt.ylim([0.0, 1.0])
+    # needed to adjust legends differently for two types of plot
+    if y_val_key_list[0] in BOND_TYPE_LIST:
+        plt.legend(fontsize=14, loc='upper right', bbox_to_anchor=(1.45, 1.05), frameon=False)
+    else:
+        plt.legend(fontsize=14, loc='upper right', bbox_to_anchor=(1.7, 1.05), frameon=False)
+
+    plt.title(plot_title)
+    plt.savefig(plot_fname, bbox_inches='tight', transparent=True)
+    print(f"Wrote file: {plot_fname}")
+    plt.close()
+
+
+def get_avg_percent_bonds(bond_list, num_opts, adj_lists, num_trials):
+    """
+    Given adj_list for a set of options, with repeats for each option, find the avg and std dev of percent of each
+    bond type
+    :param bond_list: list of strings representing each bond type
+    :param num_opts: number of options specified (should be length of adj_lists)
+    :param adj_lists: list of lists of adjs: outer is for each option, inner is for each repeat
+    :param num_trials: number of repeats (should be length of inner adj_lists list)
+    :return: avg_bonds, std_bonds: list of floats, list of floats: for each option tested, the average and std dev
+                  of bond distributions (percentages)
+    """
+    analysis = []
+    for i in range(num_opts):
+        cur_adjs = adj_lists[i]
+        analysis.append([analyze_adj_matrix(cur_adjs[j]) for j in range(num_trials)])
+
+    bond_percents = {}
+    avg_bonds = {}
+    std_bonds = {}
+
+    for bond_type in bond_list:
+        bond_percents[bond_type] = [[analysis[j][i][BONDS][bond_type]/sum(analysis[j][i][BONDS].values())
+                                     for i in range(num_trials)] for j in range(num_opts)]
+        avg_bonds[bond_type] = [np.mean(bond_pcts) for bond_pcts in bond_percents[bond_type]]
+        std_bonds[bond_type] = [np.sqrt(np.var(bond_pcts)) for bond_pcts in bond_percents[bond_type]]
+    return avg_bonds, std_bonds
+
+
+def create_bond_v_sg_plots(add_rate_str, cfg, sg_adjs):
+    all_avg_bonds, all_std_bonds = get_avg_percent_bonds(BOND_TYPE_LIST, len(cfg[SG_RATIOS]), sg_adjs,
+                                                         cfg[NUM_REPEATS])
+    title = f"Add rate {add_rate_str} monomer/s"
+    x_axis_label = 'SG Ratio'
+    y_axis_label = 'Bond Type Yield (%)'
+    fname = create_out_fname(f'bond_dist_v_sg_{add_rate_str}', base_dir=cfg[OUT_DIR], ext='.png')
+    plot_bond_error_bars(cfg[SG_RATIOS], all_avg_bonds, all_std_bonds, BOND_TYPE_LIST,
+                         x_axis_label, y_axis_label, title, fname)
+
+
+def create_dynamics_plots(add_rate_str, bond_types, cfg, num_monos, num_oligs, sg_ratio):
+    # Starting with num mon & olig vs timestep:
+    len_y_val_key_list = [MONOMERS, OLIGOMERS]
+    min_len = len(num_monos[0])
+    avg_bond_types = {}
+    std_bond_types = {}
+    if cfg[NUM_REPEATS] > 1:
+        # If there are multiple runs, arrays may be different lengths, so find shortest array
+        min_len = len(num_monos[0])
+        for mono_list in num_monos[1:]:
+            if len(mono_list) < min_len:
+                min_len = len(mono_list)
+        # make lists of lists into np array
+        sg_num_monos = np.asarray([np.array(num_list[:min_len]) for num_list in num_monos])
+        # could save; for now, use to make images
+        av_num_monos = np.mean(sg_num_monos, axis=0)
+
+        sg_num_oligs = np.asarray([np.array(num_list[:min_len]) for num_list in num_oligs])
+        av_num_oligs = np.mean(sg_num_oligs, axis=0)
+
+        std_num_monos = np.std(sg_num_monos, axis=0)
+        std_num_oligs = np.std(sg_num_oligs, axis=0)
+
+        len_y_axis_val_dicts = {MONOMERS: av_num_monos, OLIGOMERS: av_num_oligs}
+        len_y_axis_std_dev_dicts = {MONOMERS: std_num_monos, OLIGOMERS: std_num_oligs}
+
+        for bond_type in BOND_TYPE_LIST:
+            sg_bond_dist = np.asarray([np.array(bond_list[:min_len]) for
+                                       bond_list in bond_types[bond_type]])
+            avg_bond_types[bond_type] = np.mean(sg_bond_dist, axis=0)
+            std_bond_types[bond_type] = np.std(sg_bond_dist, axis=0)
+
+    else:
+        len_y_axis_val_dicts = {MONOMERS: num_monos[0], OLIGOMERS: num_oligs[0]}
+        len_y_axis_std_dev_dicts = {MONOMERS: None, OLIGOMERS: None}
+
+        for bond_type in BOND_TYPE_LIST:
+            avg_bond_types[bond_type] = bond_types[bond_type]
+            std_bond_types[bond_type] = None
+    timesteps = list(range(min_len))
+    title = f"S:G Ratio {sg_ratio}, Add rate {add_rate_str} monomer/s"
+    sg_str = f'{sg_ratio:.{3}g}'.replace("+", "").replace(".", "-")
+    fname = create_out_fname(f'mono_olig_v_step_{sg_str}_{add_rate_str}', base_dir=cfg[OUT_DIR],
+                             ext='.png')
+    x_axis_label = 'Time step'
+    y_axis_label = 'Number'
+    plot_bond_error_bars(timesteps, len_y_axis_val_dicts, len_y_axis_std_dev_dicts, len_y_val_key_list,
+                         x_axis_label, y_axis_label, title, fname)
+    fname = create_out_fname(f'bond_dist_v_step_{sg_str}_{add_rate_str}', base_dir=cfg[OUT_DIR],
+                             ext='.png')
+    x_axis_label = 'Time step'
+    y_axis_label = 'Number of Bonds'
+    plot_bond_error_bars(timesteps, avg_bond_types, std_bond_types, BOND_TYPE_LIST,
+                         x_axis_label, y_axis_label, title, fname)
 
 
 def adj_analysis_to_stdout(adj_results):
@@ -219,49 +366,67 @@ def parse_cmdline(argv=None):
     # initialize the parser object:
     parser = argparse.ArgumentParser(description=f"Create lignin chain(s) composed of 'S' ({S}) and/or 'G' ({G}) "
                                                  f"monolignols, as described in:\n  Orella, M., "
-                                                 'Gani, T. Z. H., Vermaas, J. V., Stone, M. L., Anderson, E. M., '
-                                                 'Beckham, G. T., \n  Brushett, Fikile R., Roman-Leshkov, Y. (2019). '
-                                                 'Lignin-KMC: A Toolkit for Simulating Lignin Biosynthesis.\n  '
-                                                 'ACS Sustainable Chemistry & Engineering. '
-                                                 'https://doi.org/10.1021/acssuschemeng.9b03534. C-Lignin can be \n  '
-                                                 'modeled with the functions in this package, as shown in ipynb '
-                                                 'examples in our project package on github \n  '
-                                                 '(https://github.com/michaelorella/lignin-kmc/), but not currently '
-                                                 'from the command line. If this \n  functionality is desired, please '
-                                                 'start a new issue on the github.\n\n  By default, the Gibbs free '
-                                                 f'energy barriers from this reference will be used, as specified in '
-                                                 f'Tables S1 and S2.\n  Alternately, the user may specify values, '
+                                                 f"Gani, T. Z. H., Vermaas, J. V., Stone, M. L., Anderson, E. M., "
+                                                 f"Beckham, G. T., \n  Brushett, Fikile R., Roman-Leshkov, Y. (2019). "
+                                                 f"Lignin-KMC: A Toolkit for Simulating Lignin Biosynthesis.\n  "
+                                                 f"ACS Sustainable Chemistry & Engineering. "
+                                                 f"https://doi.org/10.1021/acssuschemeng.9b03534. C-Lignin can be \n  "
+                                                 f"modeled with the functions in this package, as shown in ipynb "
+                                                 f"examples in our project package on github \n  "
+                                                 f"(https://github.com/michaelorella/lignin-kmc/), but not currently "
+                                                 f"from the command line. If this \n  functionality is desired, "
+                                                 f"please start a new issue on the github.\n\n  By default, the Gibbs "
+                                                 f"free energy barriers from this reference will be used, as specified "
+                                                 f"in Tables S1 and S2.\n  Alternately, the user may specify values, "
                                                  f"which should be specified as a dict of dict of dicts in a \n  "
                                                  f"specified configuration file (specified with '-c') using the "
                                                  f"'{E_BARRIER_KCAL_MOL}' or '{E_BARRIER_J_PART}'\n  parameters with "
                                                  f"corresponding units (kcal/mol or joules/particle, respectively), in "
                                                  f"a configuration file \n  (see '-c'). The format is (bond_type: "
                                                  f"monomer(s) involved: units involved: ea_vals), for example:\n      "
-                                                 f"ea_dict = {{{OX}: {{0: {{{MONOMER}: 0.9, {OLIGOMER}: 6.3}}, "
-                                                 f"1: ""{{{MONOMER}: 0.6, {OLIGOMER}: " f"2.2}}}}, ...}}\n  "
-                                                 f"where 0: {LIGNIN_SUBUNITS[0]}, 1: {LIGNIN_SUBUNITS[1]}, "
-                                                 f"2: {LIGNIN_SUBUNITS[2]}. The default output is a SMILES string "
-                                                 f"printed to standard out.\n\n  All command-line options may "
-                                                 f"alternatively be specified in a configuration file. Command-line "
-                                                 f"(non-default) \n  selections will override configuration file "
-                                                 f"specifications.",
+                                                 f"ea_dict = {{{OX}: {{'G': {{{MONOMER}: 0.9, {OLIGOMER}: 6.3}}, "
+                                                 f"'S': ""{{{MONOMER}: 0.6, {OLIGOMER}: " f"2.2}}}}, ...}}.\n  "
+                                                 f"The default output is a SMILES string printed to standard out.\n\n"
+                                                 f"  All command-line options may alternatively be specified in a "
+                                                 f"configuration file. Command-line (non-default) \n  selections will "
+                                                 f"override configuration file specifications.",
                                      formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-a", "--add_rate", help=f"The rate of monomer addition to the system (in monomers/second) to "
-                                                 f"be used when the \n'{MAX_MONOS}' ('-m' option) is larger than "
-                                                 f"'{INI_MONOS}' ('-i' option), \nthus specifying monomer addition. "
-                                                 f"The simulation will end when either there are no more \npossible "
-                                                 f"reactions (including monomer addition) or when the '{SIM_TIME}' "
-                                                 f"\n('-l' option) is reached, whichever comes first.",
-                        default=DEF_ADD_RATE)
+    parser.add_argument("-a", "--add_rates", help=f"A comma-separated list of the rates of monomer addition to the "
+                                                  f"system (in monomers/second), \nto be used when the '{MAX_MONOS}' "
+                                                  f"('-m' option) is larger than '{INI_MONOS}' \n('-i' option), thus "
+                                                  f"specifying monomer addition. The simulation will end when either "
+                                                  f"there \nare no more possible reactions (including monomer "
+                                                  f"addition) or when the '{SIM_TIME}' \n('-l' option) is reached, "
+                                                  f"whichever comes first. Note: if there are spaces in the list of "
+                                                  f"\naddition rates, the list must be enclosed in quotes to be read "
+                                                  f"as a single string. The \ndefault list contains the single "
+                                                  f"addition rate of {DEF_ADD_RATE} monomers/s.",
+                        default=[DEF_ADD_RATE])
     parser.add_argument("-c", "--config", help="The location of the configuration file in the 'ini' format. This file "
                                                "can be used to \noverwrite default values such as for energies.",
                         default=None, type=read_cfg)
     parser.add_argument("-d", "--out_dir", help="The directory where output files will be saved. The default is "
                                                 "the current directory.", default=DEF_CFG_VALS[OUT_DIR])
+    parser.add_argument("-dy", "--dynamics_flag", help=f"Select this option if dynamics (results per timestep) are "
+                                                       f"requested. If chosen, plots of \nmonomers and oligomers vs "
+                                                       f"timestep, and bond type percent vs timestep, will be saved. "
+                                                       f"\nThey will be named 'bond_dist_v_step_*_#.png' and "
+                                                       f"'mono_olig_v_step_*_#.png', where * \nrepresents the S:G "
+                                                       f"ratio and # represents the addition rate. Note that this "
+                                                       f"option \nsignificantly increases simulation time.",
+                        action="store_true")
+    # todo: remove -e option when debugging is complete
+    parser.add_argument("-e", "--energy_barriers_flag", help=f"By default, the reaction rates will be based on the "
+                                                             f"energy barriers in kcal/mol to be used \nto calculate "
+                                                             f"reaction rates at {DEF_TEMP} K. If this flag is used, "
+                                                             f"the rates use to produce the \noriginal manuscript "
+                                                             f"plots will be used (missing one term). Alternate sets "
+                                                             f"of energy \nbarriers can be specified; see the main "
+                                                             f"help message.", action="store_true")
     parser.add_argument("-f", "--output_format_list", help="The type(s) of output format to be saved. Provide as a "
                                                            "space- or comma-separated list. \nNote: if the list has "
                                                            "spaces, it must be enclosed in quotes, to be treated as "
-                                                           "a single string. \nThe currently supported "
+                                                           "a single \nstring. The currently supported "
                                                            f"types are: '{OUT_TYPE_STR}'. \nThe '{SAVE_JSON}' "
                                                            f"option will save a json format of RDKit's 'mol' "
                                                            f"(molecule) object. The '{SAVE_TCL}' \noption will create "
@@ -280,39 +445,50 @@ def parse_cmdline(argv=None):
                                                           f"default is {DEF_SIM_TIME} s.", default=DEF_SIM_TIME)
     parser.add_argument("-m", "--max_num_monomers", help=f"The maximum number of monomers to be studied. The default "
                                                          f"value is {DEF_MAX_MONOS}.", default=DEF_MAX_MONOS)
+    parser.add_argument("-n", "--num_repeats", help=f"The number of times each combination of sg_ratio and add_rate "
+                                                    f"will be tested. The default is {DEF_NUM_REPEATS}.",
+                        default=DEF_NUM_REPEATS)
     parser.add_argument("-o", "--output_basename", help=f"The base name for output file(s). If an extension is "
                                                         f"provided, it will determine \nthe type of output. Currently "
                                                         f"supported output types are: \n'{OUT_TYPE_STR}'. Multiple "
                                                         f"output formats can be selected with the \n'-f' option. If "
                                                         f"the '-f' option is selected and no output base name "
-                                                        f"provided, a \ndefault base name of '{DEF_BASENAME}' will be "
+                                                        f"provided, a default \nbase name of '{DEF_BASENAME}' will be "
                                                         f"used.", default=DEF_BASENAME)
-
-    parser.add_argument("-r", "--random_seed", help="A positive integer to be used as a seed value for testing.",
-                        default=DEF_CFG_VALS[RANDOM_SEED])
+    parser.add_argument("-p", "--plot_bonds", help=f"Flag to produce plots of the percent of each bond type versus S:G "
+                                                   f"ratio(s). One plot will \nbe created per addition rate, named "
+                                                   f"'bond_dist_v_sg_#.png', where # represents \nthe addition rate.",
+                        action="store_true")
+    parser.add_argument("-r", "--random_seed", help="A positive integer to be used as a seed value for testing. The "
+                                                    "default is not to use a \nseed, to allow pseudorandom lignin "
+                                                    "creation.", default=DEF_CFG_VALS[RANDOM_SEED])
     parser.add_argument("-s", "--image_size", help=f"The output size of svg or png files in pixels. The default size "
                                                    f"is {DEF_IMAGE_SIZE} pixels. \nTo use a different size, provide "
                                                    f"two integers, separated by a space or a comma. \nNote: if the "
                                                    f"list of two numbers has any spaces in it, it must be enclosed "
                                                    f"in quotes.",
                         default=DEF_IMAGE_SIZE)
-    parser.add_argument("-sg", "--sg_ratio", help=f"The S:G (guaiacol:syringyl) ratio. "
-                                                  f"The default is {DEF_SG}.", default=DEF_SG)
+    parser.add_argument("-sg", "--sg_ratios", help=f"A comma-separated list of the S:G (guaiacol:syringyl) ratios to "
+                                                   f"be tested. \nIf there are spaces, the list must be enclosed in "
+                                                   f"quotes to be read as a single string. \nThe default list "
+                                                   f"contains the single value {DEF_SG}.", default=[DEF_SG])
     parser.add_argument("-t", "--temperature_in_k", help=f"The temperature (in K) at which to model lignin "
-                                                         f"biosynthesis. The default is {DEF_TEMP} K.",
+                                                         f"biosynthesis. The default is {DEF_TEMP} K.\nNote: this "
+                                                         f"temperature must match the temperature at which the "
+                                                         f"energy barriers were calculated. ",
                         default=DEF_TEMP)
-    parser.add_argument("--chain_id", help=f"The chainID to be used when generating a tcl file, which can be used "
-                                           f"to generate a pdb file \n(see LigninBuilder). This should be one "
-                                           f"character. If a longer ID is provided, it will be \ntruncated to the "
-                                           f"first character. The default value is {DEF_CHAIN_ID}.",
+    parser.add_argument("--chain_id", help=f"Option for use when generating a tcl script: the chainID to be used in "
+                                           f"generating a psf \nand/or pdb file from a tcl script (see LigninBuilder). "
+                                           f"This should be one character. If a \nlonger ID is provided, it will be "
+                                           f"truncated to the first character. The default value is {DEF_CHAIN_ID}.",
                         default=DEF_CHAIN_ID)
-    parser.add_argument("--psf_fname", help=f"The file name for psf and pdb files, designated when generating a tcl "
-                                            f"file, which can be used \nto generate the psf and pdb files (see "
-                                            f"LigninBuilder). The default value is {DEF_PSF_FNAME}.",
+    parser.add_argument("--psf_fname", help=f"Option for use when generating a tcl script: the file name for psf and "
+                                            f"pdb files that will \nbe produced from running a tcl produced by this "
+                                            f"package (see LigninBuilder). The default \nvalue is {DEF_PSF_FNAME}.",
                         default=DEF_PSF_FNAME)
-    parser.add_argument("--toppar_dir", help=f"The directory name where VMD should look for the toppar file(s), "
-                                             f"designated when generating \na tcl file to be used by VMD (see "
-                                             f"LigninBuilder). The default value is '{DEF_TOPPAR}'.",
+    parser.add_argument("--toppar_dir", help=f"Option for use when generating a tcl script: the directory name where "
+                                             f"VMD should look for \nthe toppar file(s) when running the tcl file in "
+                                             f"VMD (see LigninBuilder). The default value \nis '{DEF_TOPPAR}'.",
                         default=DEF_TOPPAR)
 
     args = None
@@ -321,18 +497,23 @@ def parse_cmdline(argv=None):
         # dict below to map config input and defaults to command-line input
         conf_arg_dict = {OUT_DIR: args.out_dir,
                          OUT_FORMAT_LIST: args.output_format_list,
-                         ADD_RATE: args.add_rate,
+                         ADD_RATES: args.add_rates,
+                         DYNAMICS: args.dynamics_flag,
                          INI_MONOS: args.initial_num_monomers,
                          SIM_TIME: args.length_simulation,
                          MAX_MONOS: args.max_num_monomers,
                          BASENAME: args.output_basename,
                          IMAGE_SIZE: args.image_size,
-                         SG_RATIO: args.sg_ratio,
+                         SG_RATIOS: args.sg_ratios,
                          TEMP: args.temperature_in_k,
                          RANDOM_SEED: args.random_seed,
                          CHAIN_ID: args.chain_id,
                          PSF_FNAME: args.psf_fname,
                          TOPPAR_DIR: args.toppar_dir,
+                         NUM_REPEATS: args.num_repeats,
+                         PLOT_BONDS: args.plot_bonds,
+                         # todo: remove -e option when debugging is complete
+                         ENERGY_BARRIER_FLAG: args.energy_barriers_flag,
                          }
         if args.config is None:
             args.config = DEF_CFG_VALS.copy()
@@ -352,7 +533,8 @@ def parse_cmdline(argv=None):
 
         # Easy possible error is to have a space in a list; check for it
         check_arg_list = []
-        for arg_str in ['-f', '--output_format_list', '-s', '--image_size']:
+
+        for arg_str in ['-f', '--output_format_list', '-s', '--image_size', "-a", "--add_rates", "-sg", "--sg_ratio"]:
             if arg_str in argv:
                 check_arg_list.append(arg_str)
         if len(check_arg_list) > 0:
@@ -400,9 +582,9 @@ def calc_rates(temp, ea_j_part_dict=None, ea_kcal_mol_dict=None):
 def create_initial_monomers(pct_s, monomer_draw):
     """
     Make a monomer list (length of monomer_draw) based on the types determined by the monomer_draw list and pct_s
-    :param pct_s: float ([0:1]), fraction of  monomers that should be type "1" ("S")
-    :param monomer_draw: a list of floats ([0:1)) to determine if the monomer should be type "0" ("G", val < pct_s) or
-                         "1" ("S", otherwise)
+    :param pct_s: float ([0:1]), fraction of  monomers that should be type "S"
+    :param monomer_draw: a list of floats ([0:1)) to determine if the monomer should be type "G" (val < pct_s) or
+                         "S", otherwise
     :return: list of Monomer objects of specified type
     """
     # TODO: If want more than 2 monomer options, need to change logic; that will require an overhaul, since
@@ -410,7 +592,7 @@ def create_initial_monomers(pct_s, monomer_draw):
     #       just S and G, no need to update
     # if mon_choice < pct_s, make it an S; that is, the evaluation comes back True (=1='S');
     #     otherwise, get False = 0 = 'G'. Since only two options (True/False) only works for 2 monomers
-    return [Monomer(int(mono_type_draw < pct_s), i) for i, mono_type_draw in enumerate(monomer_draw)]
+    return [Monomer(INT_TO_TYPE_DICT[int(mono_type_draw < pct_s)], i) for i, mono_type_draw in enumerate(monomer_draw)]
 
 
 def create_initial_events(initial_monomers, rxn_rates):
@@ -427,9 +609,9 @@ def create_initial_state(initial_events, initial_monomers):
     return {i: {MONOMER: initial_monomers[i], AFFECTED: {initial_events[i]}} for i in range(len(initial_monomers))}
 
 
-def produce_output(result, cfg):
+def produce_output(adj_matrix, mono_list, cfg):
     # Default out is SMILES
-    block = generate_mol(result[ADJ_MATRIX], result[MONO_LIST])
+    block = generate_mol(adj_matrix, mono_list)
     mol = MolFromMolBlock(block)
     smi_str = MolToSmiles(mol) + '\n'
     # if SMI is to be saved, don't output to stdout
@@ -446,14 +628,37 @@ def produce_output(result, cfg):
         if cfg[save_format]:
             fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=save_format)
             if save_format == SAVE_TCL:
-                gen_psfgen(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=fname, chain_id=cfg[CHAIN_ID],
-                           psf_fname=cfg[PSF_FNAME], toppar_dir=cfg[TOPPAR_DIR], out_dir=cfg[OUT_DIR])
+                gen_tcl(adj_matrix, mono_list, tcl_fname=fname, chain_id=cfg[CHAIN_ID],
+                        psf_fname=cfg[PSF_FNAME], toppar_dir=cfg[TOPPAR_DIR], out_dir=cfg[OUT_DIR])
             if save_format == SAVE_JSON:
                 json_str = MolToJSON(mol)
                 str_to_file(json_str + '\n', fname)
             elif save_format == SAVE_PNG or save_format == SAVE_SVG:
                 MolToFile(mol, fname, size=cfg[IMAGE_SIZE])
             print(f"Wrote file: {fname}")
+
+
+def initiate_state(add_rate, cfg, rep, sg_ratio):
+    pct_s = sg_ratio / (1 + sg_ratio)
+    ini_num_monos = cfg[INI_MONOS]
+    if cfg[RANDOM_SEED]:
+        # we don't want the same random seed for every iteration
+        np.random.seed(cfg[RANDOM_SEED] + int(add_rate / 100 + sg_ratio * 10) + rep)
+        monomer_draw = np.around(np.random.rand(ini_num_monos), MAX_NUM_DECIMAL)
+    else:
+        monomer_draw = np.random.rand(ini_num_monos)
+    initial_monomers = create_initial_monomers(pct_s, monomer_draw)
+    # initial event must be oxidation to create reactive species; all monomers may be oxidized
+    initial_events = create_initial_events(initial_monomers, cfg[RXN_RATES])
+    # initial_monomers and initial_events are grouped into the initial state
+    initial_state = create_initial_state(initial_events, initial_monomers)
+    if cfg[MAX_MONOS] > cfg[INI_MONOS]:
+        initial_events.append(Event(GROW, [], rate=add_rate))
+    elif cfg[MAX_MONOS] < cfg[INI_MONOS]:
+        warning(f"The specified maximum number of monomers ({cfg[MAX_MONOS]}) is less than the "
+                f"specified initial number of monomers ({cfg[INI_MONOS]}). \n The program will "
+                f"proceed with the with the initial number of monomers with no addition of monomers.")
+    return initial_events, initial_state
 
 
 def validate_input(cfg):
@@ -477,32 +682,47 @@ def validate_input(cfg):
                                    f"would like to obtain consistent output by using a random seed, provide a "
                                    f"positive integer value no greater than 2**32 - 1.")
 
-    if not isinstance(cfg[ADD_RATE], float):
-        try:
-            cfg[ADD_RATE] = float(cfg[ADD_RATE])
-            if cfg[ADD_RATE] <= 0:
-                raise ValueError
-        except ValueError:
-            raise InvalidDataError(f"Encountered '{cfg[ADD_RATE]}' for the '{ADD_RATE}'. "
-                                   f"A positive number is required.")
+    # Convert list entries. Will already be lists if defaults are used. Otherwise, they will be strings.
+    list_args = [ADD_RATES, SG_RATIOS]
+    arg, arg_val = "", ""  # to make IDE happy
+    try:
+        for arg in list_args:
+            arg_val = cfg[arg]
+            # Will be a string to process unless it is the default
+            if isinstance(arg_val, str):
+                raw_vals = arg_val.replace(",", " ").replace("(", "").replace(")", "").split()
+                cfg[arg] = [float(val) for val in raw_vals]
+            else:
+                cfg[arg] = arg_val
+            for val in cfg[arg]:
+                if val < 0:
+                    raise ValueError
+                # okay for sg_ratio to be zero, but not add_rate
+                elif val == 0 and arg == ADD_RATES:
+                    raise ValueError
+    except ValueError:
+        raise InvalidDataError(f"Found {arg_val} for '{arg}'. This entry must be able to be "
+                               f"converted to a list of positive floats.")
 
-    for req_pos_num in [SG_RATIO, SIM_TIME]:
+    # now testing for positive floats
+    for req_pos_num in [SIM_TIME]:
         try:
             cfg[req_pos_num] = float(cfg[req_pos_num])
-            if cfg[req_pos_num] < 0:
+            if cfg[req_pos_num] <= 0:
                 raise ValueError
         except ValueError:
             raise InvalidDataError(f"Found '{cfg[req_pos_num]}' input for '{req_pos_num}'. The {req_pos_num} must be "
                                    f"a positive number.")
 
-    for num_monos in [INI_MONOS, MAX_MONOS]:
+    # Required ints
+    for req_pos_int_arg in [INI_MONOS, MAX_MONOS, NUM_REPEATS]:
         try:
-            cfg[num_monos] = int(cfg[num_monos])
-            if cfg[num_monos] < 0:
+            cfg[req_pos_int_arg] = int(cfg[req_pos_int_arg])
+            if cfg[req_pos_int_arg] < 0:
                 raise ValueError
         except ValueError:
-            raise InvalidDataError(f"Found '{cfg[num_monos]}' input for '{num_monos}'. The {num_monos} must be a "
-                                   f"positive integer.")
+            raise InvalidDataError(f"Found '{cfg[req_pos_int_arg]}' input for '{req_pos_int_arg}'. The "
+                                   f"{req_pos_int_arg} must be a positive integer.")
 
     try:
         # Will be a string to process unless it is the default
@@ -517,6 +737,28 @@ def validate_input(cfg):
 
     # Check for valid output requests
     check_if_files_to_be_saved(cfg)
+
+    # determine rates to use
+    if cfg[E_BARRIER_KCAL_MOL] == DEF_CFG_VALS[E_BARRIER_KCAL_MOL] and (cfg[E_BARRIER_J_PART] ==
+                                                                        DEF_CFG_VALS[E_BARRIER_J_PART]
+                                                                        ) and (cfg[TEMP] == DEF_TEMP):
+        # todo: remove ENERGY_BARRIER_FLAG option when debugging is complete
+        if cfg[ENERGY_BARRIER_FLAG]:
+            cfg[RXN_RATES] = MANUSCRIPT_RATES
+        else:
+            cfg[RXN_RATES] = DEF_RXN_RATES
+    else:
+        # todo: remove ENERGY_BARRIER_FLAG option when debugging is complete
+        if cfg[ENERGY_BARRIER_FLAG]:
+            warning("Both the {ENERGY_BARRIER_FLAG} option and energy barriers have been provided. The "
+                    "{ENERGY_BARRIER_FLAG} option will be ignored, and reaction rates will be calculated from the "
+                    "provided energy barriers.")
+        if int(cfg[TEMP]) != int(DEF_TEMP):
+            warning(f"The program will continue, using a temperature other than {DEF_TEMP}. Ensure that the energy "
+                    f"barriers being used where calculated at the provided temperature ({cfg[TEMP]}), otherwise "
+                    f"cancel this run.")
+        cfg[RXN_RATES] = calc_rates(cfg[TEMP], ea_j_part_dict=cfg[E_BARRIER_J_PART],
+                                    ea_kcal_mol_dict=cfg[E_BARRIER_KCAL_MOL])
 
 
 def check_if_files_to_be_saved(cfg):
@@ -576,41 +818,61 @@ def main(argv=None):
         # tests at the beginning to catch errors early
         validate_input(cfg)
 
-        # need rates before we can start modeling reactions
-        rxn_rates = calc_rates(cfg[TEMP], ea_j_part_dict=cfg[E_BARRIER_J_PART],
-                               ea_kcal_mol_dict=cfg[E_BARRIER_KCAL_MOL])
+        for add_rate in cfg[ADD_RATES]:
+            sg_adjs = []
+            add_rate_str = f'{add_rate:.{3}g}'.replace("+", "").replace(".", "-")
+            # todo: remove MANUSCRIPT_RATES when debugging done
+            if cfg[RXN_RATES] == MANUSCRIPT_RATES:
+                add_rate_str += "_m"
+            for sg_ratio in cfg[SG_RATIOS]:
+                # the initialized lists below are for storing repeats
+                bond_types = defaultdict(list)
+                num_monos = []
+                num_oligs = []
+                adj_repeats = []
 
-        # decide on initial monomers, based on given SG_RATIO
-        pct_s = cfg[SG_RATIO] / (1 + cfg[SG_RATIO])
-        ini_num_monos = cfg[INI_MONOS]
-        if cfg[RANDOM_SEED]:
-            np.random.seed(cfg[RANDOM_SEED])
-            monomer_draw = np.around(np.random.rand(ini_num_monos), MAX_NUM_DECIMAL)
-        else:
-            monomer_draw = np.random.rand(ini_num_monos)
-        initial_monomers = create_initial_monomers(pct_s, monomer_draw)
+                for rep in range(cfg[NUM_REPEATS]):
 
-        # initial event must be oxidation to create reactive species; all monomers get a chance of being oxidized
-        initial_events = create_initial_events(initial_monomers, rxn_rates)
+                    # decide on initial monomers, based on given sg_ratio, and create initial oxidation events
+                    initial_events, initial_state = initiate_state(add_rate, cfg, rep, sg_ratio)
 
-        # After the initial_monomers and initial_events have been created, they are grouped into the initial state.
-        initial_state = create_initial_state(initial_events, initial_monomers)
-        if cfg[MAX_MONOS] > cfg[INI_MONOS]:
-            initial_events.append(Event(GROW, [], rate=cfg[ADD_RATE]))
-        elif cfg[MAX_MONOS] < cfg[INI_MONOS]:
-            warning(f"The specified maximum number of monomers ({cfg[MAX_MONOS]}) is less than the specified initial "
-                    f"number of monomers ({cfg[INI_MONOS]}). \n          The program will proceed with the initial "
-                    f"number of monomers with no addition of monomers.")
+                    # begin simulation
+                    result = run_kmc(cfg[RXN_RATES], initial_state, initial_events, n_max=cfg[MAX_MONOS],
+                                     t_max=cfg[SIM_TIME], sg_ratio=sg_ratio, dynamics=cfg[DYNAMICS])
 
-        # begin simulation
-        result = run_kmc(rxn_rates, initial_state, initial_events, n_max=cfg[MAX_MONOS], t_max=cfg[SIM_TIME],
-                         sg_ratio=cfg[SG_RATIO])
-        # show results
-        summary = analyze_adj_matrix(result[ADJ_MATRIX])
-        adj_analysis_to_stdout(summary)
+                    if cfg[DYNAMICS]:
+                        last_adj = result[ADJ_MATRIX][-1]
+                        last_mono_list = result[MONO_LIST][-1]
+                        (bond_type_dict, olig_monos_dict, sum_monos_list, olig_count_dict,
+                         sum_count_list) = get_bond_type_v_time_dict(result[ADJ_MATRIX], sum_len_larger_than=2)
 
-        # Outputs
-        produce_output(result, cfg)
+                        for bond_type in BOND_TYPE_LIST:
+                            bond_types[bond_type].append(bond_type_dict[bond_type])
+                        num_monos.append(olig_count_dict[1])
+                        num_oligs.append(sum_count_list)
+
+                    else:
+                        last_adj = result[ADJ_MATRIX]
+                        last_mono_list = result[MONO_LIST]
+
+                    adj_repeats.append(last_adj)
+
+                    # show results
+                    summary = analyze_adj_matrix(last_adj)
+                    adj_analysis_to_stdout(summary)
+
+                    # Outputs
+                    produce_output(last_adj, last_mono_list, cfg)
+
+                    # save for potential plotting
+                sg_adjs.append(adj_repeats)
+
+                # Now that all repeats done, create plots for dynamics, if applicable
+                if cfg[DYNAMICS]:
+                    # create plots of num mon & olig vs timestep, and % bond time v timestep
+                    create_dynamics_plots(add_rate_str, bond_types, cfg, num_monos, num_oligs, sg_ratio)
+            if cfg[PLOT_BONDS]:
+                create_bond_v_sg_plots(add_rate_str, cfg, sg_adjs)
 
     except (InvalidDataError, KeyError) as e:
         warning(e)

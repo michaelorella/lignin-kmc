@@ -13,8 +13,10 @@ DISABLE_REMOVE = logger.isEnabledFor(logging.DEBUG)
 
 # Constants #
 TEST_DIR = os.path.dirname(__file__)
+MAIN_DIR = os.path.abspath(os.path.join(TEST_DIR, '..'))
 DATA_DIR = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'run_kmc')
+PLOT_DIR = os.path.join(DATA_DIR, 'plots')
 TEMP_DIR = os.path.join("..", TEST_DIR, 'temp_dir/temp_dir')
 INNER_TEMP_DIR = os.path.join("..", TEST_DIR, 'temp_dir/')
 
@@ -34,35 +36,41 @@ TEST_SMI_OUT = os.path.join(SUB_DATA_DIR, TEST_SMI_BASENAME)
 GOOD_TEST_SMI_OUT = os.path.join(SUB_DATA_DIR, "good_test_lignin.smi")
 TEST_SMI_OUT_TEMP_DIR = os.path.join(TEMP_DIR, TEST_SMI_BASENAME)
 
+BOND_V_STEP_PNG = os.path.join(MAIN_DIR, "bond_dist_v_step_1_1e06.png")
+MONO_V_STEP_PNG = os.path.join(MAIN_DIR, "mono_olig_v_step_1_1e06.png")
+
+PLOT_BOND_V_SG_PNG = os.path.join(PLOT_DIR, "bond_dist_v_sg_1e06_m.png")
+PLOT_BOND_V_STEP_PNG = os.path.join(PLOT_DIR, "bond_dist_v_step_1_1e06_m.png")
+PLOT_MONO_V_STEP_PNG = os.path.join(PLOT_DIR, "mono_olig_v_step_1_1e06_m.png")
+
+PLOT_BOND_V_SG6_PNG = os.path.join(PLOT_DIR, "bond_dist_v_sg_1e06.png")
+PLOT_BOND_V_SG8_PNG = os.path.join(PLOT_DIR, "bond_dist_v_sg_1e08.png")
+
 
 # Data #
 
 # testing pieces of json, skipping parts that refer to version; more thorough testing is beyond scope
 GOOD_JSON_PARTS = ['"bonds":[{"bo":2,"atoms":[0,1]},{"atoms":[1,2]},{"bo":2,"atoms":[2,3]},{"atoms":[3,4]},'
-                   '{"bo":2,"atoms":[4,5]},{"atoms":[5,0]},{"atoms":[0,6]},{"bo":2,"atoms":[6,7],',
+                   '{"bo":2,"atoms":[4,5]},{"atoms":[5,0]},{"atoms":[0,6]},{"atoms":[6,7]},{"atoms":[7,8]},'
                    '{"atoms":[8,9]},{"atoms":[2,10]},{"atoms":[10,11]},{"atoms":[3,12]},{"bo":2,"atoms":[13,14]},'
                    '{"atoms":[14,15]},{"bo":2,"atoms":[15,16]},{"atoms":[16,17]},{"bo":2,"atoms":[17,18]},'
                    '{"atoms":[18,13]},{"atoms":[13,19]},{"atoms":[19,20]},{"atoms":[20,21]},{"atoms":[21,22]},'
-                   '{"atoms":[15,23]},{"atoms":[23,24]},{"atoms":[16,25]},{"atoms":[17,26]},{"atoms":[26,27]},'
-                   '{"bo":2,"atoms":[28,29]},{"atoms":[29,30]},{"bo":2,"atoms":[30,31]},{"atoms":[31,32]},'
-                   '{"bo":2,"atoms":[32,33]},{"atoms":[33,28]},{"atoms":[28,34]},{"atoms":[34,35]},{"atoms":[35,36]},'
-                   '{"atoms":[36,37]},{"atoms":[30,38]},{"atoms":[38,39]},{"atoms":[31,40]},{"atoms":[32,41]},'
-                   '{"atoms":[41,42]},{"bo":2,"atoms":[43,44]},{"atoms":[44,45]},{"bo":2,"atoms":[45,46]},'
-                   '{"atoms":[46,47]},{"bo":2,"atoms":[47,48]},{"atoms":[48,43]},{"atoms":[43,49]},{"atoms":[49,50]},'
-                   '{"atoms":[50,51]},{"atoms":[51,52]},{"atoms":[45,53]},{"atoms":[53,54]},{"atoms":[46,55]},'
-                   '{"bo":2,"atoms":[56,57]},{"atoms":[57,58]},{"bo":2,"atoms":[58,59]},{"atoms":[59,60]},'
-                   '{"bo":2,"atoms":[60,61]},{"atoms":[61,56]},{"atoms":[56,62]},{"atoms":[62,63]},{"atoms":[63,64]},'
-                   '{"atoms":[64,65]},{"atoms":[58,66]},{"atoms":[66,67]},{"atoms":[59,68]},{"atoms":[60,69]},'
-                   '{"atoms":[69,70]},{"bo":2,"atoms":[71,72]},{"atoms":[72,73]},{"bo":2,"atoms":[73,74]},'
-                   '{"atoms":[74,75]},{"bo":2,"atoms":[75,76]},{"atoms":[76,71]},{"atoms":[71,77]},{"atoms":[77,78]},'
-                   '{"atoms":[78,79]},{"atoms":[79,80]},{"atoms":[73,81]},{"atoms":[81,82]},{"atoms":[74,83]},'
-                   '{"bo":2,"atoms":[84,85]},{"atoms":[85,86]},{"bo":2,"atoms":[86,87]},{"atoms":[87,88]},'
-                   '{"bo":2,"atoms":[88,89]},{"atoms":[89,84]},{"atoms":[84,90]},{"atoms":[90,91]},{"atoms":[91,92]},'
-                   '{"atoms":[92,93]},{"atoms":[86,94]},{"atoms":[94,95]},{"atoms":[87,96]},{"bo":2,"atoms":[97,98]},'
-                   '{"atoms":[98,99]},{"bo":2,"atoms":[99,100]},{"atoms":[100,101]},{"bo":2,"atoms":[101,102]},',
-                   '"aromaticBonds":[0,1,2,3,4,5,13,14,15,16,17,18,28,29,30,31,32,33,43,44,45,46,47,48,56,57,58,59,'
-                   '60,61,71,72,73,74,75,76,84,85,86,87,88,89,97,98,99,100,101,102,112,113,114,115,116,117,127,128,',
-                   '"atomRings":[[0,5,4,3,2,1],[12,3,4,20,19],[14,15,16,17,18,13],[29,30,31,32,33,28],']
+                   '{"atoms":[15,23]},{"atoms":[23,24]},{"atoms":[16,25]},{"bo":2,"atoms":[26,27]},{"atoms":[27,28]},'
+                   '{"bo":2,"atoms":[28,29]},{"atoms":[29,30]},{"bo":2,"atoms":[30,31]},{"atoms":[31,26]},'
+                   '{"atoms":[26,32]},{"atoms":[32,33]},{"atoms":[33,34]},{"atoms":[34,35]},{"atoms":[28,36]},',
+                   '{"atoms":[49,50]},{"atoms":[42,51]},{"atoms":[43,52]},{"atoms":[52,53]},{"bo":2,"atoms":[54,55]},'
+                   '{"atoms":[55,56]},{"bo":2,"atoms":[56,57]},{"atoms":[57,58]},{"bo":2,"atoms":[58,59]},'
+                   '{"atoms":[59,54]},{"atoms":[54,60]},{"atoms":[60,61]},{"atoms":[61,62]},{"atoms":[62,63]},'
+                   '{"atoms":[56,64]},{"atoms":[64,65]},{"atoms":[57,66]},{"bo":2,"atoms":[67,68]},{"atoms":[68,69]},',
+                   '{"atoms":[95,103]},{"atoms":[103,104]},{"atoms":[96,105]},{"atoms":[97,106]},{"atoms":[106,107]},'
+                   '{"bo":2,"atoms":[108,109]},{"atoms":[109,110]},{"bo":2,"atoms":[110,111]},{"atoms":[111,112]},',
+                   '{"atoms":[111,120]},{"bo":2,"atoms":[121,122]},{"atoms":[122,123]},{"bo":2,"atoms":[123,124]},',
+                   '{"atoms":[73,138]},{"atoms":[58,87]},{"atoms":[86,66]},{"atoms":[79,100]},{"atoms":[99,139]},'
+                   '{"atoms":[92,115]},{"atoms":[114,140]},{"atoms":[112,128]},{"atoms":[127,120]}],',
+                   '"aromaticAtoms":[0,1,2,3,4,5,13,14,15,16,17,18,26,27,28,29,30,31,39,40,41,42,43,44,54,55,56,57,'
+                   '58,59,67,68,69,70,71,72,80,81,82,83,84,85,93,94,95,96,97,98,108,109,110,111,112,113,121,122,123,'
+                   '124,125,126],"aromaticBonds":[0,1,2,3,4,5,13,14,15,16,17,18,26,27,28,29,30,31,39,40,41,42,43,44,'
+                   '54,55,56,57,58,59,67,68,69,70,71,72,80,81,82,83,84,85,93,94,95,96,97,98,108,109,110,111,112,113,']
 
 
 # Tests #
@@ -128,12 +136,12 @@ class TestCreateLigninNoOutput(unittest.TestCase):
     def testAlphaSGRatio(self):
         test_input = ["-r", "10", "-sg", "ghost"]
         with capture_stderr(main, test_input) as output:
-            self.assertTrue('must be a positive number' in output)
+            self.assertTrue('positive floats' in output)
 
     def testNegSGRatio(self):
         test_input = ["-r", "10", "-sg", "-0.1"]
         with capture_stderr(main, test_input) as output:
-            self.assertTrue('must be a positive number' in output)
+            self.assertTrue('positive floats' in output)
 
     def testNegSimLen(self):
         test_input = ["-r", "10", "-l", "-0.1"]
@@ -149,6 +157,11 @@ class TestCreateLigninNoOutput(unittest.TestCase):
         test_input = ["-r", "10", "-i", "4.5"]
         with capture_stderr(main, test_input) as output:
             self.assertTrue('must be a positive integer' in output)
+
+    def testZeroSimTime(self):
+        test_input = ["-r", "10", "-l", "0"]
+        with capture_stderr(main, test_input) as output:
+            self.assertTrue('positive' in output)
 
     def testAlphaIniMonos(self):
         test_input = ["-r", "10", "-i", "ghost"]
@@ -183,19 +196,37 @@ class TestCreateLigninNoOutput(unittest.TestCase):
         test_input = ["-a", "ghost"]
         # main(test_input)
         with capture_stderr(main, test_input) as output:
-            self.assertTrue("A positive number" in output)
+            self.assertTrue("positive floats" in output)
 
     def testZeroAddRate(self):
         test_input = ["-a", "0"]
         # main(test_input)
         with capture_stderr(main, test_input) as output:
-            self.assertTrue("A positive number" in output)
+            self.assertTrue("positive floats" in output)
 
     def testSizeWithSpace(self):
         test_input = ["-o", DEF_PNG_OUT, "-s", "300", "400"]
         # main(test_input)
         with capture_stderr(main, test_input) as output:
             self.assertTrue("spaces" in output)
+
+    def testNegListVal(self):
+        test_input = ["-sg", "0, -0.1"]
+        # main(test_input)
+        with capture_stderr(main, test_input) as output:
+            self.assertTrue("positive" in output)
+
+    def testZeroListVal(self):
+        test_input = ["-a", "1.0, 0"]
+        # main(test_input)
+        with capture_stderr(main, test_input) as output:
+            self.assertTrue("positive" in output)
+
+    def testFewerMaxThanMinMonos(self):
+        test_input = ["-r", "10", "-i", "20", "-m", "10", ]
+        # main(test_input)
+        with capture_stderr(main, test_input) as output:
+            self.assertTrue("initial" in output)
 
 
 class TestCreateLigninNormalUse(unittest.TestCase):
@@ -204,16 +235,16 @@ class TestCreateLigninNormalUse(unittest.TestCase):
         # main(test_input)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n" \
                              "       1 oligomer(s) of chain length 10, with branching coefficient 0.0"
-        good_bond_summary = "composed of the following bond types and number:\n    BO4:    6 " \
-                            "    BB:    0     B5:    3     B1:    0    5O4:    0    AO4:    0     55:    0"
+        good_bond_summary = "composed of the following bond types and number:\n    BO4:    5 " \
+                            "    BB:    1     B5:    3     B1:    0    5O4:    0    AO4:    0     55:    0"
         good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n" \
-                                 "       5 monomer(s) (chain length 1)\n       1 dimer(s) (chain length 2)\n" \
+                                 "       3 monomer(s) (chain length 1)\n       2 dimer(s) (chain length 2)\n" \
                                  "       1 trimer(s) (chain length 3)"
         good_rcf_bond_summary = "with the following remaining bond types and number:\n    BO4:    0     " \
-                                "BB:    0     B5:    3     B1:    0    5O4:    0    AO4:    0     55:    0"
-        good_smiles = "COc1cc(C(O)C(CO)Oc2c(OC)cc(C(O)C(CO)Oc3c(OC)cc(C4Oc5c(OC)cc(/C=C/CO)cc5C4CO)cc3OC)cc2OC)" \
-                      "ccc1OC(CO)C(O)c1cc(OC)c(OC(CO)C(O)c2cc(OC)c3c(c2)C(CO)C(c2cc(OC)c4c(c2)C(CO)C(c2cc(OC)" \
-                      "c(OC(CO)C(O)c5cc(OC)c(OC(CO)C(O)c6cc(OC)c([O])c(OC)c6)c(OC)c5)c(OC)c2)O4)O3)c(OC)c1"
+                                "BB:    1     B5:    3     B1:    0    5O4:    0    AO4:    0     55:    0"
+        good_smiles = "COc1cc(C(O)C(CO)Oc2ccc(C3OCC4C(c5cc(OC)c6c(c5)C(CO)C(c5cc(OC)c(OC(CO)C(O)c7cc(OC)c8c(c7)C(CO)" \
+                      "C(c7ccc(OC(CO)C(O)c9cc(OC)c%10c(c9)C(CO)C(c9cc(OC)c([O])c(OC)c9)O%10)c(OC)c7)O8)c(OC)c5)O6)" \
+                      "OCC34)cc2OC)ccc1OC(CO)C(O)c1ccc(OC(CO)C(O)c2cc(OC)c([O])c(OC)c2)c(OC)c1"
         with capture_stdout(main, test_input) as output:
             self.assertTrue(OPENING_MSG in output)
             self.assertTrue(good_chain_summary in output)
@@ -254,13 +285,13 @@ class TestCreateLigninNormalUse(unittest.TestCase):
         # main(test_input)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n" \
                              "       1 oligomer(s) of chain length 10, with branching coefficient 0.0"
-        good_bond_summary = "composed of the following bond types and number:\n    BO4:    6" \
-                            "     BB:    1     B5:    2     B1:    0    5O4:    0    AO4:    0     55:    0"
+        good_bond_summary = "composed of the following bond types and number:\n    BO4:    7" \
+                            "     BB:    1     B5:    1     B1:    0    5O4:    0    AO4:    0     55:    0"
         good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n" \
-                                 "       4 monomer(s) (chain length 1)\n" \
-                                 "       3 dimer(s) (chain length 2)"
-        good_rcf_bond_summary = "with the following remaining bond types and number:\n    BO4:    0" \
-                                "     BB:    1     B5:    2     B1:    0    5O4:    0    AO4:    0     55:    0"
+                                 "       6 monomer(s) (chain length 1)\n" \
+                                 "       2 dimer(s) (chain length 2)"
+        good_rcf_bond_summary = "with the following remaining bond types and number:\n    BO4:    0    " \
+                                " BB:    1     B5:    1     B1:    0    5O4:    0    AO4:    0     55:    0"
         with capture_stdout(main, test_input) as output:
             self.assertTrue(good_chain_summary in output)
             self.assertTrue(good_bond_summary in output)
@@ -347,24 +378,24 @@ class TestCreateLigninNormalUse(unittest.TestCase):
             pass
 
     def testAltSGRatio(self):
-        test_input = ["-r", "8", "-sg", "2.5", "-a", "1.0"]
+        test_input = ["-r", "6", "-sg", "2.5", "-a", "1.0"]
         # main(test_input)
-        good_smiles = "COc1cc(C2Oc3c(OC)cc(/C=C/CO)cc3C2CO)ccc1OC(CO)C(O)c1cc(OC)c2c(c1)C(CO)C(c1cc(OC)c(OC(CO)C(O)" \
-                      "c3cc(OC)c(OC(CO)C(O)c4cc(OC)c(OC(CO)C(O)c5cc(OC)c(OC(CO)C(O)c6cc(OC)c(OC(CO)C(O)c7cc(OC)" \
-                      "c(OC(CO)C(O)c8cc(OC)c([O])c(OC)c8)c(OC)c7)c(OC)c6)c(OC)c5)c(OC)c4)c(OC)c3)c(OC)c1)O2 "
+        good_smiles = "COc1cc(C2OCC3C(c4cc(OC)c(OC(CO)C(O)c5cc(OC)c(OC(CO)C(O)c6cc(OC)c(OC(CO)C(O)c7cc(OC)c8c(c7)" \
+                      "C(CO)C(c7cc(OC)c9c(c7)C(CO)C(c7cc(OC)c([O])c(OC)c7)O9)O8)c(OC)c6)c(OC)c5)c(OC)c4)OCC23)ccc1O" \
+                      "C(CO)C(O)c1cc(OC)c(OC(CO)C(O)c2cc(OC)c(OC(CO)C(O)c3cc(OC)c([O])c(OC)c3)c(OC)c2)c(OC)c1"
         with capture_stdout(main, test_input) as output:
             self.assertTrue(good_smiles in output)
 
     def testAltIniMaxMonosSimLen(self):
-        test_input = ["-r", "10", "-i", "8", "-m", "12", "-l", "0.002", "-a", "1.0"]
+        test_input = ["-r", "10", "-i", "8", "-m", "12", "-l", "0.02", "-a", "1.0"]
         # main(test_input)
-        good_smiles = "COc1cc(/C=C/CO)ccc1O.COc1cc(C2OCC3C(c4cc(OC)c(OC(CO)C(O)c5cc(OC)c([O])c(OC)c5)c(Oc5c(OC)cc" \
-                      "(C6OCC7C(c8cc(OC)c(Oc9cc(C%10Oc%11c(OC)cc(/C=C/CO)cc%11C%10CO)cc(OC)c9[O])c(OC)c8)OCC67)" \
-                      "cc5OC)c4)OCC23)ccc1OC(CO)C(O)c1cc(OC)c([O])c(OC)c1"
+        good_smiles = "COc1cc(/C=C/CO)ccc1O.COc1cc(C(O)C(CO)Oc2ccc(C3OCC4C(c5cc(OC)c([O])c(-c6cc(C7OCC8C(c9cc(OC)" \
+                      "c([O])c(Oc%10c(OC)cc(C%11Oc%12c(OC)cc(/C=C/CO)cc%12C%11CO)cc%10OC)c9)OCC78)cc(OC)c6OC(CO)" \
+                      "C(O)c6cc(OC)c([O])c(OC)c6)c5)OCC34)cc2OC)ccc1[O]"
         with capture_stdout(main, test_input) as output:
             self.assertTrue(good_smiles in output)
 
-    def testPSFGenOptions(self):
+    def testTCLGenOptions(self):
         try:
             test_input = ["-r", "8", "-i", "4", "-m", "4", "-f", "tcl", "-d", SUB_DATA_DIR,
                           "--chain_id", "1", "--psf_fname", "birch", "--toppar_dir", "", "-a", "1.0"]
@@ -373,3 +404,105 @@ class TestCreateLigninNormalUse(unittest.TestCase):
         finally:
             silent_remove(DEF_TCL_OUT, disable=DISABLE_REMOVE)
             pass
+
+
+class TestDynamics(unittest.TestCase):
+    def testDyn1(self):
+        expected_files = [BOND_V_STEP_PNG, MONO_V_STEP_PNG]
+        try:
+            for fname in expected_files:
+                silent_remove(fname)
+            test_input = ["-r", "10", "-i", "3", "-m", "15", "-dy", "-a", "1e6"]
+            # main(test_input)
+            with capture_stdout(main, test_input) as output:
+                self.assertTrue("BO4:    7     BB:    4     B5:    0     B1:    0    5O4:    3" in output)
+            for fname in expected_files:
+                self.assertTrue(os.path.isfile(fname))
+        finally:
+            for fname in expected_files:
+                silent_remove(fname, disable=DISABLE_REMOVE)
+            pass
+
+    def testDyn2(self):
+        expected_files = [BOND_V_STEP_PNG, MONO_V_STEP_PNG]
+        try:
+            for fname in expected_files:
+                silent_remove(fname)
+            test_input = ["-r", "10", "-i", "3", "-m", "20", "-dy", "-a", "1e6", "-n", "2"]
+            # main(test_input)
+            # testing a piece of output from each of 2 repeats
+            with capture_stdout(main, test_input) as output:
+                self.assertTrue("BO4:    7     BB:    6     B5:    1     B1:    0    5O4:    5" in output)
+                self.assertTrue("BO4:    6     BB:    4     B5:    3     B1:    0    5O4:    6" in output)
+            for fname in expected_files:
+                self.assertTrue(os.path.isfile(fname))
+        finally:
+            for fname in expected_files:
+                silent_remove(fname, disable=DISABLE_REMOVE)
+            pass
+
+    def testDyn4(self):
+        # also has multiple sg_ratio
+        expected_files = [BOND_V_STEP_PNG, MONO_V_STEP_PNG]
+        try:
+            for fname in expected_files:
+                silent_remove(fname)
+            test_input = ["-r", "10", "-i", "3", "-m", "20", "-dy", "-a", "1e6", "-n", "4"]
+            # main(test_input)
+            with capture_stdout(main, test_input) as output:
+                self.assertTrue("BO4:    7     BB:    6     B5:    1     B1:    0    5O4:    5" in output)
+                self.assertTrue("BO4:    6     BB:    4     B5:    3     B1:    0    5O4:    6" in output)
+                self.assertTrue("BO4:    8     BB:    4     B5:    2     B1:    0    5O4:    5" in output)
+                self.assertTrue("BO4:    6     BB:    6     B5:    1     B1:    0    5O4:    4" in output)
+            for fname in expected_files:
+                self.assertTrue(os.path.isfile(fname))
+        finally:
+            for fname in expected_files:
+                silent_remove(fname, disable=DISABLE_REMOVE)
+            pass
+
+    def testDynPlot1(self):
+        expected_files = [PLOT_BOND_V_SG_PNG, PLOT_BOND_V_STEP_PNG, PLOT_MONO_V_STEP_PNG]
+        try:
+            for fname in expected_files:
+                silent_remove(fname)
+            test_input = ["-r", "10", "-i", "6", "-m", "18", "-a", "1e6", "-e", "-dy", "-p", "-d", PLOT_DIR]
+            # main(test_input)
+            with capture_stdout(main, test_input) as output:
+                self.assertTrue("1 oligomer(s) of chain length 16, with branching coefficient 0.125" in output)
+            for fname in expected_files:
+                self.assertTrue(os.path.isfile(fname))
+        finally:
+            for fname in expected_files:
+                silent_remove(fname, disable=DISABLE_REMOVE)
+            pass
+
+    def testSGPlot3(self):
+        # also has multiple sg_ratio; smoke test only (that files are created, but not testing content
+        expected_files = [PLOT_BOND_V_SG6_PNG, PLOT_BOND_V_SG8_PNG]
+        try:
+            for fname in expected_files:
+                silent_remove(fname)
+            test_input = ["-r", "6", "-i", "8", "-m", "16", "-a", "1e8, 1e6", "-sg", "5,10",
+                          "-n", "3", "-p", "-d", PLOT_DIR]
+            main(test_input)
+            for fname in expected_files:
+                self.assertTrue(os.path.isfile(fname))
+        finally:
+            for fname in expected_files:
+                silent_remove(fname, disable=DISABLE_REMOVE)
+            pass
+
+#     # Do not include the following in test coverage--just an easy way to run this for its production output
+#     def testProduction(self):
+#         new_out_dir = os.path.join(DATA_DIR, 'new_plots')
+#
+#         # more efficient to just look at "1e8, 1e6, 1e4" and "1,  3, 5, 10"
+#         input_base = ["-i", "5", "-m", "200", "-a", "1e8, 1e6, 1e4, 1e2, 1",
+#                       "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10",
+#                           "-n", "5", "-p", "-d", new_out_dir]
+#         input_1 = input_base
+#         input_2 = input_base + ["-e"]
+#
+#         for prod_input in [input_1, input_2]:
+#             main(prod_input)

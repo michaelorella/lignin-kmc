@@ -11,9 +11,10 @@ H = 'p-hydroxyphenyl'
 S4 = 'S4'
 G4 = 'G4'
 G7 = 'G7'
-LIGNIN_SUBUNITS = {0: G, 1: S, 2: C}  # perhaps to be added later: 3: H
-MONOLIG_OHS = {0: 'coniferyl', 1: 'sinapyl', 2: 'caffeoyl'}  # perhaps to be added later: 3: 'p-coumaryl'
-SG_RATIO = 'sg_ratio'
+LIGNIN_SUBUNITS = [G, S, H, C]
+# Dict below likely to be changed when H added
+INT_TO_TYPE_DICT = {0: G, 1: S}
+MONOLIG_OHS = {G: 'coniferyl', S: 'sinapyl', H: 'p-coumaryl', C: 'caffeoyl'}
 ADD_RATE = 'add_rate'
 INI_MONOS = 'initial_num_monomers'
 MAX_MONOS = 'max_num_monomers'
@@ -35,8 +36,9 @@ BB = 'bb'
 BO4 = 'bo4'
 C5C5 = '55'
 C5O4 = '5o4'
+BOND_TYPE_LIST = [BO4, BB, B5, B1, C5O4, AO4, C5C5]
 
-# reaction types
+# reaction types other than bond formation
 Q = 'hydration'
 OX = 'oxidation'
 GROW = 'grow'
@@ -81,126 +83,170 @@ DEF_TOPPAR = "toppar/"
 #     Sustainable Chem. Eng. 2019, https://doi.org/10.1021/acssuschemeng.9b03534
 # Per Terry Gani: the solution state correction is not needed because this barrier is based on the TS vs. the
 #     the reactant (hydrogen-bonded) complex
-DEF_E_BARRIER_KCAL_MOL = {C5O4: {(0, 0): {(MONOMER, MONOMER): 11.2, (MONOMER, OLIGOMER): 14.6,
+DEF_E_BARRIER_KCAL_MOL = {C5O4: {(G, G): {(MONOMER, MONOMER): 11.2, (MONOMER, OLIGOMER): 14.6,
                                           (OLIGOMER, MONOMER): 14.6, (OLIGOMER, OLIGOMER): 4.4},
-                                 (1, 0): {(MONOMER, MONOMER): 10.9, (MONOMER, OLIGOMER): 14.6,
+                                 (S, G): {(MONOMER, MONOMER): 10.9, (MONOMER, OLIGOMER): 14.6,
                                           (OLIGOMER, MONOMER): 14.6, (OLIGOMER, OLIGOMER): 4.4},
-                                 (2, 2): {(MONOMER, MONOMER): 11.9, (MONOMER, OLIGOMER): 11.9,
+                                 (C, C): {(MONOMER, MONOMER): 11.9, (MONOMER, OLIGOMER): 11.9,
                                           (OLIGOMER, MONOMER): 11.9, (OLIGOMER, OLIGOMER): 11.9}},
-                          C5C5: {(0, 0): {(MONOMER, MONOMER): 12.5, (MONOMER, OLIGOMER): 15.6,
+                          C5C5: {(G, G): {(MONOMER, MONOMER): 12.5, (MONOMER, OLIGOMER): 15.6,
                                           (OLIGOMER, MONOMER): 15.6, (OLIGOMER, OLIGOMER): 3.8},
-                                 (2, 2): {(MONOMER, MONOMER): 10.6, (MONOMER, OLIGOMER): 10.6,
+                                 (C, C): {(MONOMER, MONOMER): 10.6, (MONOMER, OLIGOMER): 10.6,
                                           (OLIGOMER, MONOMER): 10.6, (OLIGOMER, OLIGOMER): 10.6}},
-                          B5: {(0, 0): {(MONOMER, MONOMER): 5.5, (MONOMER, OLIGOMER): 5.8, (OLIGOMER, MONOMER): 5.8,
+                          B5: {(G, G): {(MONOMER, MONOMER): 5.5, (MONOMER, OLIGOMER): 5.8, (OLIGOMER, MONOMER): 5.8,
                                         (OLIGOMER, OLIGOMER): 5.8},
-                               (0, 1): {(MONOMER, MONOMER): 5.5, (MONOMER, OLIGOMER): 5.8, (OLIGOMER, MONOMER): 5.8,
+                               (G, S): {(MONOMER, MONOMER): 5.5, (MONOMER, OLIGOMER): 5.8, (OLIGOMER, MONOMER): 5.8,
                                         (OLIGOMER, OLIGOMER): 5.8},
-                               (2, 2): {(MONOMER, MONOMER): 1.9, (MONOMER, OLIGOMER): 5.8, (OLIGOMER, MONOMER): 5.8,
+                               (C, C): {(MONOMER, MONOMER): 1.9, (MONOMER, OLIGOMER): 5.8, (OLIGOMER, MONOMER): 5.8,
                                         (OLIGOMER, OLIGOMER): 5.8}},
-                          BB: {(0, 0): {(MONOMER, MONOMER): 5.2, (MONOMER, OLIGOMER): 5.2, (OLIGOMER, MONOMER): 5.2,
+                          BB: {(G, G): {(MONOMER, MONOMER): 5.2, (MONOMER, OLIGOMER): 5.2, (OLIGOMER, MONOMER): 5.2,
                                         (OLIGOMER, OLIGOMER): 5.2},
-                               (1, 0): {(MONOMER, MONOMER): 6.5, (MONOMER, OLIGOMER): 6.5, (OLIGOMER, MONOMER): 6.5,
+                               (S, G): {(MONOMER, MONOMER): 6.5, (MONOMER, OLIGOMER): 6.5, (OLIGOMER, MONOMER): 6.5,
                                         (OLIGOMER, OLIGOMER): 6.5},
-                               (0, 1): {(MONOMER, MONOMER): 6.5, (MONOMER, OLIGOMER): 6.5, (OLIGOMER, MONOMER): 6.5,
+                               (G, S): {(MONOMER, MONOMER): 6.5, (MONOMER, OLIGOMER): 6.5, (OLIGOMER, MONOMER): 6.5,
                                         (OLIGOMER, OLIGOMER): 6.5},
-                               (1, 1): {(MONOMER, MONOMER): 5.2, (MONOMER, OLIGOMER): 5.2, (OLIGOMER, MONOMER): 5.2,
+                               (S, S): {(MONOMER, MONOMER): 5.2, (MONOMER, OLIGOMER): 5.2, (OLIGOMER, MONOMER): 5.2,
                                         (OLIGOMER, OLIGOMER): 5.2},
-                               (2, 2): {(MONOMER, MONOMER): 7.2, (MONOMER, OLIGOMER): 7.2, (OLIGOMER, MONOMER): 7.2,
+                               (C, C): {(MONOMER, MONOMER): 7.2, (MONOMER, OLIGOMER): 7.2, (OLIGOMER, MONOMER): 7.2,
                                         (OLIGOMER, OLIGOMER): 7.2}},
-                          BO4: {(0, 0): {(MONOMER, MONOMER): 6.3, (MONOMER, OLIGOMER): 6.2, (OLIGOMER, MONOMER): 6.2,
+                          BO4: {(G, G): {(MONOMER, MONOMER): 6.3, (MONOMER, OLIGOMER): 6.2, (OLIGOMER, MONOMER): 6.2,
                                          (OLIGOMER, OLIGOMER): 6.2},
-                                (1, 0): {(MONOMER, MONOMER): 9.1, (MONOMER, OLIGOMER): 6.2,
+                                (S, G): {(MONOMER, MONOMER): 9.1, (MONOMER, OLIGOMER): 6.2,
                                          (OLIGOMER, MONOMER): 6.2, (OLIGOMER, OLIGOMER): 6.2},
-                                (0, 1): {(MONOMER, MONOMER): 8.9, (MONOMER, OLIGOMER): 6.2,
+                                (G, S): {(MONOMER, MONOMER): 8.9, (MONOMER, OLIGOMER): 6.2,
                                          (OLIGOMER, MONOMER): 6.2, (OLIGOMER, OLIGOMER): 6.2},
-                                (1, 1): {(MONOMER, MONOMER): 9.8, (MONOMER, OLIGOMER): 10.4,
+                                (S, S): {(MONOMER, MONOMER): 9.8, (MONOMER, OLIGOMER): 10.4,
                                          (OLIGOMER, MONOMER): 10.4, (OLIGOMER, OLIGOMER): 10.4},
-                                (2, 2): {(MONOMER, MONOMER): 4.9, (MONOMER, OLIGOMER): 1.3,
+                                (C, C): {(MONOMER, MONOMER): 4.9, (MONOMER, OLIGOMER): 1.3,
                                          (OLIGOMER, MONOMER): 1.3, (OLIGOMER, OLIGOMER): 1.3}},
-                          AO4: {(0, 0): {(MONOMER, MONOMER): 20.7, (MONOMER, OLIGOMER): 20.7,
+                          AO4: {(G, G): {(MONOMER, MONOMER): 20.7, (MONOMER, OLIGOMER): 20.7,
                                          (OLIGOMER, MONOMER): 20.7, (OLIGOMER, OLIGOMER): 20.7},
-                                (1, 0): {(MONOMER, MONOMER): 20.7, (MONOMER, OLIGOMER): 20.7,
+                                (S, G): {(MONOMER, MONOMER): 20.7, (MONOMER, OLIGOMER): 20.7,
                                          (OLIGOMER, MONOMER): 20.7, (OLIGOMER, OLIGOMER): 20.7},
-                                (0, 1): {(MONOMER, MONOMER): 20.7, (MONOMER, OLIGOMER): 20.7,
+                                (G, S): {(MONOMER, MONOMER): 20.7, (MONOMER, OLIGOMER): 20.7,
                                          (OLIGOMER, MONOMER): 20.7, (OLIGOMER, OLIGOMER): 20.7},
-                                (1, 1): {(MONOMER, MONOMER): 20.7, (MONOMER, OLIGOMER): 20.7,
+                                (S, S): {(MONOMER, MONOMER): 20.7, (MONOMER, OLIGOMER): 20.7,
                                          (OLIGOMER, MONOMER): 20.7, (OLIGOMER, OLIGOMER): 20.7},
-                                (2, 2): {(MONOMER, MONOMER): 20.7, (MONOMER, OLIGOMER): 20.7,
+                                (C, C): {(MONOMER, MONOMER): 20.7, (MONOMER, OLIGOMER): 20.7,
                                          (OLIGOMER, MONOMER): 20.7, (OLIGOMER, OLIGOMER): 20.7}},
-                          B1: {(0, 0): {(MONOMER, OLIGOMER): 9.6, (OLIGOMER, MONOMER): 9.6,
+                          B1: {(G, G): {(MONOMER, OLIGOMER): 9.6, (OLIGOMER, MONOMER): 9.6,
                                         (OLIGOMER, OLIGOMER): 9.6},
-                               (1, 0): {(MONOMER, OLIGOMER): 11.7, (OLIGOMER, MONOMER): 11.7,
+                               (S, G): {(MONOMER, OLIGOMER): 11.7, (OLIGOMER, MONOMER): 11.7,
                                         (OLIGOMER, OLIGOMER): 11.7},
-                               (0, 1): {(MONOMER, OLIGOMER): 10.7, (OLIGOMER, MONOMER): 10.7,
+                               (G, S): {(MONOMER, OLIGOMER): 10.7, (OLIGOMER, MONOMER): 10.7,
                                         (OLIGOMER, OLIGOMER): 10.7},
-                               (1, 1): {(MONOMER, OLIGOMER): 11.9, (OLIGOMER, MONOMER): 11.9,
+                               (S, S): {(MONOMER, OLIGOMER): 11.9, (OLIGOMER, MONOMER): 11.9,
                                         (OLIGOMER, OLIGOMER): 11.9},
-                               (2, 2): {(MONOMER, OLIGOMER): 9.6, (OLIGOMER, MONOMER): 9.6,
+                               (C, C): {(MONOMER, OLIGOMER): 9.6, (OLIGOMER, MONOMER): 9.6,
                                         (OLIGOMER, OLIGOMER): 9.6}},
-                          OX: {0: {MONOMER: 0.9, OLIGOMER: 6.3}, 1: {MONOMER: 0.6, OLIGOMER: 2.2},
-                               2: {MONOMER: 0.9, OLIGOMER: 0.9}},
-                          Q: {0: {MONOMER: 11.1, OLIGOMER: 11.1}, 1: {MONOMER: 11.7, OLIGOMER: 11.7},
-                              2: {MONOMER: 11.1, OLIGOMER: 11.1}}}
+                          OX: {G: {MONOMER: 0.9, OLIGOMER: 6.3}, S: {MONOMER: 0.6, OLIGOMER: 2.2},
+                               C: {MONOMER: 0.9, OLIGOMER: 0.9}},
+                          Q: {G: {MONOMER: 11.1, OLIGOMER: 11.1}, S: {MONOMER: 11.7, OLIGOMER: 11.7},
+                              C: {MONOMER: 11.1, OLIGOMER: 11.1}}}
 
 # These were calculated at 298 K from the DEF_E_BARRIER_KCAL_MOL
-DEF_RXN_RATES = {C5O4: {(0, 0): {MON_MON: 38335.5972148372, MON_OLI: 123.419593715543, OLI_MON: 123.419593715543,
+DEF_RXN_RATES = {C5O4: {(G, G): {MON_MON: 38335.5972148372, MON_OLI: 123.419593715543, OLI_MON: 123.419593715543,
                                  OLI_OLI: 3698609451.84164},
-                        (1, 0): {MON_MON: 63606.8417529500, MON_OLI: 123.419593715543, OLI_MON: 123.419593715543,
+                        (S, G): {MON_MON: 63606.8417529500, MON_OLI: 123.419593715543, OLI_MON: 123.419593715543,
                                  OLI_OLI: 3698609451.84164},
-                        (2, 2): {MON_MON: 11762.4692901771, MON_OLI: 11762.4692901771, OLI_MON: 11762.4692901771,
+                        (C, C): {MON_MON: 11762.4692901771, MON_OLI: 11762.4692901771, OLI_MON: 11762.4692901771,
                                  OLI_OLI: 11762.4692901771}},
-                 C5C5: {(0, 0): {MON_MON: 4272.63018912086, MON_OLI: 22.8233180720356, OLI_MON: 22.8233180720356,
+                 C5C5: {(G, G): {MON_MON: 4272.63018912086, MON_OLI: 22.8233180720356, OLI_MON: 22.8233180720356,
                                  OLI_OLI: 10182201166.0217},
-                        (2, 2): {MON_MON: 105537.166803781, MON_OLI: 105537.166803781, OLI_MON: 105537.166803781,
+                        (C, C): {MON_MON: 105537.166803781, MON_OLI: 105537.166803781, OLI_MON: 105537.166803781,
                                  OLI_OLI: 105537.166803781}},
-                 B5: {(0, 0): {MON_MON: 577740233.381881, MON_OLI: 348201801.431315, OLI_MON: 348201801.431315,
+                 B5: {(G, G): {MON_MON: 577740233.381881, MON_OLI: 348201801.431315, OLI_MON: 348201801.431315,
                                OLI_OLI: 348201801.431315},
-                      (0, 1): {MON_MON: 577740233.381881, MON_OLI: 348201801.431315, OLI_MON: 348201801.431315,
+                      (G, S): {MON_MON: 577740233.381881, MON_OLI: 348201801.431315, OLI_MON: 348201801.431315,
                                OLI_OLI: 348201801.431315},
-                      (2, 2): {MON_MON: 251507997491.634, MON_OLI: 348201801.431315, OLI_MON: 348201801.431315,
+                      (C, C): {MON_MON: 251507997491.634, MON_OLI: 348201801.431315, OLI_MON: 348201801.431315,
                                OLI_OLI: 348201801.431315}},
-                 BB: {(0, 0): {MON_MON: 958592907.607318, MON_OLI: 958592907.607318, OLI_MON: 958592907.607318,
+                 BB: {(G, G): {MON_MON: 958592907.607318, MON_OLI: 958592907.607318, OLI_MON: 958592907.607318,
                                OLI_OLI: 958592907.607318},
-                      (1, 0): {MON_MON: 106838377.218107, MON_OLI: 106838377.218107, OLI_MON: 106838377.218107,
+                      (S, G): {MON_MON: 106838377.218107, MON_OLI: 106838377.218107, OLI_MON: 106838377.218107,
                                OLI_OLI: 106838377.218107},
-                      (0, 1): {MON_MON: 106838377.218107, MON_OLI: 106838377.218107, OLI_MON: 106838377.218107,
+                      (G, S): {MON_MON: 106838377.218107, MON_OLI: 106838377.218107, OLI_MON: 106838377.218107,
                                OLI_OLI: 106838377.218107},
-                      (1, 1): {MON_MON: 958592907.607318, MON_OLI: 958592907.607318, OLI_MON: 958592907.607318,
+                      (S, S): {MON_MON: 958592907.607318, MON_OLI: 958592907.607318, OLI_MON: 958592907.607318,
                                OLI_OLI: 958592907.607318},
-                      (2, 2): {MON_MON: 32781102.2219828, MON_OLI: 32781102.2219828, OLI_MON: 32781102.2219828,
+                      (C, C): {MON_MON: 32781102.2219828, MON_OLI: 32781102.2219828, OLI_MON: 32781102.2219828,
                                OLI_OLI: 32781102.2219828}},
-                 BO4: {(0, 0): {MON_MON: 149736731.431189, MON_OLI: 177267402.79460, OLI_MON: 177267402.794600,
+                 BO4: {(G, G): {MON_MON: 149736731.431189, MON_OLI: 177267402.79460, OLI_MON: 177267402.794600,
                                 OLI_OLI: 177267402.794600},
-                       (1, 0): {MON_MON: 1327129.87498242, MON_OLI: 177267402.79460, OLI_MON: 177267402.794600,
+                       (S, G): {MON_MON: 1327129.87498242, MON_OLI: 177267402.79460, OLI_MON: 177267402.794600,
                                 OLI_OLI: 177267402.794600},
-                       (0, 1): {MON_MON: 1860006.62719604, MON_OLI: 177267402.79460, OLI_MON: 177267402.794600,
+                       (G, S): {MON_MON: 1860006.62719604, MON_OLI: 177267402.79460, OLI_MON: 177267402.794600,
                                 OLI_OLI: 177267402.794600},
-                       (1, 1): {MON_MON: 407201.805441432, MON_OLI: 147913.051594236, OLI_MON: 147913.051594236,
+                       (S, S): {MON_MON: 407201.805441432, MON_OLI: 147913.051594236, OLI_MON: 147913.051594236,
                                 OLI_OLI: 147913.051594236},
-                       (2, 2): {MON_MON: 1590507825.87210, MON_OLI: 692396712512.577, OLI_MON: 692396712512.577,
+                       (C, C): {MON_MON: 1590507825.87210, MON_OLI: 692396712512.577, OLI_MON: 692396712512.577,
                                 OLI_OLI: 692396712512.577}},
-                 AO4: {(0, 0): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
+                 AO4: {(G, G): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
                                 OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265},
-                       (1, 0): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
+                       (S, G): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
                                 OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265},
-                       (0, 1): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
+                       (G, S): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
                                 OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265},
-                       (1, 1): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
+                       (S, S): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
                                 OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265},
-                       (2, 2): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
+                       (C, C): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
                                 OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265}},
-                 B1: {(0, 0): {MON_OLI: 570703.795464849, OLI_MON: 570703.795464849, OLI_OLI: 570703.795464849},
-                      (1, 0): {MON_OLI: 16485.4030071542, OLI_MON: 16485.4030071542, OLI_OLI: 16485.4030071542},
-                      (0, 1): {MON_OLI: 89146.6234207596, OLI_MON: 89146.6234207596, OLI_OLI: 89146.6234207596},
-                      (1, 1): {MON_OLI: 11762.4692901771, OLI_MON: 11762.4692901771, OLI_OLI: 11762.4692901771},
-                      (2, 2): {MON_OLI: 570703.795464849, OLI_MON: 570703.795464849, OLI_OLI: 570703.795464849}},
-                 OX: {0: {MONOMER: 1360057059567.54, OLIGOMER: 149736731.431189},
-                      1: {MONOMER: 2256621533195.09, OLIGOMER: 151582896154.443},
-                      2: {MONOMER: 1360057059567.54, OLIGOMER: 1360057059567.54}},
-                 Q: {0: {MONOMER: 45383.9995564285, OLIGOMER: 45383.9995564285},
-                     1: {MONOMER: 16485.4030071542, OLIGOMER: 16485.4030071542},
-                     2: {MONOMER: 45383.9995564285, OLIGOMER: 45383.9995564285}}
+                 B1: {(G, G): {MON_OLI: 570703.795464849, OLI_MON: 570703.795464849, OLI_OLI: 570703.795464849},
+                      (S, G): {MON_OLI: 16485.4030071542, OLI_MON: 16485.4030071542, OLI_OLI: 16485.4030071542},
+                      (G, S): {MON_OLI: 89146.6234207596, OLI_MON: 89146.6234207596, OLI_OLI: 89146.6234207596},
+                      (S, S): {MON_OLI: 11762.4692901771, OLI_MON: 11762.4692901771, OLI_OLI: 11762.4692901771},
+                      (C, C): {MON_OLI: 570703.795464849, OLI_MON: 570703.795464849, OLI_OLI: 570703.795464849}},
+                 OX: {G: {MONOMER: 1360057059567.54, OLIGOMER: 149736731.431189},
+                      S: {MONOMER: 2256621533195.09, OLIGOMER: 151582896154.443},
+                      C: {MONOMER: 1360057059567.54, OLIGOMER: 1360057059567.54}},
+                 Q: {G: {MONOMER: 45383.9995564285, OLIGOMER: 45383.9995564285},
+                     S: {MONOMER: 16485.4030071542, OLIGOMER: 16485.4030071542},
+                     C: {MONOMER: 45383.9995564285, OLIGOMER: 45383.9995564285}}
                  }
+
+# todo: remove MANUSCRIPT_RATES when debugging done
+MANUSCRIPT_RATES = {C5O4: {(G, G): {MON_MON: 5904261.55598695, MON_OLI: 80333.560184945, OLI_MON: 80333.560184945,
+                                    OLI_OLI: 31893540751.2937},
+                           (S, G): {MON_MON: 8626534.12830123, MON_OLI: 80333.560184945, OLI_MON: 80333.560184945,
+                                    OLI_OLI: 31893540751.2937}},
+                    C5C5: {(G, G): {MON_MON: 1141805.97148106, MON_OLI: 22698.3606666981, OLI_MON: 22698.3606666981,
+                                    OLI_OLI: 68083872447.6958}},
+                    B5: {(G, G): {MON_MON: 7941635722.59467, MON_OLI: 5435496317.66216, OLI_MON: 5435496317.66216,
+                                  OLI_OLI: 5435496317.66216},
+                         (G, S): {MON_MON: 7941635722.59467, MON_OLI: 5435496317.66216, OLI_MON: 5435496317.66216,
+                                  OLI_OLI: 5435496317.66216}},
+                    BB: {(G, G): {MON_MON: 11603278571.9039, MON_OLI: 11603278571.9039, OLI_MON: 11603278571.9039,
+                                  OLI_OLI: 11603278571.9039},
+                         (S, G): {MON_MON: 2243920367.77638, MON_OLI: 2243920367.77638, OLI_MON: 2243920367.77638,
+                                  OLI_OLI: 2243920367.77638},
+                         (S, S): {MON_MON: 11603278571.9039, MON_OLI: 11603278571.9039, OLI_MON: 11603278571.9039,
+                                  OLI_OLI: 11603278571.9039},
+                         (G, S): {MON_MON: 2243920367.77638, MON_OLI: 2243920367.77638, OLI_MON: 2243920367.77638,
+                                  OLI_OLI: 2243920367.77638}},
+                    BO4: {(G, G): {MON_MON: 2889268780.92427, MON_OLI: 3278522716.22094, OLI_MON: 3278522716.22094,
+                                   OLI_OLI: 3278522716.22094},
+                          (S, G): {MON_MON: 83919112.8376677, MON_OLI: 3278522716.22094, OLI_MON: 3278522716.22094,
+                                   OLI_OLI: 3278522716.22094},
+                          (G, S): {MON_MON: 108054134.329644, MON_OLI: 3278522716.22094, OLI_MON: 3278522716.22094,
+                                   OLI_OLI: 3278522716.22094},
+                          # below is where an entry is missing
+                          (S, S): {MON_MON: 34644086.8574001, MON_OLI: 16228844.7506668, OLI_MON: 16228844.7506668}},
+                    AO4: {(G, G): {MON_MON: 36.0239749057507, MON_OLI: 36.0239749057507, OLI_MON: 36.0239749057507,
+                                   OLI_OLI: 36.0239749057507},
+                          (S, G): {MON_MON: 36.0239749057507, MON_OLI: 36.0239749057507, OLI_MON: 36.0239749057507,
+                                   OLI_OLI: 36.0239749057507},
+                          (G, S): {MON_MON: 36.0239749057507, MON_OLI: 36.0239749057507, OLI_MON: 36.0239749057507,
+                                   OLI_OLI: 36.0239749057507},
+                          (S, S): {MON_MON: 36.0239749057507, MON_OLI: 36.0239749057507, OLI_MON: 36.0239749057507,
+                                   OLI_OLI: 36.0239749057507}},
+                    B1: {(G, G): {MON_OLI: 44607678.613794, OLI_MON: 44607678.613794, OLI_OLI: 44607678.613794},
+                         (S, G): {MON_OLI: 3138443.59211371, OLI_MON: 3138443.59211371, OLI_OLI: 3138443.59211371},
+                         (G, S): {MON_OLI: 11107513.4850607, OLI_MON: 11107513.4850607, OLI_OLI: 11107513.4850607},
+                         (S, S): {MON_OLI: 2437439.37772669, OLI_MON: 2437439.37772669, OLI_OLI: 2437439.37772669}},
+                    OX: {G: {MONOMER: 2659877051606.15, OLIGOMER: 2889268780.92427},
+                         S: {MONOMER: 3886264174644.99, OLIGOMER: 514384986527.191}},
+                    Q: {G: {MONOMER: 6699707.46979824, OLIGOMER: 6699707.46979824},
+                        S: {MONOMER: 3138443.59211371, OLIGOMER: 3138443.59211371}}}
 
 
 class Event:
@@ -285,18 +331,18 @@ class Monomer:
     polymerization.
 
     ATTRIBUTES:
-        identity    -- uint     --  unique integer for indexing monomer (also the hash value)
-        type        -- uint     --  integer switch for monolignol variety
-                                        0 = coniferyl alcohol
-                                        1 = sinapyl alcohol
-                                        2 = caffeoyl alcohol
-        parent      -- Monomer  --  monomer object that has the smallest unique identifier in a chain (can be used for
+        identity    -- int     --  unique integer for indexing monomer (also the hash value)
+        type        -- str     --  monolignol variety
+                                        G = coniferyl alcohol
+                                        S = sinapyl alcohol
+                                        C = caffeoyl alcohol
+        parent      -- Monomer --  monomer object that has the smallest unique identifier in a chain (can be used for
                                     sizing fragments)
-        size        -- uint     --  integer with the size of the fragment if parent == self
-        active      -- int      --  integer with the location [1-9] of the active site on the monomer (-1 means
+        size        -- int     --  integer with the size of the fragment if parent == self
+        active      -- int     --  integer with the location [1-9] of the active site on the monomer (-1 means
                                     inactive)
-        open        -- set      --  set of units with location [1-9] of open positions on the monomer
-        connectedTo -- set      --  set of integer identities of other monomers that this monomer is connected to
+        open        -- set     --  set of units with location [1-9] of open positions on the monomer
+        connectedTo -- set     --  set of integer identities of other monomers that this monomer is connected to
 
     METHODS:
         N/A - no defined public methods
@@ -314,13 +360,13 @@ class Monomer:
         connected to begin as just containing the self's identity.
 
         Example calls are below:
-            mon = Monomer(0, 0) # Makes a guaiacol unit monomer with ID = 0
-            mon = Monomer(1, 0) # Makes a syringol unit monomer with ID = 0 (not recommended to repeat IDs)
-            mon = Monomer(2, 0) # Makes a caffeoyl unit monomer with ID = 0
-            mon = Monomer(1, n) # Makes a sinapyl alcohol with ID = n
+            mon = Monomer(G, 0) # Makes a guaiacol unit monomer with ID = 0
+            mon = Monomer(S, 0) # Makes a syringol unit monomer with ID = 0 (not recommended to repeat IDs)
+            mon = Monomer(H, 0) # Makes a caffeoyl unit monomer with ID = 0
+            mon = Monomer(S, n) # Makes a sinapyl alcohol with ID = n
 
-        :param unit_type: int    -- integer switch of the monomer type
-        :param i: int    -- unique identifier for the monomer
+        :param unit_type: str, monomer type
+        :param i: int, unique identifier for the monomer
         Outputs:
             New instance of a monomer object with the desired attributes
         """
@@ -333,13 +379,14 @@ class Monomer:
         # The active attribute will be the position of an active position, if 0
         # the monomer is not activated yet, -1 means it can never be activated
         self.active = 0
-        if unit_type == 0 or unit_type == 2:
+        if unit_type == G or unit_type == C:
             self.open = {4, 5, 8}
-        elif unit_type == 1:
+        elif unit_type == S:
             self.open = {4, 8}
         else:
-            raise InvalidDataError(f'Encountered unit type {unit_type},  but only the following types are '
-                                   f'currently available: {MONOLIG_OHS}')
+            # todo: update once H is added
+            raise InvalidDataError(f"Encountered unit type {unit_type},  but only the following types are "
+                                   f"currently available: 'G' ({G}), 'S' ({S}), 'C' ({C})")
         self.connectedTo = {i}
 
     def __str__(self):

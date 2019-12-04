@@ -12,5 +12,5 @@ dependencies:
   - common_wrangler=0.2.4
   - joblib=0.14.0
   - pytest=5.2.4
-  - ligninkmc=0.2
+  - ligninkmc=0.2.2
 prefix: lignin_kmc
