@@ -1,0 +1,19 @@
+/.pytest_cache/
+temp*
+/__pycache__/
+.eggs/
+.idea/
+.ipynb_checkpoints/
+"C:\\Users\\MikeOrella\\Documents\\GitHub\\lignin-kmc\\results\\2start\\1e+00.pkl"
+"C:\\Users\\MikeOrella\\Documents\\GitHub\\lignin-kmc\\results\\2start\\1e+01.pkl"
+"C:\\Users\\MikeOrella\\Documents\\GitHub\\lignin-kmc\\results\\2start\\1e+02.pkl"
+Manuscript Calculations-Copy1.ipynb
+Manuscript Calculations-short.ipynb
+Manuscript Calculations_rerun.ipynb
+Plotting Results_runrun.ipynb
+build/
+dist/
+lignin-kmc.iml
+ligninkmc.egg-info/
+tests/
+ligninkmc/__pycache__/*
