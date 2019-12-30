@@ -3,15 +3,19 @@ Written by:     Michael Orella
 Original:       6 June 2018
 Last Edited:    21 December 2018
 
-Code base for simulating the in planta polymerization of monolignols through generic Gillepsie algorithm adaptations. Monolignols can be handled as either coniferyl alcohol, sinapyl alcohol, or caffeoyl alcohol, however extensions should be easy given implementation choices. Within the module, there are two classes - monomers and events - code for analyzing the results of a simulation and for running an individual simulation. Use cases for the module are shown below.
-
->>> import ligninkmc as kmc
->>> mons = [ kmc.Monomer ( 1 , i ) for i in range(5) ]
->>> startEvs = [ kmc.Event ( 'ox' , [i] , rates['ox'][1]['monomer'] ) for i in range(5) ]
->>> state = { mons[i] : {startEvents[i]} for i in range(5) }
->>> events = { startEvents[i] for i in range(5) }
->>> events.add( kmc.Event( 'grow' , [ ] , rate = 0 , bond = 1 ) )
->>> res = kmc.run( tFinal = 1e9 , rates = rates, initialState = state, initialEvents = events)
+Code base for simulating the in planta polymerization of monolignols through generic Gillespie algorithm adaptations.
+Monolignols can be handled as either coniferyl alcohol, sinapyl alcohol, or caffeoyl alcohol, however extensions
+should be easy given implementation choices. Within the module, there are two classes - monomers and events - code
+for analyzing the results of a simulation and for running an individual simulation. Use cases for the module are
+shown below.
+#
+# >>> import ligninkmc as kmc
+# >>> mons = [ kmc.Monomer ( 1 , i ) for i in range(5) ]
+# >>> startEvs = [ kmc.Event ( OX , [i] , rates[OX][1]['monomer'] ) for i in range(5) ]
+# >>> state = { mons[i] : {startEvents[i]} for i in range(5) }
+# >>> events = { startEvents[i] for i in range(5) }
+# >>> events.add( kmc.Event( 'grow' , [ ] , rate = 0 , bond = 1 ) )
+# >>> res = kmc.run( tFinal = 1e9 , rates = rates, initialState = state, initialEvents = events)
 
 {'monomers': _____ , 'adjacency_matrix': _______ , 'time': ______ }
 '''
@@ -21,10 +25,35 @@ import scipy.sparse as sp
 import numpy as np
 
 #Import classes in this package
+from common_wrangler.common import round_sig_figs
+
 from ligninkmc.Event import Event
 from ligninkmc.Monomer import Monomer
 
 import copy
+
+G = 'guaiacol'  # (coniferyl alcohol)
+S = 'syringyl'  # (sinapyl alcohol)
+C = 'caffeoyl'  # (caffeyl alcohol)
+INT_TO_TYPE_DICT = {0: G, 1: S}
+
+MONOMER = 'monomer'
+OLIGOMER = 'oligomer'
+# bond types
+AO4 = 'ao4'
+B1 = 'b1'
+B1_ALT = 'b1alt'
+B5 = 'b5'
+BB = 'bb'
+BO4 = 'bo4'
+C5C5 = '55'
+C5O4 = '5o4'
+OX = 'oxidation'
+Q = 'hydration'
+GROW = 'grow'
+
+MAX_NUM_DECIMAL = 8
+
 
 
 def quickFragSize(monomer = None):
@@ -35,20 +64,18 @@ def quickFragSize(monomer = None):
         monomer -- Monomer -- the monomer object that we want to know if it is bound to anything else (i.e. if it is truly a monomer still)
 
     Outputs:
-        String either 'monomer' or 'dimer' if it is connected to nothing else, or isn't respectively
-
-    >>> TODO
+        String either 'monomer' or OLIGOMER if it is connected to nothing else, or isn't respectively
 
     '''
-    if monomer.type == 0 and monomer.open == {4,5,8}: #Guaiacol monomer
+    if monomer.type == G and monomer.open == {4,5,8}: #Guaiacol monomer
         return 'monomer'
-    elif monomer.type == 1 and monomer.open == {4,8}: #Syringol monomer
+    elif monomer.type == S and monomer.open == {4,8}: #Syringol monomer
         return 'monomer'
-    elif monomer.type == 2 and monomer.open == {4,5,8}:
+    elif monomer.type == C and monomer.open == {4,5,8}:  # Caffeoyl monomer
         return 'monomer'
-    return 'dimer'
+    return OLIGOMER
 
-def updateEvents(monomers = None,adj = None ,lastEvent = None,events = {},rateVec = None,r = None,maxMon = 500):
+def updateEvents(monomers = None, adj = None, lastEvent = None, events=None, rateVec = None, r = None, maxMon = 500):
     '''
     The meat of the implementation for lignification specific KMC. This method determines what the possible events are in a given state, where the state is the current simulation state. Most of the additional parameters in this method are added for performance benefits rather than necessity.
 
@@ -63,11 +90,11 @@ def updateEvents(monomers = None,adj = None ,lastEvent = None,events = {},rateVe
 
     Outputs:
         N/A - mutates the set of events and the rate vector
-
-    >>>
     '''
     #Map the monomer active state to the possible events it can do
-    possibleEvents = {0:[['ox',1,r['ox']]],
+    if events is None:
+        events = {}
+    possibleEvents = {0:[[OX,1,r[OX]]],
                       4:[['b1',2,r['b1'],[1,8]],
                          ['5o4',2,r['5o4'],[4,5]],
                          ['ao4',2,r['ao4'],[4,7]],
@@ -75,7 +102,7 @@ def updateEvents(monomers = None,adj = None ,lastEvent = None,events = {},rateVe
                          ['55',2,r['55'],[5,5]],
                          ['b5',2,r['b5'],[5,8]],
                          ['bb',2,r['bb'],[8,8]]],
-                      7:[['q',1,r['q']],
+                      7:[[Q,1,r[Q]],
                          ['ao4',2,r['ao4'],[7,4]]],
                       -1:[[]]
                       }
@@ -85,7 +112,6 @@ def updateEvents(monomers = None,adj = None ,lastEvent = None,events = {},rateVe
         leHash = hash(lastEvent)
         del(events[leHash])
         del(rateVec[leHash])
-        csradj = adj.tocsr(copy=True)
         
         #Make sure to keep track of which partners have been "cleaned" already - i.e. what monomers have already had all of the old events removed
         cleanedPartners = set() 
@@ -97,18 +123,18 @@ def updateEvents(monomers = None,adj = None ,lastEvent = None,events = {},rateVe
         #This prevents having to re-search the entire space every time, saving significant computation
         for monId in affectedMonomers:
             #Get the affected monomer
-            mon = monomers[monId]['mon']
+            mon = monomers[monId][MONOMER]
                     
             #Get the sets of activated monomers that we could bind with
-            ox = set(); quinone = set();
+            ox = set(); quinone = set()
             
             otherIDs = [x for x in monomers if x != monId]
             for other in otherIDs:
                 #Don't allow connections that would cyclize the polymer!
-                if monomers[other]['mon'].active == 4 and monomers[other]['mon'].identity not in mon.connectedTo:
-                    ox.add(monomers[other]['mon'])
-                elif monomers[other]['mon'].active == 7 and monomers[other]['mon'].identity not in mon.connectedTo:
-                    quinone.add(monomers[other]['mon'])
+                if monomers[other][MONOMER].active == 4 and monomers[other][MONOMER].identity not in mon.connectedTo:
+                    ox.add(monomers[other][MONOMER])
+                elif monomers[other][MONOMER].active == 7 and monomers[other][MONOMER].identity not in mon.connectedTo:
+                    quinone.add(monomers[other][MONOMER])
             bondingPartners = { 'bo4':ox,'b5':ox,'5o4':ox,'55':ox,'bb':ox,'b1':ox,
                                 'ao4':quinone}
 
@@ -117,7 +143,7 @@ def updateEvents(monomers = None,adj = None ,lastEvent = None,events = {},rateVe
 
             #Get the codes for the events that are possible based on how the current monomer behaves
             activePos = mon.active
-            newEventList = possibleEvents[activePos];
+            newEventList = possibleEvents[activePos]
 
             #Take any events to be modified out of the set so that we can replace with the updated events
             for event in eventsToBeModified:
@@ -224,7 +250,7 @@ def updateEvents(monomers = None,adj = None ,lastEvent = None,events = {},rateVe
 
         #Add an event to oxidize the monomer that was just added to the 
         #simulation
-        oxidation = Event( 'ox' , [curN - 1] , r['ox'][monomers[curN - 1]['mon'].type]['monomer'] )
+        oxidation = Event( OX , [curN - 1] , r[OX][monomers[curN - 1][MONOMER].type]['monomer'] )
         monomers[curN - 1]['affected'].add( oxidation )
         evHash = hash( oxidation )
         events[evHash] = oxidation
@@ -255,7 +281,7 @@ def connectedSize(mon = None):
     else:
         return connectedSize(mon = mon.parent)
 
-def doEvent(event = None,state = None,adj = None):
+def doEvent(event = None,state = None, adj = None, sg_ratio=None, random_seed=None):
     '''
     The second key component of the lignin implementation of the Monte Carlo algorithm, this method actually executes the chosen event on the current state and modifies it to reflect the updates.
 
@@ -268,7 +294,7 @@ def doEvent(event = None,state = None,adj = None):
         N/A - mutates the list of monomers and adjacency matrix instead
     '''
     indices = event.index
-    monomers = [state[i]['mon'] for i in state]
+    monomers = [state[i][MONOMER] for i in state]
     if len(indices) == 2: #Doing bimolecular reaction, need to adjust adj
 
         #Get the tuple of values corresponding to bond and state updates and
@@ -301,11 +327,11 @@ def doEvent(event = None,state = None,adj = None):
         mon0.open |= set(vals[1+order[0]])
         mon1.open |= set(vals[1+order[1]])
 
-        if mon0.active == 7 and mon1.type == 2:
+        if mon0.active == 7 and mon1.type == C:
             mon0.active = 0
             mon0.open -= {7}
 
-        if mon1.active == 7 and mon0.type == 2:
+        if mon1.active == 7 and mon0.type == C:
             mon1.active = 0
             mon1.open -= {7}
         
@@ -318,11 +344,11 @@ def doEvent(event = None,state = None,adj = None):
                 mon.connectedTo = mon0.connectedTo
                     
     elif len(indices) == 1:
-        if event.key == 'q':
+        if event.key == Q:
             mon = monomers[indices[0]]
             mon.active = 0
             mon.open.remove(7); mon.open.add(1)
-        elif event.key == 'ox':
+        elif event.key == OX:
             mon = monomers[indices[0]]
 
             #Make the monomer appear oxidized
@@ -337,16 +363,23 @@ def doEvent(event = None,state = None,adj = None):
             adj.resize((currentSize+1,currentSize+1))
 
             #Add another monomer to the state
-            if monomers and monomers[-1].type == 2:
-                monType = 2
+            if monomers and monomers[-1].type == C:
+                monType = C
             else:
-                sg = event.bond
-                pct = sg / (1 + sg)
-                monType = int(np.random.rand() < pct)
-            newMon = Monomer(monType,currentSize)
-            state[currentSize] = {'mon':newMon,'affected':set()}
+                pct = sg_ratio / (1 + sg_ratio)
+                if random_seed:
+                    # to prevent the same choice every iteration, add a changing integer
+                    np.random.seed(random_seed + currentSize)
+                    rand_num = np.around(np.random.rand(), MAX_NUM_DECIMAL)
+                else:
+                    rand_num = np.random.rand()
+                monType = INT_TO_TYPE_DICT[int(rand_num < pct)]
+            newMon = Monomer(monType, currentSize)
+            state[currentSize] = {MONOMER:newMon,'affected':set()}
 
-def run(nMax = 10 , tFinal = 10, rates = None, initialState = None, initialEvents = None, dynamics = False):
+
+def run(nMax=10, tFinal=10, rates=None, initialState=None, initialEvents=None, dynamics=False, sg_ratio=None,
+        random_seed=None):
     '''
     Performs the Gillespie algorithm using the specific event and update implementations described by doEvent and updateEvents specifically. The initial state and events in that state are constructed and passed to the run method, along with the possible rates of different bond formation events, the maximum number of monomers that should be included in the simulation and the total simulation time.
 
@@ -362,11 +395,11 @@ def run(nMax = 10 , tFinal = 10, rates = None, initialState = None, initialEvent
 
     Example usage assuming that rates have been defined as dictionary of dictionary of dictionaries:
     rates['event type'][(monomer 1 type, monomer 2 type)][(monomer 1 frag size, monomer 2 frag size)]
-    >>> mons = [Monomer(1,i) for i in range(5)]
-    >>> evs = [Event()]
-    >>> state = {mons[i]:{evs[i]} for i in range(5)}
-    >>> evs.add(Event('grow'))
-    >>> run(nMax = 5 , tFinal = 10 , rates = rates , initialState = state, initialEvents = set(evs))
+    # >>> mons = [Monomer(1, i) for i in range(5)]
+    # >>> evs = [Event()]
+    # >>> state = {mons[i]:{evs[i]} for i in range(5)}
+    # >>> evs.add(Event('grow'))
+    # >>> run(nMax = 5 , tFinal = 10 , rates = rates , initialState = state, initialEvents = set(evs))
 
     {'time' : , 'monomers' : , 'adjacency_matrix' : }
     '''
@@ -376,7 +409,7 @@ def run(nMax = 10 , tFinal = 10, rates = None, initialState = None, initialEvent
     #Current number of monomers
     n = len(state.keys())
     adj = sp.dok_matrix((n,n))
-    t = [0,]
+    t = [0, ]
 
     #Calculate the rates of all of the events available at the current state
     rvec = {}
@@ -389,34 +422,46 @@ def run(nMax = 10 , tFinal = 10, rates = None, initialState = None, initialEvent
 
     if dynamics:
         adjList = [adj.copy()]
-        monList = [[copy.copy(state[i]['mon']) for i in state]]
+        monList = [[copy.copy(state[i][MONOMER]) for i in state]]
+    else:
+        adjList = []
+        monList = []
 
-    #Run the Gillespie algorithm
+        #Run the Gillespie algorithm
     while t[-1] < tFinal and len(eventDict) > 0:        
         #Find the total rate for all of the possible events and choose which event to do
         hashes = list(rvec.keys())
         allRates = list(rvec.values())
         rtot = np.sum(allRates)
 
-        j = np.random.choice(hashes,p = allRates/rtot)
+        if random_seed:
+            # don't want same dt for every iteration, so add to seed with each iteration
+            np.random.seed(random_seed + len(t))
+            # don't let machine precision change the dt on different platforms
+            rand_num = np.around(np.random.rand(), MAX_NUM_DECIMAL)
+        else:
+            rand_num = np.random.rand()
+
+        j = np.random.choice(hashes, p=allRates/rtot)
         event = eventDict[j]
         
         #See how much time has passed before this event happened
-        dt = ( 1 / rtot ) * np.log ( 1 / np.random.rand(1) )
-
-        t.extend(t[-1] + dt)
+        # See how much time has passed before this event happened; rounding to reduce platform dependency
+        dt = round_sig_figs((1 / rtot) * np.log(1 / rand_num))
+        t.append(t[-1] + dt)
 
         #Do the event and update the state
-        doEvent(event,state,adj)
+        doEvent(event,state,adj, sg_ratio=sg_ratio)
 
         if dynamics:
             adjList.append(adj.copy())
-            monList.append([copy.copy(state[i]['mon']) for i in state])
+            monList.append([copy.copy(state[i][MONOMER]) for i in state])
 
         #Check the new state for what events are possible
-        updateEvents(monomers = state, adj = adj, lastEvent = event, events = eventDict, rateVec = rvec, r = rates, maxMon = nMax)
+        updateEvents(monomers = state, adj = adj, lastEvent = event, events = eventDict, rateVec = rvec,
+                     r = rates, maxMon = nMax)
 
     if dynamics:
 
         return {'time':t,'monomers':monList,'adjacency_matrix':adjList}    
-    return {'time':t,'monomers':[state[i]['mon'] for i in state],'adjacency_matrix':adj}
+    return {'time':t,'monomers':[state[i][MONOMER] for i in state],'adjacency_matrix':adj}
