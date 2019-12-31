@@ -15,21 +15,19 @@ shown below.
 # >>> state = { mons[i] : {startEvents[i]} for i in range(5) }
 # >>> events = { startEvents[i] for i in range(5) }
 # >>> events.add( kmc.Event( 'grow' , [ ] , rate = 0 , bond = 1 ) )
-# >>> res = kmc.run( tFinal = 1e9 , rates = rates, initialState = state, initialEvents = events)
+# >>> res = kmc.run_kmc( tFinal = 1e9 , rates = rates, initialState = state, initialEvents = events)
 
 {'monomers': _____ , 'adjacency_matrix': _______ , 'time': ______ }
 '''
 
 #Import python packages for data processing
+from collections import Counter
+
 import scipy.sparse as sp
 import numpy as np
 
 #Import classes in this package
 from common_wrangler.common import round_sig_figs, InvalidDataError
-
-from ligninkmc.Event import Event
-from ligninkmc.Monomer import Monomer
-
 import copy
 
 G = 'guaiacol'  # (coniferyl alcohol)
@@ -56,6 +54,472 @@ GROW = 'grow'
 MAX_NUM_DECIMAL = 8
 
 
+class Monomer:
+    '''
+    Class definition for monomer objects. This is highly generic such that it can be easily extended to more types of monolignols. The class is primarily used for storing information about each monolignol included in a simulation of polymerization.
+
+    ATTRIBUTES:
+        identity    -- uint     --  unique integer for indexing monomers (also the hash value)
+        type        -- uint     --  integer switch for monolignol variety (0 = coniferyl alcohol, 1 = sinapyl alcohol, 2 = caffeoyl alcohol)
+        parent      -- Monomer  --  monomer object that has the smallest unique identifier in a chain (can be used for sizing fragments)
+        size        -- uint     --  integer with the size of the fragment if parent == self
+        active      -- int      --  integer with the location [1-9] of the active site on the monomer (-1 means inactive)
+        open        -- set      --  set of units with location [1-9] of open positions on the monomer
+        connectedTo -- set      --  set of integer identities of other monomers that this monomer is connected to
+
+    METHODS:
+        N/A - no defined public methods
+
+    Monomers are mutable objects, but compare and hash only on the identity, which should be treated as a constant
+    '''
+
+    #Types
+    # 0 == Guaiacol
+    # 1 == Syringol
+    # 2 == Caffeoyl
+    def __init__(self,unit,i):
+        '''
+        Constructor for the Monomer class, which sets the properties depending on what monolignol is being represented. The only attributes that need to be set are the species [0-2], and the unique integer identifier. Everything else will be computed from these values. The active site is initially set to 0, indicating that the monomer is not oxidized, but can be eventually. The open positions are either {4,5,8} or {4,8} depending on whether a 5-methoxy is present. The parent is set to be self until connections occur. The set of monomers that are connectedTo begin as just containing the self's identity.
+
+        Inputs:
+            unit    --  uint    -- integer switch of the monomer type
+            i       --  uint    -- unique identifier for the monomer
+        Outputs:
+            New instance of a monomer object with the desired attributes
+
+        Example calls are below:
+        #
+        # >>> mon = Monomer(0,0) #Makes a guaiacol unit monomer with ID = 0
+        # >>> mon = Monomer(1,0) #Makes a syringol unit monomer with ID = 0 (not recommended to repeat IDs)
+        # >>> mon = Monomer(2,0) #Makes a caffeoyl unit monomer with ID = 0
+        # >>> mon = Monomer(1,n) #Makes a sinapyl alcohol with ID = n
+        '''
+
+        self.identity = i
+        self.type = unit
+        self.parent = self
+        self.size = 1
+
+        #The active attribute will be the position of an active position, if 0
+        #the monomer is not activated yet, -1 means it can never be activated
+        self.active = 0
+        if unit == G:
+            self.open = {4,5,8}
+        elif unit == S:
+            self.open = {4,8}
+        else:
+            self.open = {4,5,8}
+
+        self.connectedTo = {i}
+
+    def __str__(self):
+        trans = {G:'coniferyl',S:'sinapyl', C:'caffeoyl'}
+        return f'{self.identity}: {trans[self.type]} alcohol is connected to {self.connectedTo} and active at {self.active}'
+
+    def __repr__(self):
+        trans = {G:'coniferyl',S:'sinapyl',C:'caffeoyl'}
+        representation = f'{self.identity}: {trans[self.type]} alcohol \n'
+        return representation
+
+    def __eq__(self,other): #Always compare monomers by identity alone. This should always be a unique identifier
+        return self.identity == other.identity
+
+    def __lt__(self,other):
+        return self.identity < other.identity
+
+    def __hash__(self):
+        return self.identity
+
+
+class Event:
+    '''
+    Class definition for the events that occur during lignification process. While more specific than the monomer class, this class is also easily extensible such that other reactivity could be incorporated in the future. The most important features lie in the event dictionary that specifies the changes that need to occur for a given reaction.
+
+    ATTRIBUTES:
+        key     -- str  --  Name of the bond that is being formed using the traditional nomenclature (e.g. '5o4', 'bo4', '55' etc.)
+        index   -- list --  N x 1 list of integers containing the unique monomer identifiers involved in the reaction (N = 2 for bimolecular, 1 for unimolecular)
+        rate    -- float--  Scalar floating point value with the rate of this particular reaction event
+        bond    -- list --  2 x 1 list of the updates that need to occur to the adjacency matrix to reflect the bond formations
+
+    METHODS:
+        N/A no declared public methods
+
+    Events are compared based on the monomers that are involved in the event, the specific bond being formed, and the value updates to the adjacency matrix.
+    '''
+
+
+    #create dictionary that maps event keys onto numerical changes in monomer
+    #state where the value is a tuple of (new reactant active point,openPos0,openPos1)
+    eventDict = {'bo4':((-1,7),(),(7,)),
+                 'bb':((0,0),(),()),
+                 '55':((0,0),(),()),
+                 '5o4':((-1,0),(),()),
+                 'b5':((-1,0),(),()),
+                 'b1':((0,7),(),(7,)),
+                 'ao4':((-1,4),(),()),
+                 'q':(0, (1,), ()),
+                 'ox':(4, (), ())
+                 }
+
+    #Create dictionary to properly order the event indices
+    activeDict = {(4,8):(0,1), (8,4):(1,0), (4,5):(0,1), (5,4):(1,0), (5,8):(0,1), (8,5):(1,0), (1,8):(0,1),
+                  (8,1):(1,0), (4,7):(0,1), (7,4):(1,0), (5,5):(0,1), (8,8):(0,1)}
+
+    def __init__(self,eventName,ids,rate=0,bond=()):
+        '''
+        Straightforward constructor that takes the name of bond being formed, the indices of affected monomers, the rate of the event, and the updates to the adjacency matrix.
+
+        Inputs:
+            eventName   -- str  -- assigned to key attribute - has the name of the bond being formed or the reaction occurring
+            ids         -- int  -- N x 1 list assigned to index - keeps track of the monomers affected by this event
+            rate        -- float-- the rate of the event (make sure units are consistent - I typically use GHz)
+            bond        -- int  -- 2 x 1 list of updates to the adjacency matrix when a bond is formed
+
+        Outputs:
+            new instance of an event object that corresponds to the attributes provided
+        '''
+        self.key = eventName
+        self.index = ids
+        self.rate = rate
+        self.bond = bond
+
+
+    def __str__(self):
+        if self.key == Q or self.key == OX:
+            msg = f'Performing {self.key} on index {str(self.index[0])}'
+        else:
+            msg = f'Forming {self.key} bond between indices {str(self.index)} ({ADJ_MATRIX} update {str(self.bond)})'
+        return msg
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __eq__(self,other):
+        return self.index == other.index and self.bond == other.bond and self.key == other.key
+
+    def __hash__(self):
+        # attempt at repeatable hash
+        if not self.index:
+            index_join = 0
+        else:
+            index_join = int("".join([str(x) for x in self.index]))
+        index_bytes = index_join.to_bytes((index_join.bit_length() + 7) // 8, 'big')
+        key_bytes = self.key.encode()
+        bond_list_str = "".join([str(x) for x in self.bond])
+        bond_list_bytes =  bond_list_str.encode()
+        event_bytes = b''.join([index_bytes, key_bytes, bond_list_bytes])
+        temp = int.from_bytes(event_bytes, 'big')
+        # the hash call below "right-sizes" the value, but since it is hashing an int, will be repeatable
+        event_hash = hash(temp)
+
+        # # original hash
+        # event_hash = hash ((tuple(self.index), self.key, self.bond))
+
+        return  event_hash
+
+# ANALYSIS CODE #
+
+def findFragments(adj = None):
+    '''
+    Implementation of a modified depth first search on the adjacency matrix provided to identify isolated graphs within the superstructure. This allows us to easily track the number of isolated fragments and the size of each of these fragments. This implementation does not care about the specific values within the adjacency matrix, but effectively treats the adjacency matrix as boolean.
+
+    Inputs:
+        adj     --  DOK_MATRIX  -- NxN sparse matrix in dictionary of keys format that contains all of the connectivity information for the current lignification state
+
+    Outputs:
+        A set of sets of the unique integer identifiers for the monomers contained within each fragment.
+
+    >>> a = sp.dok_matrix((2,2))
+    >>> findFragments(a)
+
+    {{0},{1}}
+
+    >>> a.resize((5,5))
+    >>> a[0,1] = 1; a[1,0] = 1; a[0,2] = 1; a[2,0] = 1; a[3,4] = 1; a[4,3] = 1
+    >>> findFragments(a)
+
+    {{0,1,2},{3,4}}
+
+    # >>> a = sp.dok_matrix((5,5))
+    # >>> a[0,4] = 1; a[4,0] = 1
+    # >>> findFragments(a)
+
+    {{0,4},{1},{2},{3}}
+    '''
+    remainingNodes = list(range(adj.get_shape()[0]))
+    currentNode = 0
+    connectedFragments = [set()]
+    connectionStack = []
+
+    csradj = adj.tocsr(copy = True)
+
+    while currentNode is not None:
+        #Indicate that we are currently visiting this node by removing it
+        remainingNodes.remove(currentNode)
+
+        #Add to the currentFragment
+        currentFragment = connectedFragments[-1]
+
+        #Look for what's connected to this row
+        connections = {node for node in csradj[currentNode].indices}
+
+        #Add these connections to our current fragment
+        currentFragment.update({currentNode})
+
+        #Visit any nodes that the current node is connected to that still need to be visited
+        connectionStack.extend([node for node in connections if (node in remainingNodes and node not in connectionStack)])
+
+        #Get the next node that should be visited
+        if len(connectionStack) != 0:
+            currentNode = connectionStack.pop()
+        elif len(remainingNodes) != 0:
+            currentNode = remainingNodes[0]
+            connectedFragments.append(set())
+        else:
+            currentNode = None
+    return connectedFragments
+
+def fragmentSize(frags = None):
+    '''
+    A rigorous way to analyze the size of fragments that have been identified using the findFragments(adj) tool. Makes a dictionary of monomer identities mapped to the length of the fragment that contains them.
+
+    Inputs:
+        frags   -- set of sets -- The set of monomer identifier sets that were output from the findFragments code, or the sets of monomers that are connected to each other
+
+    Outputs:
+        Dictionary mapping the identity of each monomer [0,N-1] to the length of the fragment that it is found in
+
+
+    >>> frags = {{0},{1}}
+    >>> fragmentSize(frags)
+
+    { 0:1 , 1:1 }
+
+    >>> frags = {{0,4,2},{1,3}}
+    >>> fragmentSize(frags)
+
+    { 0:3 , 1:2 , 2:3 , 3:2 , 4:3 }
+
+    >>> frags = {{0,1,2,3,4}}
+    >>> fragmentSize(frags)
+
+    { 0:5 , 1:5 , 2:5 , 3:5 , 4:5 }
+    '''
+    sizes = {}
+    for fragment in frags:
+        length = len(fragment)
+        for node in fragment:
+            sizes[node] = length
+
+
+# noinspection DuplicatedCode
+def break_bond_type(adj = None, bondType = None):
+    '''
+    Function for removing all of a certain type of bond from the adjacency matrix. This is primarily used for the analysis at the end of the simulations when in silico RCF should occur. The update happens via conditional removal of the matching values in the adjacency matrix.
+
+    Inputs:
+        adj     -- DOK_MATRIX   -- the adjacency matrix for the lignin polymer that has been simulated, and needs certain bonds removed
+        bondType-- str          -- the string containing the bond type that should be broken. These are the standard nomenclature, except for b1alt, which removes the previous bond between the beta position and another monomer on the monomer that is bound through 1
+
+    Outputs:
+        new dok_matrix adjacency matrix for the connections that remain after the desired bond was broken
+
+    # >>> a = sp.dok_matrix((5,5))
+    # >>> a[1,0] = 4; a[0,1] = 8; a[2,3] = 8; a[3,2] = 8
+    # >>> break_bond_type(a,'bo4').todense()
+
+    [[0,0,0,0,0],
+     [0,0,0,0,0],
+     [0,0,0,8,0],
+     [0,0,8,0,0],
+     [0,0,0,0,0]]
+
+    # >>> a = sp.dok_matrix( [[0,4,0,0,0],
+    #                         [8,0,1,0,0],
+    #                         [0,8,0,0,0],
+    #                         [0,0,0,0,0],
+    #                         [0,0,0,0,0]])
+    # >>> break_bond_type(a,'b1alt')
+
+    [[0,0,0,0,0],
+     [0,0,1,0,0],
+     [0,8,0,0,0],
+     [0,0,0,0,0],
+     [0,0,0,0,0]]
+    '''
+    newAdj = adj.todok(1) #Copy the matrix into a new matrix
+
+    breakage = {'b1': (lambda b_row, b_col : (adj[(row,col)] == 1 and adj[(col,row)] == 8) or (adj[(row,col)] == 8 and
+                                                                                          adj[(col,row)] == 1)) ,
+                'b1alt': (lambda b_row, b_col : (adj[(row,col)] == 1 and
+                                            adj[(col,row)] == 8) or
+                                           (adj[(row,col)] == 8 and
+                                            adj[(col,row)] == 1)) ,
+                'b5': (lambda b_row, b_col : (adj[(row,col)] == 5 and adj[(col,row)] == 8) or (adj[(row,col)] == 8 and
+                                                                                          adj[(col,row)] == 5)) ,
+                'bo4': (lambda b_row, b_col : (adj[(row,col)] == 4 and adj[(col,row)] == 8) or (adj[(row,col)] == 8 and
+                                                                                           adj[(col,row)] == 4)) ,
+                'ao4': (lambda b_row, b_col : (adj[(row,col)] == 4 and adj[(col,row)] == 7) or (adj[(row,col)] == 7 and
+                                                                                           adj[(col,row)] == 4)) ,
+                '5o4': (lambda b_row, b_col : (adj[(row,col)] == 4 and adj[(col,row)] == 5) or (adj[(row,col)] == 5 and
+                                                                                           adj[(col,row)] == 4)) ,
+                'bb': (lambda b_row, b_col: (adj[(row,col)] == 8 and adj[(col,row)] == 8)) ,
+                '55': (lambda b_row, b_col : (adj[(row,col)] == 5 and adj[(col,row)] == 5)) }
+
+    for el in adj.keys():
+        row = el[0]; col = el[1]
+
+        if breakage[bondType](row,col) and bondType != 'b1alt':
+            newAdj[(row,col)] = 0; newAdj[(col,row)] = 0
+        elif breakage[bondType](row,col):
+            if adj[(row,col)] == 1: #The other 8 is in this row
+                data = adj.tocoo().getrow(row).data
+                cols = adj.tocoo().getrow(row).indices
+                idx = 0
+                for i, idx in enumerate(cols):
+                    if data[i] == 8:
+                        break
+
+                newAdj[(row, idx)] = 0
+                newAdj[(idx, row)] = 0
+            else: #The other 8 is in the other row
+                data = adj.tocoo().getrow(col).data
+                cols = adj.tocoo().getrow(col).indices
+                idx = 0
+                for i,idx in enumerate(cols):
+                    if data[i] == 8:
+                        break
+                newAdj[(col, idx)] = 0
+                newAdj[(idx, col)] = 0
+
+    return newAdj
+
+def count_bonds(adj = None):
+    '''
+    Counter for the different bonds that are present in the adjacency matrix. Primarily used for getting easy analysis of the properties of a simulated lignin from the resulting adjacency matrix.
+
+    Inputs:
+        adj     -- DOK_MATRIX   -- the adjacency matrix for the lignin polymer that has been simulated
+
+    Outputs:
+        dictionary mapping bond strings to the frequency of that specific bond
+
+    >>> a = sp.dok_matrix( [[0,8,0,0,0],
+                            [4,0,8,0,0],
+                            [0,5,0,8,0],
+                            [0,0,8,0,4],
+                            [0,0,0,8,0]] )
+    >>> count_bonds(a)
+
+    { 'bo4':2 , 'b1' : 0 , 'bb' : 1 , 'b5' : 1 , '55' : 0 , 'ao4' : 0 , '5o4' : 0 }
+    '''
+    count = {'bo4':0,'b1':0,'bb':0,'b5':0,'55':0,'ao4':0,'5o4':0}
+    bonds = {(4,8):'bo4',(8,4):'bo4',(8,1):'b1',(1,8):'b1',(8,8):'bb',(5,5):'55',(8,5):'b5',(5,8):'b5',(7,4):'ao4',
+             (4,7):'ao4',(5,4):'5o4',(4,5):'5o4'}
+
+    for el in sp.triu(adj).todok().keys(): #Don't double count by looking only at the upper triangular keys
+        row = el[0]; col = el[1]
+
+        bond = (adj[(row,col)],adj[(col,row)])
+        count[bonds[bond]] += 1
+
+    return count
+
+def count_oligomer_yields(adj = None):
+    '''
+    Use the depth first search implemented in findFragments(adj) to locate individual fragments, and then determine the sizes of these individual fragments to obtain estimates of simulated oligomeric yields.
+
+    Inputs:
+        adj     -- DOK_MATRIX   -- the adjacency matrix for the lignin polymer that has been simulated
+
+    Outputs:
+        A Counter dictionary mapping the length of fragments to the number of occurrences of that length
+
+    >>> a = sp.dok_matrix( [ [0,0,0,0,0],
+                             [0,0,0,0,0],
+                             [0,0,0,0,0],
+                             [0,0,0,0,0],
+                             [0,0,0,0,0] ] )
+    >>> count_oligomer_yields(a)
+
+    { 1 : 5 }
+
+    >>> a = sp.dok_matrix( [ [0,4,0,0,0],
+                             [8,0,0,0,0],
+                             [0,0,0,0,0],
+                             [0,0,0,0,0],
+                             [0,0,0,0,0] ] )
+    >>> count_oligomer_yields(a)
+
+    { 2 : 1 , 1 : 3 }
+
+    >>> a = sp.dok_matrix( [ [0,4,0,0,0],
+                             [8,0,0,0,0],
+                             [0,0,0,8,0],
+                             [0,0,5,0,0],
+                             [0,0,0,0,0] ] )
+    >>> count_oligomer_yields(a)
+
+    { 2 : 2 , 1 : 1 }
+
+    >>> a = sp.dok_matrix( [ [0,4,8,0,0],
+                             [8,0,0,0,0],
+                             [5,0,0,0,0],
+                             [0,0,0,0,0],
+                             [0,0,0,0,0] ] )
+    >>> count_oligomer_yields(a)
+
+    { 3 : 1 , 1 : 2 }
+    '''
+
+    #Figure out what is still connected by using the determineCycles function, and look at the length of each connected piece
+    oligomers = findFragments(adj = adj)
+    counts = Counter(map(len,oligomers))
+    return counts
+
+def analyze(adjacency = None):
+    '''
+    Performs the analysis for a single simulation to extract the relevant macroscopic properties, such as both the simulated frequency of different oligomer sizes and the number of each different type of bond before and after in silico RCF. The specific code to handle each of these properties is written in the count_bonds(adj) and count_oligomer_yields(adj) specifically.
+
+    Inputs:
+        adj     -- DOK_MATRIX   -- the adjacency matrix for the lignin polymer that has been simulated
+        nodes   -- list         -- list of monomer objects that have identities matching the indices of the adjacency matrix
+
+    Outputs:
+        A dictionary of keywords to the desired result - e.g. Chain Lengths, RCF Yields, Bonds, and RCF Bonds
+
+    # >>> a = sp.dok_matrix( [ [0,0,0,0,0],
+    #                          [0,0,0,0,0],
+    #                          [0,0,0,0,0],
+    #                          [0,0,0,0,0],
+    #                          [0,0,0,0,0] ] )
+    # >>> analyze(a)
+
+    { 'Chain Lengths' : output from count_oligomer_yields(a) , 'Bonds' : output from count_bonds(a) ,
+    'RCF Yields' : output from count_oligomer_yields(a') where a' has bonds broken , 'RCF Bonds' : output from count_bonds(a') }
+    '''
+
+    #Remove any excess b1 bonds from the matrix, e.g. bonds that should be
+    #broken during synthesis
+    adjacency = break_bond_type (adj = adjacency, bondType ='b1alt')
+
+    #Examine the initial polymers before any bonds are broken
+    yields = count_oligomer_yields(adj = adjacency)
+    bondDistributions = count_bonds(adj = adjacency)
+
+    #Simulate the RCF process at complete conversion by breaking all of the
+    #alkyl C-O bonds that were formed during the reaction
+    rcfAdj = break_bond_type (adj = break_bond_type (adj =
+                                           break_bond_type (adj = adjacency, bondType ='bo4'), bondType ='ao4')
+                              , bondType = '5o4')
+
+    #Now count the bonds and yields remaining
+    rcfYields = count_oligomer_yields(adj = rcfAdj)
+    rcfBonds = count_bonds(adj = rcfAdj)
+
+    return {'Chain Lengths': yields, 'Bonds': bondDistributions, 'RCF Yields': rcfYields,'RCF Bonds': rcfBonds}
+
+# Other methods
 
 def quickFragSize(monomer = None):
     '''
@@ -183,7 +647,7 @@ def updateEvents(monomers = None, adj = None, lastEvent = None, events=None, rat
                         size = (quickFragSize(monomer = mon),quickFragSize(monomer = partner))
                         if bond[0] in mon.open and bond[1] in partner.open:
                             try:
-                                rate = item[2][(mon.type,partner.type)][size] / ( curN ** 2 )
+                                rate = item[2][(mon.type, partner.type)][size] / (curN ** 2)
                             except KeyError:
                                 print(item[0])
                                 print((mon.identity,partner.identity))
@@ -378,10 +842,10 @@ def doEvent(event = None,state = None, adj = None, sg_ratio=None, random_seed=No
             state[currentSize] = {MONOMER:newMon,'affected':set()}
 
 
-def run(nMax=10, tFinal=10, rates=None, initialState=None, initialEvents=None, dynamics=False, sg_ratio=None,
-        random_seed=None):
+def run_kmc(nMax, tFinal, rates, initialState, initialEvents, dynamics=False, sg_ratio=None,
+            random_seed=None):
     '''
-    Performs the Gillespie algorithm using the specific event and update implementations described by doEvent and updateEvents specifically. The initial state and events in that state are constructed and passed to the run method, along with the possible rates of different bond formation events, the maximum number of monomers that should be included in the simulation and the total simulation time.
+    Performs the Gillespie algorithm using the specific event and update implementations described by doEvent and updateEvents specifically. The initial state and events in that state are constructed and passed to the run_kmc method, along with the possible rates of different bond formation events, the maximum number of monomers that should be included in the simulation and the total simulation time.
 
     Inputs:
         nMax        -- uint         -- The maximum number of monomers in the simulation
@@ -399,14 +863,14 @@ def run(nMax=10, tFinal=10, rates=None, initialState=None, initialEvents=None, d
     # >>> evs = [Event()]
     # >>> state = {mons[i]:{evs[i]} for i in range(5)}
     # >>> evs.add(Event('grow'))
-    # >>> run(nMax = 5 , tFinal = 10 , rates = rates , initialState = state, initialEvents = set(evs))
+    # >>> run_kmc(nMax = 5 , tFinal = 10 , rates = rates , initialState = state, initialEvents = set(evs))
 
     {'time' : , 'monomers' : , 'adjacency_matrix' : }
     '''
     state = copy.deepcopy(initialState)
     events = copy.deepcopy(initialEvents)
 
-    #Current number of monomers
+    # Current number of monomers
     n = len(state.keys())
     adj = sp.dok_matrix((n,n))
     t = [0, ]

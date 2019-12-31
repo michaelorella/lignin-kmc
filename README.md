@@ -26,7 +26,7 @@ Navigate to the directory where you would like the local copy of the source code
 git clone https://github.com/michaelorella/lignin-kmc
 ```
 
-In the root, you will find a file titled `environment.yml`. This file contains all of the dependencies listed above, with the versions tested. To create your own environment mirroring this one, run the following command in the terminal (or Anaconda Prompt on Windows):
+In the root, you will find a file titled `environment.yml`. This file contains all of the dependencies listed above, with the versions tested. To create your own environment mirroring this one, run_kmc the following command in the terminal (or Anaconda Prompt on Windows):
 ```
 conda env create -f environment.yml
 ```
@@ -36,7 +36,7 @@ An alternative to get the most recent packages (this is not tested and therefore
 conda create -c rdkit -n lignin_kmc rdkit=2018.03.4.0 python=3.6.6 scipy=1.1.0 numpy=1.15.1 matplotlib=2.2.2 joblib=0.12.2 jupyter=1.0.0
 ```
 
-Once the environment has been created, you can install the LIGNIN-KMC module using a Python `import` statement. The necessary package to import is `ligninkmc`. To do this, start the environment you just created in conda and run Python:
+Once the environment has been created, you can install the LIGNIN-KMC module using a Python `import` statement. The necessary package to import is `ligninkmc`. To do this, start the environment you just created in conda and run_kmc Python:
 ```
 (base) ~/ conda activate lignin_kmc
 (lignin_kmc) ~/ Python
@@ -47,19 +47,19 @@ Type "help", "copyright", "credits" or "license" for more information.
 >>> import ligninkmc as kmc
 ```
 
-Congratulations! LIGNIN-KMC is now installed! With this basic installation, you will have access to the functions `run`, `generateMol`, `moltosvg`, and `analyze` and the classes `Monomer` and `Event`.
+Congratulations! LIGNIN-KMC is now installed! With this basic installation, you will have access to the functions `run_kmc`, `generateMol`, `moltosvg`, and `analyze` and the classes `Monomer` and `Event`.
 
 ## Examples
 For these examples, I will assume that the rates have already been obtained and have been input as a 3-dimensional dictionary (bond type, monomer types, oligomer sizes) to transition state energies (relative to the reactant energies) measured in Joules. For more complete examples including the definition of the energies, see the files `~/Lignin Polymerization Notebook.ipynb` and `~/Example.ipynb`. 
 
-The first step of these simulations is to initialize monomers and events that will start the simulation. For this simple example, we will make all S-type lignin with 5 monomers. There will be no possibility of adding monomers to the simulation as time goes on. Finally, the only events at the start are oxidations of the monolignol. This information is then compiled by the `run` function in the module that executes the Gillespie algorithm on the *in silico* lignin state. The output from the simulation is a single dictionary data structure that contains a list of the monomer objects in their state at the end of the simulation, the adjacency matrix that describes connectivity between the monomers, and the times at which events were executed.
+The first step of these simulations is to initialize monomers and events that will start the simulation. For this simple example, we will make all S-type lignin with 5 monomers. There will be no possibility of adding monomers to the simulation as time goes on. Finally, the only events at the start are oxidations of the monolignol. This information is then compiled by the `run_kmc` function in the module that executes the Gillespie algorithm on the *in silico* lignin state. The output from the simulation is a single dictionary data structure that contains a list of the monomer objects in their state at the end of the simulation, the adjacency matrix that describes connectivity between the monomers, and the times at which events were executed.
 ```
 >>> mons = [ kmc.Monomer ( 1 , i ) for i in range(5) ]
 >>> startEvs = [ kmc.Event ( 'ox' , [i] , rates['ox'][1]['monomer'] ) for i in range(5) ]
 >>> state = { i : { 'mons' : mons[i] , 'affected' : {startEvents[i]} } for i in range(5) }
 >>> events = { startEvents[i] for i in range(5) }
 >>> events.add( kmc.Event( 'grow' , [ ] , rate = 0 , bond = 1 ) )
->>> res = kmc.run( tFinal = 1e9 , rates = rates, initialState = state, initialEvents = events)
+>>> res = kmc.run_kmc( tFinal = 1e9 , rates = rates, initialState = state, initialEvents = events)
 
 {'monomers': _____ , 'adjacency_matrix': _______ , 'time': ______ }
 ```
@@ -105,7 +105,7 @@ __Event__(key, index, rate, bond)
 - rate = R+ = the rate of the event that is occuring (units consistent with time units in simulation, but otherwise meaningless)
 - bond = [Z+,Z+] = list of changes that need to be made to the adjacency matrix to perform the event
 
-The class that is used to define events, which can be unpacked by the `run` function to execute the events occuring in the simulation.
+The class that is used to define events, which can be unpacked by the `run_kmc` function to execute the events occuring in the simulation.
 
 #### FUNCTIONS
 
@@ -169,7 +169,7 @@ __updateEvents__(monomers = None, adj = None, lastEvent = None, events = {}, rat
 - monomers = dict() = maps the index of the monomer to the object and the events that a change to this index would effect
 - adj = DOK_Matrix = adjacency matrix
 - lastEvent = Event = the previous event that occurred
-- events = dict() = map the hash value of each event to the unique event - this is all of the possible events at the current state after the method is run
+- events = dict() = map the hash value of each event to the unique event - this is all of the possible events at the current state after the method is run_kmc
 - rateVec = dict() = map the hash value of each event to the rate of that event
 - r = dict() = the rates that are obtained *a priori* from DFT calculations
 - maxMon = Z+ = the maximum number of monomers in the simulation
@@ -205,7 +205,7 @@ __generateMol__(adj,nodeList)
 - nodeList = [Monomer,Monomer,...,Monomer] = list of monomers output from the simulation
 - return = str = molfile contents
 
-Generates a file format as specified by CTAN that represents the molecule that was just simulated by `run`. This file can then be used together with rdKit for further visualization or analysis, or any one of your favorite chemical drawing softwares.
+Generates a file format as specified by CTAN that represents the molecule that was just simulated by `run_kmc`. This file can then be used together with rdKit for further visualization or analysis, or any one of your favorite chemical drawing softwares.
 
 __moltosvg__(mol,molSize=(450,150),kekulize=True)
 - mol = rdkit.molecule = molecule object

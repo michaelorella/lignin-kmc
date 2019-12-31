@@ -5,11 +5,9 @@ from collections import OrderedDict
 import joblib as par
 import numpy as np
 from scipy.sparse import dok_matrix
-from ligninkmc import Monomer, Event, run
-from ligninkmc.Analysis import (breakBond, countBonds, countYields)
-from ligninkmc.KineticMonteCarlo import (G, S, C, MONOMER, OLIGOMER,
-                                         C5O4, C5C5, B5, BB, BO4, AO4, B1, OX, Q, B1_ALT, GROW, INT_TO_TYPE_DICT,
-                                         MAX_NUM_DECIMAL, ADJ_MATRIX)
+from ligninkmc.kmc_functions import (G, S, C, MONOMER, OLIGOMER, C5O4, C5C5, B5, BB, BO4, AO4, B1, OX, Q, B1_ALT,
+                                     run_kmc, break_bond_type, count_bonds, count_oligomer_yields, ADJ_MATRIX, Monomer, INT_TO_TYPE_DICT,
+                                     Event, MAX_NUM_DECIMAL, GROW)
 
 # Constants
 AFFECTED = 'affected'
@@ -156,19 +154,19 @@ def analyze_adj_matrix(adjacency):
 
     # Remove any excess b1 bonds from the matrix, e.g. bonds that should be
     # broken during synthesis
-    adjacency = breakBond(adjacency, B1_ALT)
+    adjacency = break_bond_type(adjacency, B1_ALT)
 
     # Examine the initial polymers before any bonds are broken
-    counts = countYields(adjacency)
-    bond_distributions = countBonds(adjacency)
+    counts = count_oligomer_yields(adjacency)
+    bond_distributions = count_bonds(adjacency)
 
     # Simulate the RCF process at complete conversion by breaking all of the
     # alkyl C-O bonds that were formed during the reaction
-    rcf_adj = breakBond(breakBond(breakBond(adjacency, BO4), AO4), C5O4)
+    rcf_adj = break_bond_type(break_bond_type(break_bond_type(adjacency, BO4), AO4), C5O4)
 
     # Now count the bonds and yields remaining
-    rcf_counts = countYields(rcf_adj)
-    rcf_bonds = countBonds(rcf_adj)
+    rcf_counts = count_oligomer_yields(rcf_adj)
+    rcf_bonds = count_bonds(rcf_adj)
 
     return {BONDS: bond_distributions, CHAIN_LEN: counts, RCF_YIELDS: rcf_counts, RCF_BONDS: rcf_bonds}
 
@@ -218,8 +216,8 @@ def create_sample_kmc_result(max_time=1., num_initial_monos=3, max_monos=10, sg_
     initial_state = OrderedDict(create_initial_state(initial_events, initial_monomers))
     initial_events.append(Event(GROW, [], rate=1e4))
 
-    result = run(rates=DEF_RXN_RATES, initialState=initial_state, initialEvents=initial_events,
-                 nMax=max_monos, tFinal=max_time, sg_ratio=sg_ratio, random_seed=10)
+    result = run_kmc(max_monos, max_time, DEF_RXN_RATES, initial_state, initial_events,
+                     sg_ratio=sg_ratio, random_seed=10)
     return result
 
 
@@ -243,7 +241,7 @@ class TestRunKMC(unittest.TestCase):
 class TestAnalyzeKMCParts(unittest.TestCase):
     def testCountYieldsAllMonomers(self):
         good_olig_len_dict = {1: 5}
-        olig_len_dict = countYields(ADJ_ZEROS)
+        olig_len_dict = count_oligomer_yields(ADJ_ZEROS)
         self.assertTrue(olig_len_dict == good_olig_len_dict)
 
     def testCountYields1(self):
@@ -254,17 +252,17 @@ class TestAnalyzeKMCParts(unittest.TestCase):
                             [0, 0, 0, 0, 0],
                             [0, 0, 0, 0, 0]])
         good_olig_len_dict = {1: 3, 2: 1}
-        olig_len_dict = countYields(adj_1)
+        olig_len_dict = count_oligomer_yields(adj_1)
         self.assertTrue(olig_len_dict == good_olig_len_dict)
 
     def testCountYields2(self):
         # passed!
-        olig_len_dict = countYields(ADJ2)
+        olig_len_dict = count_oligomer_yields(ADJ2)
         good_olig_len_dict = {1: 1, 2: 2}
         self.assertTrue(olig_len_dict == good_olig_len_dict)
 
     def testCountYields3(self):
-        olig_len_dict = countYields(ADJ3)
+        olig_len_dict = count_oligomer_yields(ADJ3)
         good_olig_len_dict = {1: 2, 3: 1}
         self.assertTrue(olig_len_dict == good_olig_len_dict)
 
@@ -275,7 +273,7 @@ class TestAnalyzeKMCParts(unittest.TestCase):
                     (0, 8): 4.0, (8, 0): 5.0, (8, 9): 4.0, (9, 8): 8.0}
         for key, val in adj_dict.items():
             adj[key] = val
-        olig_len_dict = countYields(adj)
+        olig_len_dict = count_oligomer_yields(adj)
         print("Olig_len_dict: ", olig_len_dict)
         # good_olig_len_dict = {10: 1}
         # self.assertTrue(olig_len_dict == good_olig_len_dict)
@@ -288,7 +286,7 @@ class TestAnalyzeKMCParts(unittest.TestCase):
                             [0, 5, 0, 8, 0],
                             [0, 0, 8, 0, 4],
                             [0, 0, 0, 8, 0]])
-        adj_bonds = countBonds(adj_a)
+        adj_bonds = count_bonds(adj_a)
         self.assertTrue(adj_bonds == good_bond_dict)
 
     def testBreakBO4Bonds(self):
@@ -302,7 +300,7 @@ class TestAnalyzeKMCParts(unittest.TestCase):
         a[0, 1] = 8
         a[2, 3] = 8
         a[3, 2] = 8
-        broken_adj = breakBond(a, BO4).toarray()
+        broken_adj = break_bond_type(a, BO4).toarray()
         self.assertTrue(np.array_equal(broken_adj, good_broken_adj))
 
     def testBreakB1_ALTBonds(self):
@@ -316,7 +314,7 @@ class TestAnalyzeKMCParts(unittest.TestCase):
                         [0, 8, 0, 0, 0],
                         [0, 0, 0, 0, 0],
                         [0, 0, 0, 0, 0]])
-        broken_adj = breakBond(a, B1_ALT).toarray()
+        broken_adj = break_bond_type(a, B1_ALT).toarray()
         self.assertTrue(np.array_equal(broken_adj, good_broken_adj))
 
 
@@ -337,7 +335,7 @@ class TestVisualization(unittest.TestCase):
     def testIniRates(self):
         run_multi = False
         if run_multi:
-            fun = par.delayed(run)
+            fun = par.delayed(run_kmc)
             num_jobs = 4
         else:
             fun = None
@@ -362,14 +360,11 @@ class TestVisualization(unittest.TestCase):
             initial_state = create_initial_state(initial_events, initial_monomers)
             initial_events.append(Event(GROW, [], rate=add_rate))
             if run_multi:
-                results = par.Parallel(n_jobs=num_jobs)([fun(rates=DEF_RXN_RATES, initialState=initial_state,
-                                                             initialEvents=initial_events, nMax=max_monos, tFinal=1,
-                                                             random_seed=random_seed + i)
-                                                         for i in range(num_repeats)])
+                results = par.Parallel(n_jobs=num_jobs)([fun(max_monos, 1, DEF_RXN_RATES, initial_state, initial_events,
+                                                             random_seed=random_seed + i) for i in range(num_repeats)])
             else:
-                results = [run(rates=DEF_RXN_RATES, initialState=initial_state, initialEvents=initial_events,
-                               nMax=max_monos, tFinal=1, sg_ratio=sg_ratio, random_seed=random_seed + i)
-                           for i in range(num_repeats)]
+                results = [run_kmc(max_monos, 1, DEF_RXN_RATES, initial_state, initial_events,
+                                   sg_ratio=sg_ratio, random_seed=random_seed + i) for i in range(num_repeats)]
             add_rates_result_list.append(results)
 
         av_bo4_bonds, std_bo4_bonds = get_avg_num_bonds(BO4, num_rates, add_rates_result_list, num_repeats)
@@ -386,7 +381,7 @@ class TestVisualization(unittest.TestCase):
         #     without run_multi: Ran 1 test in 85.104s
         run_multi = False
         if run_multi:
-            fun = par.delayed(run)
+            fun = par.delayed(run_kmc)
             num_jobs = 4
         else:
             fun = None
@@ -418,13 +413,12 @@ class TestVisualization(unittest.TestCase):
             initial_state = create_initial_state(initial_events, initial_monomers)
 
             if run_multi:
-                results = par.Parallel(n_jobs=num_jobs)([fun(rates=DEF_RXN_RATES, initialState=initial_state,
-                                                             initialEvents=initial_events, nMax=num_monos, tFinal=1,
-                                                             random_seed=random_seed + i)
+                results = par.Parallel(n_jobs=num_jobs)([fun(num_monos, 1, DEF_RXN_RATES, initial_state,
+                                                             initialEvents=initial_events, random_seed=random_seed + i)
                                                          for i in range(num_repeats)])
             else:
-                results = [run(rates=DEF_RXN_RATES, initialState=initial_state,
-                               initialEvents=initial_events, nMax=num_monos, tFinal=1, random_seed=random_seed + i)
+                results = [run_kmc(num_monos, 1, DEF_RXN_RATES, initial_state, initial_events,
+                                   random_seed=random_seed + i)
                            for i in range(num_repeats)]
             sg_result_list.append(results)
 
@@ -450,12 +444,10 @@ class TestVisualization(unittest.TestCase):
         initial_state = create_initial_state(initial_events, initial_monomers)
         # since GROW is not added to event_dict, no additional monomers will be added
 
-        result = run(rates=DEF_RXN_RATES, initialState=initial_state, initialEvents=initial_events,
-                     nMax=num_monos, tFinal=1, random_seed=10)
-        self.assertTrue(len(result[TIME]) == 500)
+        result = run_kmc(num_monos, 1, DEF_RXN_RATES, initial_state, initial_events, random_seed=10)
+        print(len(result[TIME]), result[TIME][-1], len(result[MONO_LIST]))
         self.assertAlmostEqual(result[TIME][-1], 0.03219764120594697)
         self.assertTrue(len(result[MONO_LIST]) == 182)
-
 
     def testCompareVersions(self):
         monomer_types = [[G, S, G, G, S, S, S, G, S, S, G, G, S, G, G, G, G, S, G, G, G, S, G, S, S, S, G, S, S, G, G],
@@ -472,14 +464,14 @@ class TestVisualization(unittest.TestCase):
             num_monos = len(initial_monomers)
             initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
             initial_state = create_initial_state(initial_events, initial_monomers)
-            results = run(rates=DEF_RXN_RATES, initialState=initial_state, initialEvents=initial_events,
-                          nMax=num_monos, tFinal=1, random_seed=random_seed)
+            results = run_kmc(num_monos, 1, DEF_RXN_RATES, initial_state, initial_events, random_seed=random_seed)
             sg_result_list.append(results)
 
         av_bo4_bonds, std_bo4_bonds = get_avg_num_bonds_single_option(BO4, sg_result_list, num_repeats)
         print("Average fraction BO4 bonds: {:.3f}".format(av_bo4_bonds))
         print("Std dev fraction BO4 bonds: {:.3f}".format(std_bo4_bonds))
         self.assertLess(av_bo4_bonds, .2)
+        print(av_bo4_bonds)
         self.assertTrue(np.allclose(av_bo4_bonds, 0.12817059483726148))
+        print(std_bo4_bonds)
         self.assertTrue(np.allclose(std_bo4_bonds, 0.020492364262714738))
-

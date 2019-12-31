@@ -1,80 +1,42 @@
 from rdkit import Chem
-from rdkit.Chem import AllChem
-from rdkit.Chem import Draw
 from rdkit.Chem import rdDepictor
 from rdkit.Chem.Draw import rdMolDraw2D
-from rdkit.Chem.Draw import IPythonConsole
-from rdkit.Chem.Draw.MolDrawing import MolDrawing, DrawingOptions
-import itertools
+from rdkit.Chem.Draw.MolDrawing import DrawingOptions
 import re
 
 DrawingOptions.bondLineWidth = 1.2
 
 
-def generateMol(adj,nodeList): 
+# noinspection RegExpRepeatedSpace
+def generateMol(adj,nodeList):
     #define dictionary for atoms within each monomer
-    atomBlocks = {'G':( 'C 0 0 0 0 \n' + #1
-                        'C 0 0 0 0 \n' + #2
-                        'C 0 0 0 0 \n' + #3
-                        'C 0 0 0 0 \n' + #4
-                        'C 0 0 0 0 \n' + #5
-                        'C 0 0 0 0 \n' + #6
-                        'C 0 0 0 0 \n' + #7
-                        'C 0 0 0 0 \n' + #8
-                        'C 0 0 0 0 \n' + #9
+    atomBlocks = {'G': ('C 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \n'  #1-7
+                        'C 0 0 0 0 \nC 0 0 0 0 \n' + #8-9
                         'O 0 0 0 0 \n' + #9-OH
                         'O 0 0 0 0 \n' + #3-OMe
                         'C 0 0 0 0 \n' + #3-OMe
                         'O 0 0 0 0 \n'), #4-OH
-                 'S': ( 'C 0 0 0 0 \n' + #1
-                        'C 0 0 0 0 \n' + #2
-                        'C 0 0 0 0 \n' + #3
-                        'C 0 0 0 0 \n' + #4
-                        'C 0 0 0 0 \n' + #5
-                        'C 0 0 0 0 \n' + #6
-                        'C 0 0 0 0 \n' + #7
-                        'C 0 0 0 0 \n' + #8
-                        'C 0 0 0 0 \n' + #9
+                 'S': ( 'C 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \n'  #1-7
+                        'C 0 0 0 0 \nC 0 0 0 0 \n' + #8-9
                         'O 0 0 0 0 \n' + #9-OH
                         'O 0 0 0 0 \n' + #3-OMe
                         'C 0 0 0 0 \n' + #3-OMe
                         'O 0 0 0 0 \n' + #4-OH
                         'O 0 0 0 0 \n' + #5-OMe
                         'C 0 0 0 0 \n'),  #5-OMe
-                 'C': ( 'C 0 0 0 0 \n' + #1
-                        'C 0 0 0 0 \n' + #2
-                        'C 0 0 0 0 \n' + #3
-                        'C 0 0 0 0 \n' + #4
-                        'C 0 0 0 0 \n' + #5
-                        'C 0 0 0 0 \n' + #6
-                        'C 0 0 0 0 \n' + #7
-                        'C 0 0 0 0 \n' + #8
-                        'C 0 0 0 0 \n' + #9
+                 'C': ( 'C 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \n' + #1 - 7
+                        'C 0 0 0 0 \nC 0 0 0 0 \n' + #8-9
                         'O 0 0 0 0 \n' + #9-OH
                         'O 0 0 0 0 \n' + #3-OH
                         'O 0 0 0 0 \n'), #4-OH
-                 'G4':( 'C 0 0 0 0 \n' + #1
-                        'C 0 0 0 0 \n' + #2
-                        'C 0 0 0 0 \n' + #3
-                        'C 0 0 0 0 \n' + #4
-                        'C 0 0 0 0 \n' + #5
-                        'C 0 0 0 0 \n' + #6
-                        'C 0 0 0 0 \n' + #7
-                        'C 0 0 0 0 \n' + #8
-                        'C 0 0 0 0 \n' + #9
+                 'G4':( 'C 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \n' + #1-7
+                        'C 0 0 0 0 \nC 0 0 0 0 \n' + #8-9
                         'O 0 0 0 0 \n' + #9-OH
                         'O 0 0 0 0 \n' + #3-OMe
                         'C 0 0 0 0 \n' + #3-OMe
                         'O 0 0 0 0 RAD=2\n'), #4-O
-                 'S4':( 'C 0 0 0 0 \n' + #1
-                        'C 0 0 0 0 \n' + #2
-                        'C 0 0 0 0 \n' + #3
-                        'C 0 0 0 0 \n' + #4
-                        'C 0 0 0 0 \n' + #5
-                        'C 0 0 0 0 \n' + #6
-                        'C 0 0 0 0 \n' + #7
-                        'C 0 0 0 0 \n' + #8
-                        'C 0 0 0 0 \n' + #9
+                 'S4':( 'C 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \n' + #1-7
+                        'C 0 0 0 0 \nC 0 0 0 0 \n' + #8-9
                         'O 0 0 0 0 \n' + #9-OH
                         'O 0 0 0 0 \n' + #3-OMe
                         'C 0 0 0 0 \n' + #3-OMe
@@ -83,7 +45,7 @@ def generateMol(adj,nodeList):
                         'C 0 0 0 0 \n')} #5-OMe
 
     #Similarly define dictionary for bonds within each monomer - 
-    #NOTE: THESE MAY NEED TO CHANGE DEPENDING ON INTERUNIT LINKAGES
+    #NOTE: THESE MAY NEED TO CHANGE DEPENDING ON INTER-UNIT LINKAGES
     bondBlocks = {'G7':('1 1  2  \n' +  #Aromatic ring 1->2
                         '2 2  3  \n' +  #Aromatic ring 2->3
                         '1 3  4  \n' +  #Aromatic ring 3->4
@@ -156,18 +118,19 @@ def generateMol(adj,nodeList):
     molStr = '\n\n\n  0  0  0  0  0  0  0  0  0  0999 V3000\nM  V30 BEGIN CTAB\n' #Header information
     molAtomBlocks = 'M  V30 BEGIN ATOM\n'
     molBondBlocks = 'M  V30 BEGIN BOND\n'
-    atomlineno = 1
-    bondlineno = 1
+    atom_line_no = 1
+    bond_line_no = 1
     monomerStartIdxBond = []
     monomerStartIdxAtom = []
     removed = {'bonds':0,'atoms':0}
 
-    sitePositions = {4:{2:11,1:12,0:12},8:{x:7 for x in [0,1,2]},10:{x:9 for x in [0,1,2]},5:{x:4 for x in [0,1,2]},7:{x:6 for x in [0,1,2]},1:{x:0 for x in [0,1,2]},10:{x:9 for x in [0,1,2]}}
+    sitePositions = {4: {2: 11, 1:12,0:12}, 8:{x: 7 for x in [0,1,2]}, 10: {x:9 for x in [0,1,2]},
+                     5:{x:4 for x in [0,1,2]}, 7: {x:6 for x in [0,1,2]}, 1:{x:0 for x in [0,1,2]}}
     ALPHA_BETA_ALKENE_LOCATION = 7
     ALPHA_RING_LOCATION = 6
     ALPHA = 7
-    BETA = 8
-    
+
+    atomBlock, bondBlock = None, None
     #Build the individual monomers before they are linked by anything
     for i , mon in enumerate(nodeList):
         if mon.type == 0:
@@ -199,34 +162,34 @@ def generateMol(adj,nodeList):
         lines = atomBlock.splitlines(keepends=True)
         
         #Figure out what atom and bond number this monomer is starting at
-        monomerStartIdxBond.append(bondlineno)
-        monomerStartIdxAtom.append(atomlineno)
+        monomerStartIdxBond.append(bond_line_no)
+        monomerStartIdxAtom.append(atom_line_no)
 
         #Loop through the lines of the atom block and add the necessary prefixes to the lines, using a continuing atom index
         for line in lines:
-            molAtomBlocks += f'M  V30 {atomlineno} {line}'
-            atomlineno += 1
+            molAtomBlocks += f'M  V30 {atom_line_no} {line}'
+            atom_line_no += 1
         #END ATOM AGGREGATION
 
         #Extract each of the individual bonds that defines the monomer skeleton and add it into the aggregate string
         lines = bondBlock.splitlines(keepends=True)
 
         #Recall where this monomer started
-        startindex = monomerStartIdxAtom[-1] - 1 #So that we can add the defined bond indices to this start index to get the bond defs
+        start_index = monomerStartIdxAtom[-1] - 1 #So that we can add the defined bond indices to this start index to get the bond defs
 
         #Loop through the lines of the bond block and add necessary prefixes to the lines, then modify as needed after
         for line in lines:
-            #Extract the definining information about the monomer skeleton
+            #Extract the defining information about the monomer skeleton
             bondVals = re.split(' +',line)
 
             #The first element is the bond order, followed by the indices of the atoms that are connected by this bond.
             #These indices need to be updated based on the true index of this monomer, not the 1 -> ~15 indices that it started with
             bondOrder = bondVals[0]
-            bondConnects = [ int ( bondVals[1] ) + startindex , int ( bondVals[2] ) + startindex ]
+            bondConnects = [ int ( bondVals[1] ) + start_index , int ( bondVals[2] ) + start_index ]
 
             #Now save the true string for defining this bond, along with the cumulative index of the bond
-            molBondBlocks += f'M  V30 {bondlineno} {bondOrder} {bondConnects[0]} {bondConnects[1]} \n'
-            bondlineno += 1
+            molBondBlocks += f'M  V30 {bond_line_no} {bondOrder} {bondConnects[0]} {bondConnects[1]} \n'
+            bond_line_no += 1
         #END BOND AGGREGATION
     #END MONOMER AGGREGATION
 
@@ -260,14 +223,14 @@ def generateMol(adj,nodeList):
         bond = [adj[p] for p in pair]
 
         #Get the indices of the atoms being bound -> Count from where the monomer starts, and add however many is needed to reach the desired position for that specific monomer type and bonding site
-        atomindices = [ monomerStartIdxAtom [ monomerIndices [ i ] ] + sitePositions [ bond [ i ] ] [ mons [ i ].type ] for i in range(2) ]
+        atom_indices = [ monomerStartIdxAtom [ monomerIndices [ i ] ] + sitePositions [ bond [ i ] ] [ mons [ i ].type ] for i in range(2) ]
 
         #Make the string to add to the molfile
-        bondstring = f'M  V30 {bondlineno} 1 {atomindices[0]} {atomindices[1]} \n'
-        bondlineno += 1
+        bond_string = f'M  V30 {bond_line_no} 1 {atom_indices[0]} {atom_indices[1]} \n'
+        bond_line_no += 1
         
         #Append the newly created bond to the file
-        bonds.append(bondstring)
+        bonds.append(bond_string)
 
         #Check if the alkene needs to be modified to a single bond
         if breakAlkene[ tuple ( sorted(bond) ) ]:
@@ -296,20 +259,20 @@ def generateMol(adj,nodeList):
                 alphaIndex = monomerStartIdxAtom [ monomerIndices [ beta [ tuple(bond) ] ] ] + sitePositions [ 7 ] [ mons [ beta [ tuple(bond) ] ].type ]
 
                 #Add the alpha hydroxyl O atom
-                atoms.append(f'M  V30 {atomlineno} O 0 0 0 0 \n')
-                atomlineno += 1
+                atoms.append(f'M  V30 {atom_line_no} O 0 0 0 0 \n')
+                atom_line_no += 1
 
                 #Make the bond
-                bonds.append(f'M  V30 {bondlineno} 1 {alphaIndex} {atomlineno-1} \n')
-                bondlineno += 1
+                bonds.append(f'M  V30 {bond_line_no} 1 {alphaIndex} {atom_line_no-1} \n')
+                bond_line_no += 1
             else:
                 #Make the benzodioxane linkage
                 alphaIndex = monomerStartIdxAtom [ monomerIndices [ beta [ tuple(bond) ] ] ] + sitePositions [ 7 ] [ mons [ beta [ tuple(bond) ] ].type ]
                 hydroxyIndex = monomerStartIdxAtom [ monomerIndices [ int ( not beta [ tuple (bond) ] ) ] ] + ( sitePositions [ 4 ] [ mons [ beta [ tuple(bond) ] ].type ] - 1 ) #subtract 1 to move from 4-OH to 3-OH
 
                 #Make the bond
-                bonds.append(f'M  V30 {bondlineno} 1 {alphaIndex} {hydroxyIndex} \n')
-                bondlineno += 1
+                bonds.append(f'M  V30 {bond_line_no} 1 {alphaIndex} {hydroxyIndex} \n')
+                bond_line_no += 1
 
         #Check if there will be a ring involving the alpha position
         if makeAlphaRing [ tuple ( sorted(bond) ) ]:
@@ -320,8 +283,8 @@ def generateMol(adj,nodeList):
                     alphaIndex = monomerStartIdxAtom [ monomerIndices [ index ] ] + sitePositions [ 7 ] [ mons [ index ].type ]
                     otherIndex = monomerStartIdxAtom [ monomerIndices [ int (not index) ] ] + sitePositions [ otherSite [ tuple ( sorted ( bond ) ) ] ] [ mons [ int ( not index ) ].type ]
 
-                    bonds.append(f'M  V30 {bondlineno} 1 {alphaIndex} {otherIndex} \n')
-                    bondlineno += 1
+                    bonds.append(f'M  V30 {bond_line_no} 1 {alphaIndex} {otherIndex} \n')
+                    bond_line_no += 1
 
         # All kinds of fun things need to happen for the B1 bond --
         # 1 ) Disconnect the original 1 -> A bond that existed from the not beta monomer
@@ -355,24 +318,25 @@ def generateMol(adj,nodeList):
 
     molAtomBlocks += 'M  V30 END ATOM \n'
     molBondBlocks += 'M  V30 END BOND \n'
-    counts = f'M  V30 COUNTS {atomlineno-1 - removed["atoms"]} {bondlineno-1-removed["bonds"]} 0 0 0\n'
+    counts = f'M  V30 COUNTS {atom_line_no-1 - removed["atoms"]} {bond_line_no-1-removed["bonds"]} 0 0 0\n'
     molStr += counts + molAtomBlocks + molBondBlocks + 'M  V30 END CTAB\nM  END'
     
     return molStr
 
 
+# noinspection PyArgumentList
 def moltosvg(mol,molSize=(450,150),kekulize=True):
     mc = Chem.Mol(mol.ToBinary())
     if kekulize:
         try:
             Chem.Kekulize(mc)
-        except:
+        except KeyError:
             mc = Chem.Mol(mol.ToBinary())
     if not mc.GetNumConformers():
         rdDepictor.Compute2DCoords(mc)
     drawer = rdMolDraw2D.MolDraw2DSVG(molSize[0],molSize[1])
 
-    opts = drawer.drawOptions()
+    # opts = drawer.drawOptions()
     #for i in range(mc.GetNumAtoms()):
     #    opts.atomLabels[i] = mc.GetAtomWithIdx(i).GetSymbol()+str(i+1)
     drawer.DrawMolecule(mc)
