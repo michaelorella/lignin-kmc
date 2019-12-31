@@ -1,3 +1,8 @@
+OX = 'oxidation'
+Q = 'hydration'
+ADJ_MATRIX = 'adjacency_matrix'
+
+
 class Event:
     '''
     Class definition for the events that occur during lignification process. While more specific than the monomer class, this class is also easily extensible such that other reactivity could be incorporated in the future. The most important features lie in the event dictionary that specifies the changes that need to occur for a given reaction. 
@@ -24,8 +29,8 @@ class Event:
                  'b5':((-1,0),(),()),
                  'b1':((0,7),(),(7,)),
                  'ao4':((-1,4),(),()),
-                 'q':((0),(1,),()),
-                 'ox':((4),(),())
+                 'q':(0, (1,), ()),
+                 'ox':(4, (), ())
                  }
 
     #Create dictionary to properly order the event indices
@@ -48,7 +53,7 @@ class Event:
         Straightforward constructor that takes the name of bond being formed, the indices of affected monomers, the rate of the event, and the updates to the adjacency matrix.
 
         Inputs:
-            eventName   -- str  -- assigned to key attribute - has the name of the bond being formed or the reaction occuring
+            eventName   -- str  -- assigned to key attribute - has the name of the bond being formed or the reaction occurring
             ids         -- int  -- N x 1 list assigned to index - keeps track of the monomers affected by this event
             rate        -- float-- the rate of the event (make sure units are consistent - I typically use GHz)
             bond        -- int  -- 2 x 1 list of updates to the adjacency matrix when a bond is formed
@@ -63,8 +68,10 @@ class Event:
 
 
     def __str__(self):
-        msg = ('Forming ' + self.key + ' bond between '
-               + str(self.index) + str(self.bond) + '\n')
+        if self.key == Q or self.key == OX:
+            msg = f'Performing {self.key} on index {str(self.index[0])}'
+        else:
+            msg = f'Forming {self.key} bond between indices {str(self.index)} ({ADJ_MATRIX} update {str(self.bond)})'
         return msg
 
     def __repr__(self):
@@ -74,4 +81,21 @@ class Event:
         return self.index == other.index and self.bond == other.bond and self.key == other.key
     
     def __hash__(self):
-        return hash ( ( tuple(self.index), self.key , self.bond ) )
+        # attempt at repeatable hash
+        if not self.index:
+            index_join = 0
+        else:
+            index_join = int("".join([str(x) for x in self.index]))
+        index_bytes = index_join.to_bytes((index_join.bit_length() + 7) // 8, 'big')
+        key_bytes = self.key.encode()
+        bond_list_str = "".join([str(x) for x in self.bond])
+        bond_list_bytes =  bond_list_str.encode()
+        event_bytes = b''.join([index_bytes, key_bytes, bond_list_bytes])
+        temp = int.from_bytes(event_bytes, 'big')
+        # the hash call below "right-sizes" the value, but since it is hashing an int, will be repeatable
+        event_hash = hash(temp)
+
+        # # original hash
+        # event_hash = hash ((tuple(self.index), self.key, self.bond))
+
+        return  event_hash

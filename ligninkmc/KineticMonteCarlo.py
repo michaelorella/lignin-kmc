@@ -25,7 +25,7 @@ import scipy.sparse as sp
 import numpy as np
 
 #Import classes in this package
-from common_wrangler.common import round_sig_figs
+from common_wrangler.common import round_sig_figs, InvalidDataError
 
 from ligninkmc.Event import Event
 from ligninkmc.Monomer import Monomer
@@ -37,6 +37,7 @@ S = 'syringyl'  # (sinapyl alcohol)
 C = 'caffeoyl'  # (caffeyl alcohol)
 INT_TO_TYPE_DICT = {0: G, 1: S}
 
+ADJ_MATRIX = 'adjacency_matrix'
 MONOMER = 'monomer'
 OLIGOMER = 'oligomer'
 # bond types
@@ -135,8 +136,7 @@ def updateEvents(monomers = None, adj = None, lastEvent = None, events=None, rat
                     ox.add(monomers[other][MONOMER])
                 elif monomers[other][MONOMER].active == 7 and monomers[other][MONOMER].identity not in mon.connectedTo:
                     quinone.add(monomers[other][MONOMER])
-            bondingPartners = { 'bo4':ox,'b5':ox,'5o4':ox,'55':ox,'bb':ox,'b1':ox,
-                                'ao4':quinone}
+            bondingPartners = {'bo4': ox, 'b5':ox, '5o4':ox,'55':ox, 'bb':ox, 'b1':ox, 'ao4':quinone}
 
             #Obtain the events that are affected by a change to the monomer that was just acted on
             eventsToBeModified = monomers[monId]['affected']
@@ -190,7 +190,7 @@ def updateEvents(monomers = None, adj = None, lastEvent = None, events=None, rat
                                 adj.maxprint = adj.nnz
                                 print(adj)
                                 print(size)
-                                raise
+                                raise InvalidDataError("Could not find rate")
 
                             #Add this to both the monomer and it's bonding partners list of events that need to be modified
                             #upon manipulation of either monomer
@@ -215,7 +215,7 @@ def updateEvents(monomers = None, adj = None, lastEvent = None, events=None, rat
                                     adj.maxprint = adj.nnz
                                     print(adj)
                                     print(size)
-                                    raise
+                                    raise InvalidDataError("Again, could not find rate")
                                 
                                 monomers[monId]['affected'].add ( Event ( item[0] , index , rate , alt ) ) # this -> other alt
                                 monomers[partner.identity]['affected'].add ( Event ( item[0] , index , rate , alt ) ) # this -> other alt
@@ -416,9 +416,17 @@ def run(nMax=10, tFinal=10, rates=None, initialState=None, initialEvents=None, d
 
     #Build the dictionary of events
     eventDict = {}
+    hash_list = []
     for event in events:
-        rvec[hash(event)] = event.rate / n
-        eventDict[hash(event)] = event
+        event_hash = hash(event)
+        if event_hash in hash_list:
+            if event.key != GROW:
+                raise InvalidDataError("Oh no, there is a duplicate hash!!")
+        else:
+            hash_list.append(event_hash)
+        # todo: figure out why hash value matters--here is where it is used as the keys for a couple dicts
+        rvec[event_hash] = event.rate
+        eventDict[event_hash] = event
 
     if dynamics:
         adjList = [adj.copy()]
@@ -427,7 +435,7 @@ def run(nMax=10, tFinal=10, rates=None, initialState=None, initialEvents=None, d
         adjList = []
         monList = []
 
-        #Run the Gillespie algorithm
+    #Run the Gillespie algorithm
     while t[-1] < tFinal and len(eventDict) > 0:        
         #Find the total rate for all of the possible events and choose which event to do
         hashes = list(rvec.keys())
