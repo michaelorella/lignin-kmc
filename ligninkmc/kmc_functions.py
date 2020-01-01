@@ -2,7 +2,7 @@
 # coding=utf-8
 
 """
-Code base for simulating the in planta polymerization of monolignols through Gillepsie algorithm adaptations.
+Code base for simulating the in planta polymerization of monolignols through Gillespie algorithm adaptations.
 Added the visualization tools here.
 """
 
@@ -397,6 +397,7 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
                 if rxn_event and rxn_event[1] == 1:  # Unimolecular reaction event
                     size = quick_frag_size(mon)
 
+                    # "/ cur_n" is like multiplying by concentration, ignoring any molecules not tracked by this script
                     rate = rxn_event[2][mon.type][size] / cur_n
 
                     # Add the event to the event_dict modifiable by changing the monomer, and update the set of all
@@ -425,6 +426,8 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
                                     if rxn_event[0] == BO4:
                                         print(f"{rxn_event[0]} reaction between oligomers with {mon.identity} and "
                                               f"{partner.identity}")
+                                # "/ cur_n**2" is like multiplying by concentration of each of 2 monomers,
+                                #     ignoring any molecules not tracked by this script
                                 rate = rxn_event[2][(mon.type, partner.type)][size] / (cur_n ** 2)
                             except KeyError:
                                 raise InvalidDataError(f"Error while attempting to update event_dict: event "
@@ -447,6 +450,8 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
                             if bond[1] in mon.open and bond[0] in partner.open:
                                 # Adjust the rate using the correct monomer types
                                 try:
+                                    # "/ cur_n**2" is like multiplying by concentration of each of 2 monomers,
+                                    #     ignoring any molecules not tracked by this script
                                     rate = rxn_event[2][(partner.type, mon.type)][(size[1], size[0])] / (cur_n ** 2)
                                 except KeyError:
                                     raise InvalidDataError(f"Error on determining the rate for rxn_event type "
@@ -477,7 +482,7 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
             del (event_dict[last_event_hash])
             del (rate_vec[last_event_hash])
 
-        # Reflect the larger system volume
+        # Reflect the larger system volume with adjustment of concentration term
         for i in rate_vec:
             if event_dict[i].key != GROW:
                 rate_vec[i] = rate_vec[i] * (cur_n - 1) / cur_n
@@ -487,6 +492,7 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
         state_dict[cur_n - 1][AFFECTED].add(oxidation_event)
         ev_hash = hash(oxidation_event)
         event_dict[ev_hash] = oxidation_event
+        # "/ cur_n" is like multiplying by concentration, ignoring any molecules not tracked by this script
         rate_vec[ev_hash] = oxidation_event.rate / cur_n
 
 
@@ -654,6 +660,8 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
     event_dict = OrderedDict()
     for ini_event in initial_events:
         event_hash = hash(ini_event)
+        # "/ cur_n" is like multiplying by concentration, ignoring any molecules not tracked by this script
+        #     all initial events are unimolecular
         r_vec[event_hash] = ini_event.rate / num_monos
         event_dict[event_hash] = ini_event
 
@@ -1009,20 +1017,20 @@ def generate_mol(adj, node_list):
     return mol_str
 
 
-def write_patch(open_file, patch_name, segname, resid1, resid2=None):
+def write_patch(open_file, patch_name, seg_name, resid1, resid2=None):
     """
     Simple script to consistently format patch output for tcl script
     :param open_file: {TextIOWrapper}
     :param patch_name: str
-    :param segname: str
+    :param seg_name: str
     :param resid1: int
     :param resid2: int
     :return: what to write to file
     """
     if resid2:
-        open_file.write(f"patch {patch_name} {segname}:{resid1} {segname}:{resid2}\n")
+        open_file.write(f"patch {patch_name} {seg_name}:{resid1} {seg_name}:{resid2}\n")
     else:
-        open_file.write(f"patch {patch_name} {segname}:{resid1}\n")
+        open_file.write(f"patch {patch_name} {seg_name}:{resid1}\n")
 
 
 def gen_tcl(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FNAME, chain_id=DEF_CHAIN_ID,

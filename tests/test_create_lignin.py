@@ -438,7 +438,7 @@ class TestDynamics(unittest.TestCase):
             for fname in expected_files:
                 silent_remove(fname)
             test_input = ["-r", "10", "-i", "3", "-m", "15", "-dy", "-a", "1e6"]
-            main(test_input)
+            # main(test_input)
             with capture_stdout(main, test_input) as output:
                 self.assertTrue("Lignin KMC created 15 monomers, which formed:\n       "
                                 "1 oligomer(s) of chain length 15, with branching coefficient 0.067" in output)
@@ -501,14 +501,13 @@ class TestDynamics(unittest.TestCase):
             for fname in expected_files:
                 silent_remove(fname)
             test_input = ["-r", "10", "-i", "6", "-m", "18", "-a", "1e6", "-dy", "-p", "-d", PLOT_DIR]
-            main(test_input)
+            # main(test_input)
             with capture_stdout(main, test_input) as output:
                 self.assertTrue("1 oligomer(s) of chain length 18, with branching coefficient 0.111" in output)
             for fname in expected_files:
                 self.assertTrue(os.path.isfile(fname))
         finally:
-            for fname in expected_files:
-                silent_remove(fname, disable=DISABLE_REMOVE)
+            silent_remove(PLOT_DIR, dir_with_files=True, disable=DISABLE_REMOVE)
             pass
 
     def testSGPlot3(self):
@@ -523,8 +522,7 @@ class TestDynamics(unittest.TestCase):
             for fname in expected_files:
                 self.assertTrue(os.path.isfile(fname))
         finally:
-            for fname in expected_files:
-                silent_remove(fname, disable=DISABLE_REMOVE)
+            silent_remove(TEMP_DIR, dir_with_files=True, disable=DISABLE_REMOVE)
             pass
 
     # Do not include the following in test coverage--just an easy way to run this for its production output
