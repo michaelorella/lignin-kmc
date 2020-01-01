@@ -7,8 +7,8 @@ segment 1 {
     residue 3 G
     residue 4 S
 }
-patch BB 1:2 1:4
-patch BB 1:1 1:3
-patch B5C 1:2 1:1
+patch B5G 1:2 1:1
+patch BB 1:3 1:4
+patch 4O4 1:3 1:2
 regenerate angles dihedrals
 writepsf birch.psf

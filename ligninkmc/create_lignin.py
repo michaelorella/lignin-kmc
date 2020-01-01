@@ -25,7 +25,7 @@ from ligninkmc.kmc_common import (Event, Monomer, E_BARRIER_KCAL_MOL, E_BARRIER_
                                   ADJ_MATRIX, RANDOM_SEED, S, G, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS,
                                   MAX_NUM_DECIMAL, MONO_LIST, CHAIN_MONOS, CHAIN_BRANCH_COEFF, RCF_BRANCH_COEFF,
                                   CHAIN_ID, DEF_CHAIN_ID, PSF_FNAME, DEF_PSF_FNAME, DEF_TOPPAR, TOPPAR_DIR,
-                                  MANUSCRIPT_RATES, DEF_RXN_RATES, BOND_TYPE_LIST, INT_TO_TYPE_DICT)
+                                  DEF_RXN_RATES, BOND_TYPE_LIST, INT_TO_TYPE_DICT)
 from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_tcl, count_bonds,
                                      count_oligomer_yields, analyze_adj_matrix)
 
@@ -51,8 +51,6 @@ DYNAMICS = 'dynamics_flag'
 OLIGOMERS = 'oligomers'
 MONOMERS = 'monomers'
 PLOT_BONDS = 'plot_bonds'
-# todo: remove ENERGY_BARRIER_FLAG option when debugging is complete
-ENERGY_BARRIER_FLAG = 'energy_barriers_flag'
 
 PLOT_COLORS = [(0, 0, 0), (1, 0, 0), (0, 0, 1), (0, 0.6, 0), (0.6, 0, 0.6), (1, 0.549, 0),
                (0, 0.6, 0.6), (1, 0.8, 0), (0.6078, 0.2980, 0), (0.6, 0, 0), (0, 0, 0.6)]
@@ -81,8 +79,6 @@ DEF_CFG_VALS = {OUT_DIR: None, OUT_FORMAT_LIST: None, ADD_RATES: [DEF_ADD_RATE],
                 SAVE_JSON: False, SAVE_PNG: False, SAVE_SMI: False, SAVE_SVG: False, SAVE_TCL: False,
                 CHAIN_ID: DEF_CHAIN_ID, PSF_FNAME: DEF_PSF_FNAME, TOPPAR_DIR: DEF_TOPPAR,
                 NUM_REPEATS: DEF_NUM_REPEATS, PLOT_BONDS: False,
-                # todo: remove ENERGY_BARRIER_FLAG option when debugging is complete
-                ENERGY_BARRIER_FLAG: False,
                 }
 
 REQ_KEYS = {}
@@ -415,14 +411,6 @@ def parse_cmdline(argv=None):
                                                        f"ratio and # represents the addition rate. Note that this "
                                                        f"option \nsignificantly increases simulation time.",
                         action="store_true")
-    # todo: remove -e option when debugging is complete
-    parser.add_argument("-e", "--energy_barriers_flag", help=f"By default, the reaction rates will be based on the "
-                                                             f"energy barriers in kcal/mol to be used \nto calculate "
-                                                             f"reaction rates at {DEF_TEMP} K. If this flag is used, "
-                                                             f"the rates use to produce the \noriginal manuscript "
-                                                             f"plots will be used (missing one term). Alternate sets "
-                                                             f"of energy \nbarriers can be specified; see the main "
-                                                             f"help message.", action="store_true")
     parser.add_argument("-f", "--output_format_list", help="The type(s) of output format to be saved. Provide as a "
                                                            "space- or comma-separated list. \nNote: if the list has "
                                                            "spaces, it must be enclosed in quotes, to be treated as "
@@ -512,8 +500,6 @@ def parse_cmdline(argv=None):
                          TOPPAR_DIR: args.toppar_dir,
                          NUM_REPEATS: args.num_repeats,
                          PLOT_BONDS: args.plot_bonds,
-                         # todo: remove -e option when debugging is complete
-                         ENERGY_BARRIER_FLAG: args.energy_barriers_flag,
                          }
         if args.config is None:
             args.config = DEF_CFG_VALS.copy()
@@ -739,20 +725,10 @@ def validate_input(cfg):
     check_if_files_to_be_saved(cfg)
 
     # determine rates to use
-    if cfg[E_BARRIER_KCAL_MOL] == DEF_CFG_VALS[E_BARRIER_KCAL_MOL] and (cfg[E_BARRIER_J_PART] ==
-                                                                        DEF_CFG_VALS[E_BARRIER_J_PART]
-                                                                        ) and (cfg[TEMP] == DEF_TEMP):
-        # todo: remove ENERGY_BARRIER_FLAG option when debugging is complete
-        if cfg[ENERGY_BARRIER_FLAG]:
-            cfg[RXN_RATES] = MANUSCRIPT_RATES
-        else:
-            cfg[RXN_RATES] = DEF_RXN_RATES
+    if cfg[E_BARRIER_KCAL_MOL] == DEF_CFG_VALS[E_BARRIER_KCAL_MOL] and \
+            (cfg[E_BARRIER_J_PART] == DEF_CFG_VALS[E_BARRIER_J_PART]) and (cfg[TEMP] == DEF_TEMP):
+        cfg[RXN_RATES] = DEF_RXN_RATES
     else:
-        # todo: remove ENERGY_BARRIER_FLAG option when debugging is complete
-        if cfg[ENERGY_BARRIER_FLAG]:
-            warning("Both the {ENERGY_BARRIER_FLAG} option and energy barriers have been provided. The "
-                    "{ENERGY_BARRIER_FLAG} option will be ignored, and reaction rates will be calculated from the "
-                    "provided energy barriers.")
         if int(cfg[TEMP]) != int(DEF_TEMP):
             warning(f"The program will continue, using a temperature other than {DEF_TEMP}. Ensure that the energy "
                     f"barriers being used where calculated at the provided temperature ({cfg[TEMP]}), otherwise "
@@ -821,9 +797,6 @@ def main(argv=None):
         for add_rate in cfg[ADD_RATES]:
             sg_adjs = []
             add_rate_str = f'{add_rate:.{3}g}'.replace("+", "").replace(".", "-")
-            # todo: remove MANUSCRIPT_RATES when debugging done
-            if cfg[RXN_RATES] == MANUSCRIPT_RATES:
-                add_rate_str += "_m"
             for sg_ratio in cfg[SG_RATIOS]:
                 # the initialized lists below are for storing repeats
                 bond_types = defaultdict(list)

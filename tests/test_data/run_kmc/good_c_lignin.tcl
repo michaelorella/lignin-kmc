@@ -17,16 +17,16 @@ segment L {
     residue 13 C
     residue 14 C
 }
-patch B5C L:3 L:5
-patch B5C L:2 L:1
-patch BO4 L:4 L:2
-patch BO4 L:6 L:4
-patch BO4 L:7 L:6
-patch BO4 L:8 L:3
-patch BO4 L:9 L:8
-patch BO4 L:10 L:7
-patch BO4 L:11 L:9
-patch B5C L:11 L:10
+patch B5C L:5 L:4
+patch B5C L:1 L:2
+patch B5C L:3 L:6
+patch BO4 L:7 L:3
+patch B5C L:7 L:5
+patch 4O4 L:5 L:1
+patch BO4 L:8 L:1
+patch BO4 L:9 L:7
+patch BO4 L:10 L:9
+patch BO4 L:11 L:8
 patch BO4 L:12 L:10
 patch BO4 L:13 L:11
 patch BO4 L:14 L:13

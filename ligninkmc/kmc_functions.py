@@ -172,18 +172,18 @@ def break_bond_type(adj, bond_type):
     # Copy the matrix into a new matrix
     new_adj = adj.todok(copy=True)
 
-    breakage = {B1: (lambda row, col: (adj[(row, col)] == 1 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
-                                                                                          adj[(col, row)] == 1)),
+    breakage = {B1: (lambda row, col: (adj[(row, col)] == 1 and adj[(col, row)] == 8) or
+                                      (adj[(row, col)] == 8 and adj[(col, row)] == 1)),
                 B1_ALT: (lambda row, col: (adj[(row, col)] == 1 and adj[(col, row)] == 8) or
                                           (adj[(row, col)] == 8 and adj[(col, row)] == 1)),
-                B5: (lambda row, col: (adj[(row, col)] == 5 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
-                                                                                          adj[(col, row)] == 5)),
-                BO4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
-                                                                                           adj[(col, row)] == 4)),
-                AO4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 7) or (adj[(row, col)] == 7 and
-                                                                                           adj[(col, row)] == 4)),
-                C5O4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 5) or (adj[(row, col)] == 5 and
-                                                                                            adj[(col, row)] == 4)),
+                B5: (lambda row, col: (adj[(row, col)] == 5 and adj[(col, row)] == 8) or
+                                      (adj[(row, col)] == 8 and adj[(col, row)] == 5)),
+                BO4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 8) or
+                                       (adj[(row, col)] == 8 and adj[(col, row)] == 4)),
+                AO4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 7) or
+                                       (adj[(row, col)] == 7 and adj[(col, row)] == 4)),
+                C5O4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 5) or
+                                        (adj[(row, col)] == 5 and adj[(col, row)] == 4)),
                 BB: (lambda row, col: (adj[(row, col)] == 8 and adj[(col, row)] == 8)),
                 C5C5: (lambda row, col: (adj[(row, col)] == 5 and adj[(col, row)] == 5))}
 
@@ -335,16 +335,11 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
 
     # Map the monomer active state to the possible event_dict it can do
     possible_events = {0: [[OX, 1, rate_dict[OX]]],
-                       4: [[B1, 2, rate_dict[B1], [1, 8]],
-                           [C5O4, 2, rate_dict[C5O4], [4, 5]],
-                           [AO4, 2, rate_dict[AO4], [4, 7]],
-                           [BO4, 2, rate_dict[BO4], [4, 8]],
-                           [C5C5, 2, rate_dict[C5C5], [5, 5]],
-                           [B5, 2, rate_dict[B5], [5, 8]],
+                       4: [[B1, 2, rate_dict[B1], [1, 8]], [C5O4, 2, rate_dict[C5O4], [4, 5]],
+                           [AO4, 2, rate_dict[AO4], [4, 7]], [BO4, 2, rate_dict[BO4], [4, 8]],
+                           [C5C5, 2, rate_dict[C5C5], [5, 5]], [B5, 2, rate_dict[B5], [5, 8]],
                            [BB, 2, rate_dict[BB], [8, 8]]],
-                       7: [[Q, 1, rate_dict[Q]],
-                           [AO4, 2, rate_dict[AO4], [7, 4]]],
-                       -1: [[]]
+                       7: [[Q, 1, rate_dict[Q]], [AO4, 2, rate_dict[AO4], [7, 4]]], -1: [[]]
                        }
     # Only do these for bonding and oxidation event_dict, any growth does not actually change the possible event_dict
     if last_event.key != GROW:
@@ -718,146 +713,59 @@ def generate_mol(adj, node_list):
     :return: mol_str, str in standard molfile
     """
     # define dictionary for atoms within each monomer
-    atom_blocks = {G: ('C 0 0 0 0 \n' +  # 1
-                       'C 0 0 0 0 \n' +  # 2
-                       'C 0 0 0 0 \n' +  # 3
-                       'C 0 0 0 0 \n' +  # 4
-                       'C 0 0 0 0 \n' +  # 5
-                       'C 0 0 0 0 \n' +  # 6
-                       'C 0 0 0 0 \n' +  # 7
-                       'C 0 0 0 0 \n' +  # 8
-                       'C 0 0 0 0 \n' +  # 9
-                       'O 0 0 0 0 \n' +  # 9-OH
-                       'O 0 0 0 0 \n' +  # 3-OMe
-                       'C 0 0 0 0 \n' +  # 3-OMe
-                       'O 0 0 0 0 \n'),  # 4-OH
-                   S: ('C 0 0 0 0 \n' +  # 1
-                       'C 0 0 0 0 \n' +  # 2
-                       'C 0 0 0 0 \n' +  # 3
-                       'C 0 0 0 0 \n' +  # 4
-                       'C 0 0 0 0 \n' +  # 5
-                       'C 0 0 0 0 \n' +  # 6
-                       'C 0 0 0 0 \n' +  # 7
-                       'C 0 0 0 0 \n' +  # 8
-                       'C 0 0 0 0 \n' +  # 9
-                       'O 0 0 0 0 \n' +  # 9-OH
-                       'O 0 0 0 0 \n' +  # 3-OMe
-                       'C 0 0 0 0 \n' +  # 3-OMe
-                       'O 0 0 0 0 \n' +  # 4-OH
-                       'O 0 0 0 0 \n' +  # 5-OMe
-                       'C 0 0 0 0 \n'),  # 5-OMe
-                   C: ('C 0 0 0 0 \n' +  # 1
-                       'C 0 0 0 0 \n' +  # 2
-                       'C 0 0 0 0 \n' +  # 3
-                       'C 0 0 0 0 \n' +  # 4
-                       'C 0 0 0 0 \n' +  # 5
-                       'C 0 0 0 0 \n' +  # 6
-                       'C 0 0 0 0 \n' +  # 7
-                       'C 0 0 0 0 \n' +  # 8
-                       'C 0 0 0 0 \n' +  # 9
-                       'O 0 0 0 0 \n' +  # 9-OH
-                       'O 0 0 0 0 \n' +  # 3-OH
-                       'O 0 0 0 0 \n'),  # 4-OH
-                   G4: ('C 0 0 0 0 \n' +  # 1
-                        'C 0 0 0 0 \n' +  # 2
-                        'C 0 0 0 0 \n' +  # 3
-                        'C 0 0 0 0 \n' +  # 4
-                        'C 0 0 0 0 \n' +  # 5
-                        'C 0 0 0 0 \n' +  # 6
-                        'C 0 0 0 0 \n' +  # 7
-                        'C 0 0 0 0 \n' +  # 8
-                        'C 0 0 0 0 \n' +  # 9
-                        'O 0 0 0 0 \n' +  # 9-OH
-                        'O 0 0 0 0 \n' +  # 3-OMe
-                        'C 0 0 0 0 \n' +  # 3-OMe
-                        'O 0 0 0 0 RAD=2\n'),  # 4-O
-                   S4: ('C 0 0 0 0 \n' +  # 1
-                        'C 0 0 0 0 \n' +  # 2
-                        'C 0 0 0 0 \n' +  # 3
-                        'C 0 0 0 0 \n' +  # 4
-                        'C 0 0 0 0 \n' +  # 5
-                        'C 0 0 0 0 \n' +  # 6
-                        'C 0 0 0 0 \n' +  # 7
-                        'C 0 0 0 0 \n' +  # 8
-                        'C 0 0 0 0 \n' +  # 9
-                        'O 0 0 0 0 \n' +  # 9-OH
-                        'O 0 0 0 0 \n' +  # 3-OMe
-                        'C 0 0 0 0 \n' +  # 3-OMe
-                        'O 0 0 0 0 RAD=2\n' +  # 4-O
-                        'O 0 0 0 0 \n' +  # 5-OMe
-                        'C 0 0 0 0 \n')}  # 5-OMe
+    atom_blocks = {G: ('C 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \n'  # 1-7
+                       'C 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 \n'  # 8-9, 9-OH
+                       'O 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 \n'),  # 3-OMe, 3-OMe, 4-OH
+                   S: ('C 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \n'  # 1-7
+                       'C 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 \n'  # 8-9, 9-OH
+                       'O 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 \n'  # 3-OMe, 3-OMe, 4-OH
+                       'O 0 0 0 0 \nC 0 0 0 0 \n'),  # 5-OMe, 5-OMe
+                   C: ('C 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \n'  # 1-7
+                       'C 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 \n'  # 8-9, 9-OH
+                       'O 0 0 0 0 \nO 0 0 0 0 \n'),  # 3-OH, 4-OH
+                   G4: ('C 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \n'  # 1-7
+                        'C 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 \n'  # 8-9, 9-OH
+                        'O 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 RAD=2\n'),  # 3-OMe, 3-OMe, 4-O
+                   S4: ('C 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \n'  # 1-7
+                        'C 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 \n'  # 8-9, 9-OH
+                        'O 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 RAD=2\n'  # 3-OMe, 3-OMe, 4-O
+                        'O 0 0 0 0 \nC 0 0 0 0 \n')}  # 5-OMe, 5-OMe
 
     # Similarly define dictionary for bonds within each monomer -
     # NOTE: THESE MAY NEED TO CHANGE DEPENDING ON INTER-UNIT LINKAGES
 
-    bond_blocks = {G7: ('1 1  2  \n' +  # Aromatic ring 1->2
-                        '2 2  3  \n' +  # Aromatic ring 2->3
-                        '1 3  4  \n' +  # Aromatic ring 3->4
-                        '1 4  5  \n' +  # Aromatic ring 4->5
-                        '2 5  6  \n' +  # Aromatic ring 5->6
-                        '1 6  1  \n' +  # Aromatic ring 6->1
-                        '2 1  7  \n' +  # Quinone methide propyl tail 1->A
-                        '1 7  8  \n' +  # Propyl tail A->B
-                        '1 8  9  \n' +  # Propyl tail B->G
-                        '1 9  10 \n' +  # Gamma hydroxyl G->OH
-                        '1 3  11 \n' +  # 3 methoxy 3->O
-                        '1 11 12 \n' +  # 3 methoxy O->12
+    bond_blocks = {G7: ('1 1  2  \n2 2  3  \n1 3  4  \n1 4  5  \n'  # Aromatic ring 1->2, 2->3, 3->4, 4->5
+                        '2 5  6  \n1 6  1  \n'  # Aromatic ring 5->6, 6->1
+                        '2 1  7  \n'  # Quinone methide propyl tail 1->A
+                        '1 7  8  \n1 8  9  \n'  # Propyl tail A->B, Propyl tail B->G
+                        '1 9  10 \n'  # Gamma hydroxyl G->OH
+                        '1 3  11 \n1 11 12 \n'  # 3 methoxy 3->O, 3 methoxy O->12
                         '2 4  13 \n'),  # 4 ketone 4->O
-                   G: ('2 1  2  \n' +  # Aromatic ring 1->2
-                       '1 2  3  \n' +  # Aromatic ring 2->3
-                       '2 3  4  \n' +  # Aromatic ring 3->4
-                       '1 4  5  \n' +  # Aromatic ring 4->5
-                       '2 5  6  \n' +  # Aromatic ring 5->6
-                       '1 6  1  \n' +  # Aromatic ring 6->1
-                       '1 1  7  \n' +  # Ring - propyl tail 1->A
-                       '2 7  8  \n' +  # Alkene propyl tail A->B
-                       '1 8  9  \n' +  # Propyl tail B->G
-                       '1 9  10 \n' +  # Gamma hydroxyl G->OH
-                       '1 3  11 \n' +  # 3 methoxy 3->O
-                       '1 11 12 \n' +  # 3 methoxy O->12
+                   G: ('2 1  2  \n1 2  3  \n2 3  4  \n1 4  5  \n'  # Aromatic ring 1->2, 2->3, 3->4, 4->5
+                       '2 5  6  \n1 6  1  \n'  # Aromatic ring 5->6, 6->1
+                       '1 1  7  \n2 7  8  \n'  # Ring - propyl tail 1->A, Alkene propyl tail A->B
+                       '1 8  9  \n1 9  10 \n'  # Propyl tail B->G, Gamma hydroxyl G->OH
+                       '1 3  11 \n1 11 12 \n'  # 3 methoxy 3->O, 3 methoxy O->12
                        '1 4  13 \n'),  # 4 hydroxyl 4->OH
-                   S7: ('1 1  2  \n' +  # Aromatic ring 1->2
-                        '2 2  3  \n' +  # Aromatic ring 2->3
-                        '1 3  4  \n' +  # Aromatic ring 3->4
-                        '1 4  5  \n' +  # Aromatic ring 4->5
-                        '2 5  6  \n' +  # Aromatic ring 5->6
-                        '1 6  1  \n' +  # Aromatic ring 6->1
-                        '2 1  7  \n' +  # Quinone methide 1->A
-                        '1 7  8  \n' +  # Propyl tail A->B
-                        '1 8  9  \n' +  # Propyl tail B->G
-                        '1 9  10 \n' +  # Gamma hydroxyl G->OH
-                        '1 3  11 \n' +  # 3 methoxy 3->O
-                        '1 11 12 \n' +  # 3 methoxy O->12
-                        '2 4  13 \n' +  # 4 ketone 4->O
-                        '1 5  14 \n' +  # 5 methoxy 5->O
+                   S7: ('1 1  2  \n2 2  3  \n1 3  4  \n1 4  5  \n'  # Aromatic ring 1->2, 2->3, 3->4, 4->5
+                        '2 5  6  \n1 6  1  \n'  # Aromatic ring 5->6, 6->1
+                        '2 1  7  \n'  # Quinone methide 1->A
+                        '1 7  8  \n1 8  9  \n'  # Propyl tail A->B, B->G
+                        '1 9  10 \n'  # Gamma hydroxyl G->OH
+                        '1 3  11 \n1 11 12 \n'  # 3 methoxy 3->O, 3 methoxy O->12
+                        '2 4  13 \n1 5  14 \n'  # 4 ketone 4->O, 5 methoxy 5->O
                         '1 14 15 \n'),  # 5 methoxy O->15
-                   S: ('2 1  2  \n' +  # Aromatic ring 1->2
-                       '1 2  3  \n' +  # Aromatic ring 2->3
-                       '2 3  4  \n' +  # Aromatic ring 3->4
-                       '1 4  5  \n' +  # Aromatic ring 4->5
-                       '2 5  6  \n' +  # Aromatic ring 5->6
-                       '1 6  1  \n' +  # Aromatic ring 6->1
-                       '1 1  7  \n' +  # Ring - propyl tail 1->A
-                       '2 7  8  \n' +  # Alkene propyl tail A->B
-                       '1 8  9  \n' +  # Propyl tail B->G
-                       '1 9  10 \n' +  # Gamma hydroxyl G->OH
-                       '1 3  11 \n' +  # 3 methoxy 3->O
-                       '1 11 12 \n' +  # 3 methoxy O->12
-                       '1 4  13 \n' +  # 4 hydroxyl 4->OH
-                       '1 5  14 \n' +  # 5 methoxy 5->O
-                       '1 14 15 \n'),  # 5 methoxy O->15
-                   C: ('2 1  2  \n' +  # Aromatic ring 1->2
-                       '1 2  3  \n' +  # Aromatic ring 2->3
-                       '2 3  4  \n' +  # Aromatic ring 3->4
-                       '1 4  5  \n' +  # Aromatic ring 4->5
-                       '2 5  6  \n' +  # Aromatic ring 5->6
-                       '1 6  1  \n' +  # Aromatic ring 6->1
-                       '1 1  7  \n' +  # Ring - propyl tail 1->A
-                       '2 7  8  \n' +  # Alkene propyl tail A->B
-                       '1 8  9  \n' +  # Propyl tail B->G
-                       '1 9  10 \n' +  # Gamma hydroxyl G->OH
-                       '1 3  11 \n' +  # 3 hydroxyl 3->O
-                       '1 4  12 \n')}  # 4 hydroxyl 4->OH
+                   S: ('2 1  2  \n1 2  3  \n2 3  4  \n1 4  5  \n'  # Aromatic ring 1->2, 2->3, 3->4, 4->5
+                       '2 5  6  \n1 6  1  \n'  # Aromatic ring 5->6, 6->1
+                       '1 1  7  \n2 7  8  \n'  # Ring - propyl tail 1->A,  Alkene propyl tail A->B
+                       '1 8  9  \n1 9  10 \n'  # Propyl tail B->G, Gamma hydroxyl G->OH
+                       '1 3  11 \n1 11 12 \n1 4  13 \n'  # 3 methoxy 3->O, 3 methoxy O->12, 4 hydroxyl 4->OH
+                       '1 5  14 \n1 14 15 \n'),  # 5 methoxy 5->O, 5 methoxy O->15
+                   C: ('2 1  2  \n1 2  3  \n1 2  3  \n2 3  4  \n1 4  5  \n' +  # Aromatic ring 1->2, 2->3, 3->4, 4->5
+                       '2 5  6  \n1 6  1  \n'  # Aromatic ring 5->6, 6->1
+                       '1 1  7  \n2 7  8  \n'  # Ring - propyl tail 1->A, Alkene propyl tail A->B
+                       '1 8  9  \n1 9  10 \n'  # Propyl tail B->G, Gamma hydroxyl G->OH
+                       '1 3  11 \n1 4  12 \n')}  # 3 hydroxyl 3->O, 4 hydroxyl 4->OH
 
     mol_str = '\n\n\n  0  0  0  0  0  0  0  0  0  0999 V3000\nM  V30 BEGIN CTAB\n'  # Header information
     mol_atom_blocks = 'M  V30 BEGIN ATOM\n'
@@ -868,12 +776,8 @@ def generate_mol(adj, node_list):
     mono_start_idx_atom = []
     removed = {BONDS: 0, ATOMS: 0}
 
-    site_positions = {1: {x: 0 for x in [G, S, C]},
-                      4: {C: 11, S: 12, G: 12},
-                      5: {x: 4 for x in [G, S, C]},
-                      7: {x: 6 for x in [G, S, C]},
-                      8: {x: 7 for x in [G, S, C]},
-                      10: {x: 9 for x in [G, S, C]}}
+    site_positions = {1: {x: 0 for x in [G, S, C]}, 4: {C: 11, S: 12, G: 12}, 5: {x: 4 for x in [G, S, C]},
+                      7: {x: 6 for x in [G, S, C]}, 8: {x: 7 for x in [G, S, C]}, 10: {x: 9 for x in [G, S, C]}}
     alpha_beta_alkene_location = 7
     alpha_ring_location = 6
     alpha = 7
