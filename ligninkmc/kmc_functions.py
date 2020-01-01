@@ -312,7 +312,7 @@ def analyze_adj_matrix(adjacency):
             RCF_BRANCHES: rcf_branch_dict, RCF_BRANCH_COEFF: rcf_branch_coeff_dict}
 
 
-def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, max_mon=500):
+def update_events(state_dict, adj, last_event, event_list, rate_list, rate_dict, max_mon=500):
     """
     This method determines what the possible events are in a given state, where the state is the current simulation
     state. Most of the additional parameters in this method are added for performance benefits rather than necessity.
@@ -322,12 +322,10 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
         determine which of the event_dict in the simulation need to be updated and which should not be changed.
     :param adj: dok_matrix  -- The current state of the simulation represented by the adjacency matrix containing all
         of the monomers and the bonds between them (if any)
-    :param last_event: The previous Event that occurred, which will tell us what monomers were effected. When combined
-        with the state dictionary, this allows for efficient updating of the set of event_dict that are possible
-    :param event_dict: dict  -- The set of all possible unique event_dict that must be updated and returned from this
-        method, implemented in a hash map where the event hash value is the key
-    :param rate_vec: dict  -- The rates of all of the unique event_dict implemented in a hash map where the Event
-        hash value is the key
+    :param last_event: event -- the previous Event that occurred, which will tell us what monomers were effected. When
+        combined with the state dictionary, this allows for updating the list of events (event_dict) currently possible
+    :param event_list: list -- list of all possible unique events that will be updated and returned from this method
+    :param rate_list: list  -- list of rates from the events of event_list, in the same order
     :param rate_dict: dict  -- The dictionary of the possible rates involved in each reaction
     :param max_mon: int -- The maximum number of monomers that should be stored in the simulation
     :return: n/a, updates state_dict, adj, event_dict, rate_vec
@@ -339,15 +337,15 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
                            [AO4, 2, rate_dict[AO4], [4, 7]], [BO4, 2, rate_dict[BO4], [4, 8]],
                            [C5C5, 2, rate_dict[C5C5], [5, 5]], [B5, 2, rate_dict[B5], [5, 8]],
                            [BB, 2, rate_dict[BB], [8, 8]]],
-                       7: [[Q, 1, rate_dict[Q]], [AO4, 2, rate_dict[AO4], [7, 4]]], -1: [[]]
+                       7: [[Q, 1, rate_dict[Q]], [AO4, 2, rate_dict[AO4], [7, 4]]],
+                       -1: [[]]
                        }
     # Only do these for bonding and oxidation event_dict, any growth does not actually change the possible event_dict
     if last_event.key != GROW:
         # Remove the last event that we just did from the set of event_dict that can be performed
-        last_event_hash = hash(last_event)
-        del (event_dict[last_event_hash])
-        del (rate_vec[last_event_hash])
-
+        last_event_index = event_list.index(last_event)
+        del event_list[last_event_index]
+        del rate_list[last_event_index]
         # Make sure to keep track of which partners have been "cleaned" already - i.e. what monomers have already had
         #     all of the old event_dict removed
         cleaned_partners = set()
@@ -384,10 +382,9 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
 
             # Take any event_dict to be modified out of the set so that we can replace with the updated event_dict
             for event in events_to_be_modified:
-                ev_hash = hash(event)
-                if ev_hash in event_dict:
-                    del (event_dict[ev_hash])
-                    del (rate_vec[ev_hash])
+                event_index = event_list.index(event)
+                del event_list[event_index]
+                del rate_list[event_index]
 
             # Overwrite the old event_dict that could have been modified from this monomer being updated
             state_dict[mon_id][AFFECTED] = set()
@@ -465,8 +462,8 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
             # END LOOP OVER NEW REACTION POSSIBILITIES
             for event in state_dict[mon_id][AFFECTED]:
                 ev_hash = hash(event)
-                event_dict[ev_hash] = event
-                rate_vec[ev_hash] = event.rate
+                event_list[ev_hash] = event
+                rate_list[ev_hash] = event.rate
         # END LOOP OVER MONOMERS THAT WERE AFFECTED BY LAST EVENT
     else:
         cur_n, _ = adj.get_shape()
@@ -474,20 +471,20 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
         # If the system has grown to the maximum size, delete the event for adding more monomers
         if cur_n >= max_mon:
             last_event_hash = hash(last_event)
-            del (event_dict[last_event_hash])
-            del (rate_vec[last_event_hash])
+            del (event_list[last_event_hash])
+            del (rate_list[last_event_hash])
 
         # Reflect the larger system volume
-        for i in rate_vec:
-            if event_dict[i].key != GROW:
-                rate_vec[i] = rate_vec[i] * (cur_n - 1) / cur_n
+        for i in rate_list:
+            if event_list[i].key != GROW:
+                rate_list[i] = rate_list[i] * (cur_n - 1) / cur_n
 
         # Add an event to oxidize the monomer that was just added to the simulation
         oxidation_event = Event(OX, [cur_n - 1], rate_dict[OX][state_dict[cur_n - 1][MONOMER].type][MONOMER])
         state_dict[cur_n - 1][AFFECTED].add(oxidation_event)
         ev_hash = hash(oxidation_event)
-        event_dict[ev_hash] = oxidation_event
-        rate_vec[ev_hash] = oxidation_event.rate / cur_n
+        event_list[ev_hash] = oxidation_event
+        rate_list[ev_hash] = oxidation_event.rate / cur_n
 
 
 def connect_monos(mon1, mon2):
@@ -647,15 +644,11 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
     adj = dok_matrix((num_monos, num_monos))
     t = [0, ]
 
-    # Calculate the rates of all of the event_dict available at the current state; ordered dict for consistency
-    r_vec = OrderedDict()
-
-    # Build the dictionary of event_dict
-    event_dict = OrderedDict()
+    # Calculate the rates of all of the events in the current state to allow for probability calculation
+    event_list = initial_events.copy()
+    rate_list = []
     for ini_event in initial_events:
-        event_hash = hash(ini_event)
-        r_vec[event_hash] = ini_event.rate / num_monos
-        event_dict[event_hash] = ini_event
+        rate_list.append(ini_event.rate / num_monos)
 
     if dynamics:
         adj_list = [adj.copy()]
@@ -665,16 +658,12 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
         mon_list = []
 
     # Run the Gillespie algorithm
-    while t[-1] < t_max and len(event_dict) > 0:
-        # Find the total rate for all of the possible event_dict and choose which event to do
-        # Less direct conversion of r_vec to lists (keys in hashes, vals in all_rates) for consistency
-        hashes = list(r_vec.keys())
-        hashes.sort()
-        all_rates = []
-        for r_vec_key in hashes:
-            all_rates.append(r_vec[r_vec_key])
-        r_tot = np.sum(all_rates)
+    while t[-1] < t_max and len(event_list) > 0:
+        r_tot = np.sum(rate_list)
+        event_probabilities = rate_list / r_tot
 
+        # don't want same dt for every iteration, yet want it repeatable, so add to seed with each iteration and then
+        #     call the np.random, and round if looking for repeatability to the result does not depend on the platform
         if random_seed:
             # don't want same dt for every iteration, so add to seed with each iteration
             np.random.seed(random_seed + len(t))
@@ -682,21 +671,20 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
             rand_num = np.around(np.random.rand(), MAX_NUM_DECIMAL)
         else:
             rand_num = np.random.rand()
-        j = np.random.choice(hashes, p=all_rates / r_tot)
-        event = event_dict[j]
+        chosen_event = np.random.choice(event_list, p=event_probabilities)
         # See how much time has passed before this event happened; rounding to reduce platform dependency
         dt = round_sig_figs((1 / r_tot) * np.log(1 / rand_num))
         t.append(t[-1] + dt)
 
         # Do the event and update the state
-        do_event(event, cur_state, adj, sg_ratio, random_seed=random_seed)
+        do_event(chosen_event, cur_state, adj, sg_ratio, random_seed=random_seed)
 
         if dynamics:
             adj_list.append(adj.copy())
             mon_list.append([copy.copy(cur_state[i][MONOMER]) for i in cur_state])
 
         # Check the new state for what events are possible
-        update_events(cur_state, adj, event, event_dict, r_vec, rate_dict, max_mon=n_max)
+        update_events(cur_state, adj, chosen_event, event_list, rate_list, rate_dict, max_mon=n_max)
 
     if dynamics:
         return {TIME: t, MONO_LIST: mon_list, ADJ_MATRIX: adj_list}

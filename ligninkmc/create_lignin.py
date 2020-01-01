@@ -592,7 +592,7 @@ def create_initial_events(initial_monomers, rxn_rates):
 
 
 def create_initial_state(initial_events, initial_monomers):
-    return {i: {MONOMER: initial_monomers[i], AFFECTED: {initial_events[i]}} for i in range(len(initial_monomers))}
+    return {i: {MONOMER: initial_monomers[i], AFFECTED: [initial_events[i]]} for i in range(len(initial_monomers))}
 
 
 def produce_output(adj_matrix, mono_list, cfg):
