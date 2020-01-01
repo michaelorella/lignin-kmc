@@ -483,11 +483,11 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
                 rate_vec[i] = rate_vec[i] * (cur_n - 1) / cur_n
 
         # Add an event to oxidize the monomer that was just added to the simulation
-        oxidation = Event(OX, [cur_n - 1], rate_dict[OX][state_dict[cur_n - 1][MONOMER].type][MONOMER])
-        state_dict[cur_n - 1][AFFECTED].add(oxidation)
-        ev_hash = hash(oxidation)
-        event_dict[ev_hash] = oxidation
-        rate_vec[ev_hash] = oxidation.rate / cur_n
+        oxidation_event = Event(OX, [cur_n - 1], rate_dict[OX][state_dict[cur_n - 1][MONOMER].type][MONOMER])
+        state_dict[cur_n - 1][AFFECTED].add(oxidation_event)
+        ev_hash = hash(oxidation_event)
+        event_dict[ev_hash] = oxidation_event
+        rate_vec[ev_hash] = oxidation_event.rate / cur_n
 
 
 def connect_monos(mon1, mon2):
@@ -652,10 +652,10 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
 
     # Build the dictionary of event_dict
     event_dict = OrderedDict()
-    for event in initial_events:
-        event_hash = hash(event)
-        r_vec[event_hash] = event.rate / num_monos
-        event_dict[event_hash] = event
+    for ini_event in initial_events:
+        event_hash = hash(ini_event)
+        r_vec[event_hash] = ini_event.rate / num_monos
+        event_dict[event_hash] = ini_event
 
     if dynamics:
         adj_list = [adj.copy()]
