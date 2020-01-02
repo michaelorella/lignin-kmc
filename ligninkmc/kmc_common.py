@@ -271,14 +271,8 @@ class Event:
         return self.index < other.index
 
     def __hash__(self):
-        # TODO: understand why the choice of hashing function affects results
-        #    original hash, which did not allow testing because of random salting:
-        #        return hash((tuple(self.index), self.key, self.bond))
-        #    replacement which gave different results (not immediately caught because there weren't tests yet...
-        #    I changed it as part of making the project testable:
-        #        key_as_num = sum([ord(x) % 32 for x in self.key])
-        #        return key_as_num + sum(self.index) * 1000 + int(self.rate * 10000)
-        #    The bash below is repeatable and gives similar results to the original hash
+        # The bash below is repeatable and gives similar results to the original hash, but now we do not explicitly
+        #    call it, because it was disturbing that results could change based on the kind of hash
         # Note: changed from invoking python's hash function to provide more consistent output for testing
         #     see https://docs.python.org/3/reference/datamodel.html#object.__hash__
         #     "By default, the __hash__() values of str and bytes objects are “salted” with an unpredictable random
@@ -293,7 +287,7 @@ class Event:
         bond_list_str = "".join([str(x) for x in self.bond])
         bond_list_bytes = bond_list_str.encode()
         event_bytes = b''.join([index_bytes, key_bytes, bond_list_bytes])
-        # the hash call below "right-sizes" the value
+        # the hash call below only "right-sizes" the value; does not add salting
         return hash(int.from_bytes(event_bytes, 'big'))
 
 
