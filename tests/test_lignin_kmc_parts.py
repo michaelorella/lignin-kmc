@@ -673,12 +673,8 @@ class TestVisualization(unittest.TestCase):
         block = None
         result = None
         try:
-            for num_monos in range(60, 112):
-                if num_monos == 58:
-                    first_rand = 182
-                else:
-                    first_rand = 1
-                for random_num in range(first_rand, 251):
+            for num_monos in range(61, 112):
+                for random_num in range(1, 251):
                     mono_type_list = full_mono_type_list[0: num_monos]
                     initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(mono_type_list)]
                     initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
