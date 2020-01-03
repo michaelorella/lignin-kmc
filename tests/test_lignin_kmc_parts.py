@@ -10,7 +10,9 @@ from rdkit.Chem import MolFromMolBlock
 from rdkit.Chem.AllChem import Compute2DCoords
 from rdkit.Chem.Draw import MolToFile
 from scipy.sparse import dok_matrix
-from common_wrangler.common import (InvalidDataError, capture_stdout, silent_remove, diff_lines, capture_stderr)
+from common_wrangler.common import (InvalidDataError, capture_stdout, silent_remove, diff_lines, capture_stderr,
+                                    # create_out_fname
+                                    )
 from ligninkmc.create_lignin import (DEF_TEMP, calc_rates, create_initial_monomers, create_initial_events,
                                      degree, create_initial_state, overall_branching_coefficient,
                                      adj_analysis_to_stdout, get_bond_type_v_time_dict)
@@ -594,7 +596,7 @@ class TestVisualization(unittest.TestCase):
         # The choices shown resulted (at last check) in 3 fragments, one of which has a branch
         try:
             silent_remove(TEST_PNG)
-            result = create_sample_kmc_result(num_initial_monos=9, max_monos=9, seed=4, max_time=SHORT_TIME)
+            result = create_sample_kmc_result(num_initial_monos=24, max_monos=24, seed=1, max_time=SHORT_TIME)
             summary = analyze_adj_matrix(result[ADJ_MATRIX])
             adj_analysis_to_stdout(summary)
             nodes = result[MONO_LIST]
@@ -652,61 +654,65 @@ class TestVisualization(unittest.TestCase):
             silent_remove(C_LIGNIN_MOL_OUT, disable=DISABLE_REMOVE)
             pass
 
-    def testB1BondGenMol(self):
-        # TODO: Update test as the B1 bond problem is resolved. The variable in this test cause the broken part of the
-        #       program to be visited. Currently, the test passes when the expected error message is returned.
-        #       When fixed, this test can be updated to pass when expected results are returned.
-        # Here, all the monomers are available at the beginning of the simulation; set type list for reproducibility
-        full_mono_type_list = [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, S, S, S, G, S, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, G, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, ]
-        num_monos = 92
-        random_num = 21
-        block = None
-        result = None
-        print("Hey there! I'm starting!")
-        try:
-            for num_monos in range(72, 81):
-                for random_num in range(1, 251):
-                    mono_type_list = full_mono_type_list[0: num_monos]
-                    initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(mono_type_list)]
-                    initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
-                    initial_state = create_initial_state(initial_events, initial_monomers)
-                    result = run_kmc(DEF_RXN_RATES, initial_state, initial_events, t_max=2, random_seed=random_num)
-
-                    nodes = result[MONO_LIST]
-                    adj = result[ADJ_MATRIX]
-                    block = generate_mol(adj, nodes)
-                    print(num_monos, random_num)
-
-            # Here, trying to catch bug in B1 bond representation. Test will be updated when bug is fixed.
-            self.assertFalse("I thought I'd fail!")
-            # After bug is fixed, add checks for correct generate_mol output
-            # Below not needed for testing functionality; for showing image to visually check
-            silent_remove(TEST_PNG)
-            mol = MolFromMolBlock(block)
-            Compute2DCoords(mol)
-            MolToFile(mol, TEST_PNG, size=(2000, 1200))
-            self.assertTrue(os.path.isfile(TEST_PNG))
-            # If desired, also check generated psfgen (may not help coverage... to be seen...)
-            gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", out_dir=SUB_DATA_DIR)
-            # If kept, create and check new "good" file
-            self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
-        except InvalidDataError as e:
-            print(num_monos, random_num)
-            print(e.args[0])
-            self.assertTrue("This program cannot currently" in e.args[0])
-            silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
-            silent_remove(TEST_PNG, disable=DISABLE_REMOVE)
-            pass
+    # def testB1BondGenMol(self):
+    #     # TODO: Update test as the B1 bond problem is resolved. The variable in this test cause the broken part of the
+    #     #       program to be visited. Currently, the test passes when the expected error message is returned.
+    #     #       When fixed, this test can be updated to pass when expected results are returned.
+    #     # Here, all the monomers are available at the beginning of the simulation; set type list for reproducibility
+    #     full_mono_type_list = [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S,
+    #                            S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, S,
+    #                            S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
+    #                            S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S,
+    #                            S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
+    #                            S, S, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
+    #                            S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, S, S, S, G, S, S, S, S, S, S,
+    #                            S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
+    #                            S, S, S, S, S, G, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
+    #                            S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
+    #                            S, S, S, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, ]
+    #     num_monos = 92
+    #     random_num = 21
+    #     block = None
+    #     result = None
+    #     first_in_range = 72
+    #     fname = create_out_fname(first_in_range, ext=".txt")
+    #     with open(fname, "w") as w_file:
+    #         w_file.write("Hey there! I'm starting!\n")
+    #     try:
+    #         for num_monos in range(first_in_range, first_in_range+9):
+    #             for random_num in range(1, 251):
+    #                 mono_type_list = full_mono_type_list[0: num_monos]
+    #                 initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(mono_type_list)]
+    #                 initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
+    #                 initial_state = create_initial_state(initial_events, initial_monomers)
+    #                 result = run_kmc(DEF_RXN_RATES, initial_state, initial_events, t_max=2, random_seed=random_num)
+    #
+    #                 nodes = result[MONO_LIST]
+    #                 adj = result[ADJ_MATRIX]
+    #                 block = generate_mol(adj, nodes)
+    #                 with open(fname, "w") as w_file:
+    #                     w_file.write("{} {}\n".format(num_monos, random_num))
+    #
+    #         # Here, trying to catch bug in B1 bond representation. Test will be updated when bug is fixed.
+    #         self.assertFalse("I thought I'd fail!")
+    #         # After bug is fixed, add checks for correct generate_mol output
+    #         # Below not needed for testing functionality; for showing image to visually check
+    #         silent_remove(TEST_PNG)
+    #         mol = MolFromMolBlock(block)
+    #         Compute2DCoords(mol)
+    #         MolToFile(mol, TEST_PNG, size=(2000, 1200))
+    #         self.assertTrue(os.path.isfile(TEST_PNG))
+    #         # If desired, also check generated psfgen (may not help coverage... to be seen...)
+    #         gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", out_dir=SUB_DATA_DIR)
+    #         # If kept, create and check new "good" file
+    #         self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
+    #     except InvalidDataError as e:
+    #         print(num_monos, random_num)
+    #         print(e.args[0])
+    #         self.assertTrue("This program cannot currently" in e.args[0])
+    #         silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
+    #         silent_remove(TEST_PNG, disable=DISABLE_REMOVE)
+    #         pass
 
     def testDynamics(self):
         # Tests procedures in the Dynamics.ipynb
@@ -796,38 +802,41 @@ class TestVisualization(unittest.TestCase):
         good_std_bo4 = [0.06618281717527745, 0.037136669632654995, 0.07461255910451595]
         self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))
         self.assertTrue(np.allclose(std_bo4_bonds, good_std_bo4))
-#
-#     def testNoGrowth(self):
-#         # Here, all the monomers are available at the beginning of the simulation
-#         # Increases coverage of gen_tcl
-#         try:
-#             # minimize random calls by providing set list of monomer types
-#             initial_mono_type_list = [S, S, G, S, S, S, G, S, S, S, G, S, S, G, S, G, S, G, G, S, S, S, S, S, S, S, S,
-#                                       S, S, S, G, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, G, S,
-#                                       S, S, S, S, S, S, S, S, G, S, S, S, S, S, S, S, G, S, S, S, S, S, S, G, G, S, S,
-#                                       S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, G, S, S, S, S, G, S, S, G, S,
-#                                       G, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, G, S, S, S, S, S, S, S, S,
-#                                       S, S, S, G, S, S, S, S, S, S, G, S, G, S, S, S, S, S, S, S, S, S, G, S, S, S, S]
-#             num_monos = 67
-#             random_num = 202
-#             initial_monomers = [Monomer(mono_type, i) for i, mono_type in
-#                                 enumerate(initial_mono_type_list[0:num_monos])]
-#             initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
-#             initial_state = create_initial_state(initial_events, initial_monomers)
-#             # since GROW is not added to event_dict, no additional monomers will be added
-#             result = run_kmc(DEF_RXN_RATES, initial_state, sorted(initial_events), t_max=2,
-#                              random_seed=random_num)
-#             # quick tests for run_kmc differences
-#             self.assertTrue(len(result[TIME]) == 186)
-#             self.assertAlmostEqual(result[TIME][-1], 0.005550643939956779)
-#             self.assertTrue(len(result[MONO_LIST]) == num_monos)
-#             # the function we want to test here is below
-#             gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L",
-#                     out_dir=SUB_DATA_DIR)
-#             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
-#         finally:
-#             silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
-#             pass
+
+    def testNoGrowth(self):
+        # Here, all the monomers are available at the beginning of the simulation
+        # Increases coverage of gen_tcl
+        try:
+            # minimize random calls by providing set list of monomer types
+            initial_mono_type_list = [S, S, G, S, S, S, G, S, S, S, G, S, S, G, S, G, S, G, G, S, S, S, S, S, S, S, S,
+                                      S, S, S, G, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, G, S,
+                                      S, S, S, S, S, S, S, S, G, S, S, S, S, S, S, S, G, S, S, S, S, S, S, G, G, S, S,
+                                      S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, G, S, S, S, S, G, S, S, G, S,
+                                      G, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, G, S, S, S, S, S, S, S, S,
+                                      S, S, S, G, S, S, S, S, S, S, G, S, G, S, S, S, S, S, S, S, S, S, G, S, S, S, S]
+            num_monos = 24
+            random_num = 12
+            # for num_monos in range(first_in_range, len(initial_mono_type_list)):
+            #     for random_num in range(1, random_num):
+            initial_monomers = [Monomer(mono_type, i) for i, mono_type in
+                                enumerate(initial_mono_type_list[0:num_monos])]
+            initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
+            initial_state = create_initial_state(initial_events, initial_monomers)
+            # since GROW is not added to event_dict, no additional monomers will be added
+            result = run_kmc(DEF_RXN_RATES, initial_state, sorted(initial_events), t_max=2,
+                             random_seed=random_num)
+            # quick tests for run_kmc differences
+            # self.assertTrue(len(result[TIME]) == 186)
+            # self.assertAlmostEqual(result[TIME][-1], 0.005550643939956779)
+            # self.assertTrue(len(result[MONO_LIST]) == num_monos)
+            # the function we want to test here is below
+            gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L",
+                    out_dir=SUB_DATA_DIR)
+            # print("      {} {}".format(num_monos, random_num))
+            # self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
+        finally:
+            # silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
+            pass
 
     def testTCLTruncateSegname(self):
         # Tests providing a chain_id that is longer than one character
@@ -850,34 +859,34 @@ class TestVisualization(unittest.TestCase):
                 self.assertTrue("should be one character" in output)
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_SHORT))
         finally:
-            # silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
+            silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
             pass
-#
-#     def testTCLGenEmptySegname(self):
-#         # tcl_fname="psfgen.tcl", psf_fname='lignin', chain_id="L", toppar_dir="toppar/"
-#         # Here, all the monomers are available at the beginning of the simulation
-#         # Increases coverage of gen_tcl
-#         try:
-#             # easier to run_kmc to create monomer_list than recreate it here (adj easier) so doing so
-#             # minimize random calls by providing set list of monomer types
-#             initial_mono_type_list = [S, S, G, S, S, S, G, S]
-#             num_monos = len(initial_mono_type_list)
-#             initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(initial_mono_type_list)]
-#             initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
-#             initial_state = create_initial_state(initial_events, initial_monomers)
-#             # since GROW is not added to event_dict, no additional monomers will be added
-#             result = run_kmc(DEF_RXN_RATES, initial_state, sorted(initial_events), t_max=2, random_seed=8)
-#             # quick tests to make sure run_kmc gives expected results (not what we want to test here)
-#             self.assertAlmostEqual(result[TIME][-1], 5.1005816194e-08)
-#             self.assertTrue(len(result[MONO_LIST]) == num_monos)
-#             # the function we want to test here is below
-#             with capture_stderr(gen_tcl, result[ADJ_MATRIX], result[MONO_LIST], chain_id=" ",
-#                                 out_dir=SUB_DATA_DIR) as output:
-#                 self.assertTrue("should be one character" in output)
-#             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_SHORT))
-#         finally:
-#             silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
-#             pass
+
+    def testTCLGenEmptySegname(self):
+        # tcl_fname="psfgen.tcl", psf_fname='lignin', chain_id="L", toppar_dir="toppar/"
+        # Here, all the monomers are available at the beginning of the simulation
+        # Increases coverage of gen_tcl
+        try:
+            # easier to run_kmc to create monomer_list than recreate it here (adj easier) so doing so
+            # minimize random calls by providing set list of monomer types
+            initial_mono_type_list = [S, S, G, S, S, S, G, S]
+            num_monos = len(initial_mono_type_list)
+            initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(initial_mono_type_list)]
+            initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
+            initial_state = create_initial_state(initial_events, initial_monomers)
+            # since GROW is not added to event_dict, no additional monomers will be added
+            result = run_kmc(DEF_RXN_RATES, initial_state, sorted(initial_events), t_max=2, random_seed=8)
+            # quick tests to make sure run_kmc gives expected results (not what we want to test here)
+            self.assertAlmostEqual(result[TIME][-1], 5.1005816194e-08)
+            self.assertTrue(len(result[MONO_LIST]) == num_monos)
+            # the function we want to test here is below
+            with capture_stderr(gen_tcl, result[ADJ_MATRIX], result[MONO_LIST], chain_id=" ",
+                                out_dir=SUB_DATA_DIR) as output:
+                self.assertTrue("should be one character" in output)
+            self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_SHORT))
+        finally:
+            silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
+            pass
 
     def testCheckBO4Fraction(self):
         # similar to a test above; was useful for comparing output from different versions

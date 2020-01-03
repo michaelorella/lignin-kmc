@@ -770,6 +770,8 @@ def check_if_files_to_be_saved(cfg):
             else:
                 raise InvalidDataError(f"Invalid extension provided: '{format_type}'. The currently supported types "
                                        f"are: '{OUT_TYPE_STR}'")
+    if cfg[PLOT_BONDS]:
+        cfg[SAVE_FILES] = True
 
     # if out_dir does not already exist, recreate it, only if we will actually need it
     if cfg[SAVE_FILES] and cfg[OUT_DIR]:

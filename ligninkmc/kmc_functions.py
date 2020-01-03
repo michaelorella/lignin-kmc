@@ -793,11 +793,9 @@ def generate_mol(adj, node_list):
                     bond_block = bond_blocks[S]
             elif mon.active == 7:
                 if mon.type == G:
-                    print("7G block")
                     atom_block = atom_blocks[G]
                     bond_block = bond_blocks[G7]
                 else:
-                    print("7S block")
                     atom_block = atom_blocks[S]
                     bond_block = bond_blocks[S7]
         elif mon.type == C:
@@ -926,8 +924,6 @@ def generate_mol(adj, node_list):
                 bond_line_num += 1
             else:
                 # Make the benzodioxane linkage
-                # todo: delete below
-                print("Make the benzodioxane linkage")
                 alpha_idx = mono_start_idx_atom[mono_indices[beta[tuple(bond_loc)]]] + site_positions[7][
                     mons[beta[tuple(bond_loc)]].type]
                 hydroxy_index = mono_start_idx_atom[mono_indices[int(not beta[tuple(bond_loc)])]] + (
@@ -954,9 +950,6 @@ def generate_mol(adj, node_list):
         #     1) Disconnect the original 1 -> A bond that existed from the not beta monomer
         #     2) Convert the new primary alcohol to an aldehyde
         if sorted(bond_loc) == [1, 8]:
-            # TODO: make sure all B1 bonds are correctly forms
-            warning("There are problems in how this program currently builds molecules with B1 bonds. Carefully "
-                    "check any output.")
             index_for_one = int(not beta[tuple(bond_loc)])
             # Convert the alpha alcohol on one's tail to an aldehyde
             alpha_idx = mono_start_idx_atom[mono_indices[index_for_one]
@@ -1103,6 +1096,7 @@ def gen_tcl(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FNAME
             elif bond_loc1 == 4 and bond_loc2 == 5:  # 4O5 linkage
                 write_patch(f, "4O4", chain_id, psf_patch_resid1, psf_patch_resid2)
             elif bond_loc1 == 5 and bond_loc2 == 4:  # Reverse 4O5 linkage
+                print("4O4, 5")
                 write_patch(f, "4O4", chain_id, psf_patch_resid2, psf_patch_resid1)
             elif bond_loc1 == 8 and bond_loc2 == 1:  # Beta-1 linkage
                 print("B1, 8")
