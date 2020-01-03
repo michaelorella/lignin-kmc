@@ -526,11 +526,11 @@ class TestDynamics(unittest.TestCase):
             pass
 
     # Do not include the following in test coverage--just an easy way to run this for its production output
-    # def testProduction(self):
-    #     new_out_dir = os.path.join(DATA_DIR, 'new_plots')
-    #
-    #     # more efficient to just look at "1e8, 1e6, 1e4" and "1,  3, 5, 10"
-    #     plot_input = ["-i", "5", "-m", "200", "-a", "1e8, 1e6, 1e4, 1e2, 1",
-    #                   "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10", "-n", "5", "-p", "-d", new_out_dir]
-    #
-    #     main(plot_input)
+    def testProduction(self):
+        new_out_dir = os.path.join(DATA_DIR, 'new_plots')
+
+        # more efficient to just look at "1e8, 1e6, 1e4" and "1,  3, 5, 10"
+        plot_input = ["-i", "5", "-m", "200", "-a", "1e8, 1e6, 1e4, 1e2, 1",
+                      "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10", "-n", "5", "-p", "-d", new_out_dir]
+
+        main(plot_input)
