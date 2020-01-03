@@ -88,6 +88,94 @@ B1_ADJ[11, 13] = 8.0
 B1_ADJ[11, 10] = 4.0
 B1_ADJ[10, 11] = 8.0
 
+NO_GROWTH_ADJ = dok_matrix((67, 67))
+NO_GROWTH_ADJ[20, 46] = 8.0
+NO_GROWTH_ADJ[46, 20] = 8.0
+NO_GROWTH_ADJ[2, 47] = 5.0
+NO_GROWTH_ADJ[47, 2] = 8.0
+NO_GROWTH_ADJ[38, 50] = 8.0
+NO_GROWTH_ADJ[50, 38] = 8.0
+NO_GROWTH_ADJ[18, 32] = 8.0
+NO_GROWTH_ADJ[32, 18] = 5.0
+NO_GROWTH_ADJ[62, 15] = 8.0
+NO_GROWTH_ADJ[15, 62] = 5.0
+NO_GROWTH_ADJ[30, 66] = 5.0
+NO_GROWTH_ADJ[66, 30] = 8.0
+NO_GROWTH_ADJ[40, 0] = 8.0
+NO_GROWTH_ADJ[0, 40] = 8.0
+NO_GROWTH_ADJ[55, 6] = 8.0
+NO_GROWTH_ADJ[6, 55] = 5.0
+NO_GROWTH_ADJ[22, 11] = 8.0
+NO_GROWTH_ADJ[11, 22] = 8.0
+NO_GROWTH_ADJ[35, 43] = 8.0
+NO_GROWTH_ADJ[43, 35] = 8.0
+NO_GROWTH_ADJ[25, 27] = 8.0
+NO_GROWTH_ADJ[27, 25] = 8.0
+NO_GROWTH_ADJ[52, 22] = 8.0
+NO_GROWTH_ADJ[22, 52] = 4.0
+NO_GROWTH_ADJ[51, 42] = 8.0
+NO_GROWTH_ADJ[42, 51] = 8.0
+NO_GROWTH_ADJ[57, 60] = 8.0
+NO_GROWTH_ADJ[60, 57] = 8.0
+NO_GROWTH_ADJ[58, 21] = 8.0
+NO_GROWTH_ADJ[21, 58] = 8.0
+NO_GROWTH_ADJ[59, 48] = 8.0
+NO_GROWTH_ADJ[48, 59] = 8.0
+NO_GROWTH_ADJ[41, 65] = 8.0
+NO_GROWTH_ADJ[65, 41] = 8.0
+NO_GROWTH_ADJ[24, 31] = 8.0
+NO_GROWTH_ADJ[31, 24] = 8.0
+NO_GROWTH_ADJ[34, 56] = 8.0
+NO_GROWTH_ADJ[56, 34] = 8.0
+NO_GROWTH_ADJ[45, 37] = 8.0
+NO_GROWTH_ADJ[37, 45] = 8.0
+NO_GROWTH_ADJ[9, 54] = 8.0
+NO_GROWTH_ADJ[54, 9] = 8.0
+NO_GROWTH_ADJ[36, 8] = 8.0
+NO_GROWTH_ADJ[8, 36] = 8.0
+NO_GROWTH_ADJ[17, 8] = 8.0
+NO_GROWTH_ADJ[8, 17] = 4.0
+NO_GROWTH_ADJ[53, 26] = 8.0
+NO_GROWTH_ADJ[26, 53] = 8.0
+NO_GROWTH_ADJ[7, 64] = 8.0
+NO_GROWTH_ADJ[64, 7] = 8.0
+NO_GROWTH_ADJ[61, 23] = 8.0
+NO_GROWTH_ADJ[23, 61] = 8.0
+NO_GROWTH_ADJ[16, 12] = 8.0
+NO_GROWTH_ADJ[12, 16] = 8.0
+NO_GROWTH_ADJ[58, 18] = 4.0
+NO_GROWTH_ADJ[18, 58] = 5.0
+NO_GROWTH_ADJ[47, 64] = 5.0
+NO_GROWTH_ADJ[64, 47] = 4.0
+NO_GROWTH_ADJ[49, 63] = 8.0
+NO_GROWTH_ADJ[63, 49] = 8.0
+NO_GROWTH_ADJ[10, 4] = 5.0
+NO_GROWTH_ADJ[4, 10] = 8.0
+NO_GROWTH_ADJ[29, 19] = 8.0
+NO_GROWTH_ADJ[19, 29] = 8.0
+NO_GROWTH_ADJ[28, 44] = 8.0
+NO_GROWTH_ADJ[44, 28] = 8.0
+NO_GROWTH_ADJ[13, 46] = 8.0
+NO_GROWTH_ADJ[46, 13] = 4.0
+NO_GROWTH_ADJ[33, 39] = 8.0
+NO_GROWTH_ADJ[39, 33] = 8.0
+NO_GROWTH_ADJ[62, 66] = 5.0
+NO_GROWTH_ADJ[66, 62] = 4.0
+NO_GROWTH_ADJ[62, 5] = 4.0
+NO_GROWTH_ADJ[5, 62] = 8.0
+NO_GROWTH_ADJ[1, 47] = 8.0
+NO_GROWTH_ADJ[47, 1] = 4.0
+NO_GROWTH_ADJ[14, 18] = 8.0
+NO_GROWTH_ADJ[18, 14] = 4.0
+NO_GROWTH_ADJ[3, 5] = 8.0
+NO_GROWTH_ADJ[5, 3] = 1.0
+NO_GROWTH_ADJ[13, 12] = 5.0
+NO_GROWTH_ADJ[12, 13] = 4.0
+NO_GROWTH_ADJ[41, 17] = 4.0
+NO_GROWTH_ADJ[17, 41] = 5.0
+NO_GROWTH_ADJ[37, 52] = 4.0
+NO_GROWTH_ADJ[52, 37] = 5.0
+
 
 def make_b1_mono_list(mono_type_list):
     b1_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(mono_type_list)]
@@ -112,6 +200,31 @@ def make_b1_mono_list(mono_type_list):
             ini_mon.open = {4}
         ini_mon.size = len(ini_mon.connectedTo)
     return b1_monomers
+
+
+def make_no_growth_mono_list(mono_type_list):
+    monomers_list = [Monomer(mono_type, i) for i, mono_type in enumerate(mono_type_list)]
+    for ini_id, ini_mon in enumerate(monomers_list):
+        if ini_id in [2, 6, 8, 10, 12, 15, 18, 22, 30, 32, 37, 41, 46, 47, 58, 66, 64, 66]:
+            ini_mon.active = -1
+        else:
+            ini_mon.active = 4
+        if ini_id in [1, 2, 7, 47, 64]:
+            ini_mon.connectedTo = {64, 1, 2, 7, 47}
+        elif ini_id in [0, 40]:
+            ini_mon.connectedTo = {40, 0}
+        elif ini_id in [4, 10]:
+            ini_mon.connectedTo = {4, 10}
+        elif ini_id in [6, 55]:
+            ini_mon.connectedTo = {6, 55}
+        else:
+            ini_mon.connectedTo = {66, 3, 5, 30, 15}
+        if ini_mon.active == -1:
+            ini_mon.open = set()
+        else:
+            ini_mon.open = {4}
+        ini_mon.size = len(ini_mon.connectedTo)
+    return monomers_list
 
 
 def get_avg_num_bonds(bond_type, num_opts, result_list, num_repeats):
@@ -761,7 +874,7 @@ class TestVisualization(unittest.TestCase):
 
     def testIniRates(self):
         # Note: this test did not increase coverage. Added to help debug notebook.
-        run_multi = True
+        run_multi = False
         if run_multi:
             fun = par.delayed(run_kmc)
             num_jobs = 4
@@ -811,27 +924,12 @@ class TestVisualization(unittest.TestCase):
         # Increases coverage of gen_tcl
         try:
             # minimize random calls by providing set list of monomer types
-            initial_mono_type_list = [S, S, G, S, S, S, G, S, S, S, G, S, S, G, S, G, S, G, G, S, S, S, S, S, S, S, S,
-                                      S, S, S, G, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, G, S,
-                                      S, S, S, S, S, S, S, S, G, S, S, S, S, S, S, S, G, S, S, S, S, S, S, G, G, S, S,
-                                      S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, G, S, S, S, S, G, S, S, G, S,
-                                      G, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, G, S, S, S, S, S, S, S, S,
-                                      S, S, S, G, S, S, S, S, S, S, G, S, G, S, S, S, S, S, S, S, S, S, G, S, S, S, S]
-            num_monos = 67
-            random_num = 202
-            initial_monomers = [Monomer(mono_type, i) for i, mono_type in
-                                enumerate(initial_mono_type_list[0:num_monos])]
-            initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
-            initial_state = create_initial_state(initial_events, initial_monomers)
-            # since GROW is not added to event_dict, no additional monomers will be added
-            result = run_kmc(DEF_RXN_RATES, initial_state, sorted(initial_events), t_max=2,
-                             random_seed=random_num)
-            # quick tests for run_kmc differences
-            self.assertTrue(len(result[TIME]) == 186)
-            self.assertAlmostEqual(result[TIME][-1], 0.005550643939956779)
-            self.assertTrue(len(result[MONO_LIST]) == num_monos)
+            mono_type_list = [S, S, G, S, S, S, G, S, S, S, G, S, S, G, S, G, S, G, G, S, S, S, S, S, S, S, S,
+                              S, S, S, G, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, G, S,
+                              S, S, S, S, S, S, S, S, G, S, S, S, S]
+            mono_list = make_no_growth_mono_list(mono_type_list)
             # the function we want to test here is below
-            gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L",
+            gen_tcl(NO_GROWTH_ADJ, mono_list, tcl_fname=TCL_FNAME, chain_id="L",
                     out_dir=SUB_DATA_DIR)
             self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
         finally:
