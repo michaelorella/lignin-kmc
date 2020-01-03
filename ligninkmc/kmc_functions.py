@@ -743,23 +743,17 @@ def generate_mol(adj, node_list):
     # NOTE: THESE MAY NEED TO CHANGE DEPENDING ON INTER-UNIT LINKAGES
 
     bond_blocks = {G7: ('1 1  2  \n2 2  3  \n1 3  4  \n1 4  5  \n'  # Aromatic ring 1->2, 2->3, 3->4, 4->5
-                        '2 5  6  \n1 6  1  \n'  # Aromatic ring 5->6, 6->1
-                        '2 1  7  \n'  # Quinone methide propyl tail 1->A
-                        '1 7  8  \n1 8  9  \n'  # Propyl tail A->B, Propyl tail B->G
-                        '1 9  10 \n'  # Gamma hydroxyl G->OH
-                        '1 3  11 \n1 11 12 \n'  # 3 methoxy 3->O, 3 methoxy O->12
-                        '2 4  13 \n'),  # 4 ketone 4->O
+                        '2 5  6  \n1 6  1  \n2 1  7  \n'  # Aromatic ring 5->6, 6->1 Quinone methide propyl tail 1->A
+                        '1 7  8  \n1 8  9  \n1 9  10 \n'  # Propyl tail A->B, Propyl tail B->G, Gamma hydroxyl G->OH
+                        '1 3  11 \n1 11 12 \n2 4  13 \n'),  # 3 methoxy 3->O, 3 methoxy O->12, 4 ketone 4->O
                    G: ('2 1  2  \n1 2  3  \n2 3  4  \n1 4  5  \n'  # Aromatic ring 1->2, 2->3, 3->4, 4->5
                        '2 5  6  \n1 6  1  \n'  # Aromatic ring 5->6, 6->1
                        '1 1  7  \n2 7  8  \n'  # Ring - propyl tail 1->A, Alkene propyl tail A->B
                        '1 8  9  \n1 9  10 \n'  # Propyl tail B->G, Gamma hydroxyl G->OH
-                       '1 3  11 \n1 11 12 \n'  # 3 methoxy 3->O, 3 methoxy O->12
-                       '1 4  13 \n'),  # 4 hydroxyl 4->OH
+                       '1 3  11 \n1 11 12 \n1 4  13 \n'),  # 3 methoxy 3->O, 3 methoxy O->12, 4 hydroxyl 4->OH
                    S7: ('1 1  2  \n2 2  3  \n1 3  4  \n1 4  5  \n'  # Aromatic ring 1->2, 2->3, 3->4, 4->5
-                        '2 5  6  \n1 6  1  \n'  # Aromatic ring 5->6, 6->1
-                        '2 1  7  \n'  # Quinone methide 1->A
-                        '1 7  8  \n1 8  9  \n'  # Propyl tail A->B, B->G
-                        '1 9  10 \n'  # Gamma hydroxyl G->OH
+                        '2 5  6  \n1 6  1  \n2 1  7  \n1 7  8  \n'  # Aromatic ring 5->6, 6->1, Quinone methide 1->A
+                        '1 8  9  \n1 9  10 \n'  # , Propyl tail A->B, B->G, Gamma hydroxyl G->OH
                         '1 3  11 \n1 11 12 \n'  # 3 methoxy 3->O, 3 methoxy O->12
                         '2 4  13 \n1 5  14 \n'  # 4 ketone 4->O, 5 methoxy 5->O
                         '1 14 15 \n'),  # 5 methoxy O->15

@@ -66,6 +66,53 @@ ADJ3 = dok_matrix([[0, 4, 8, 0, 0],
                    [0, 0, 0, 0, 0],
                    [0, 0, 0, 0, 0]])
 
+B1_ADJ = dok_matrix((15, 15))
+B1_ADJ[3, 7] = 8.0
+B1_ADJ[7, 3] = 8.0
+B1_ADJ[14, 12] = 8.0
+B1_ADJ[12, 14] = 8.0
+B1_ADJ[2, 4] = 8.0
+B1_ADJ[4, 2] = 8.0
+B1_ADJ[6, 8] = 5.0
+B1_ADJ[8, 6] = 8.0
+B1_ADJ[0, 1] = 8.0
+B1_ADJ[1, 0] = 8.0
+B1_ADJ[13, 14] = 8.0
+B1_ADJ[14, 13] = 4.0
+B1_ADJ[0, 9] = 4.0
+B1_ADJ[9, 0] = 8.0
+B1_ADJ[5, 9] = 8.0
+B1_ADJ[9, 5] = 4.0
+B1_ADJ[13, 11] = 1.0
+B1_ADJ[11, 13] = 8.0
+B1_ADJ[11, 10] = 4.0
+B1_ADJ[10, 11] = 8.0
+
+
+def make_b1_mono_list(mono_type_list):
+    b1_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(mono_type_list)]
+    for ini_id, ini_mon in enumerate(b1_monomers):
+        if ini_id in [0, 6, 9, 11, 14]:
+            ini_mon.active = -1
+        else:
+            ini_mon.active = 4
+        if ini_id in [0, 1, 5, 9]:
+            ini_mon.connectedTo = {0, 1, 5, 9}
+        elif ini_id in [2, 4]:
+            ini_mon.connectedTo = {2, 4}
+        elif ini_id in [3, 7]:
+            ini_mon.connectedTo = {3, 7}
+        elif ini_id in [6, 8]:
+            ini_mon.connectedTo = {8, 6}
+        else:
+            ini_mon.connectedTo = {10, 11, 12, 13, 14}
+        if ini_mon.active == -1:
+            ini_mon.open = set()
+        else:
+            ini_mon.open = {4}
+        ini_mon.size = len(ini_mon.connectedTo)
+    return b1_monomers
+
 
 def get_avg_num_bonds(bond_type, num_opts, result_list, num_repeats):
     analysis = []
@@ -542,7 +589,7 @@ class TestAnalyzeKMCSummary(unittest.TestCase):
             self.assertTrue(good_rcf_olig_summary in output)
             self.assertTrue(good_rcf_bond_summary in output)
 
-    def testKMCShortSimManyMonosResultSummaryDescription(self):
+    def testKMCShortSimMoreMonosResultSummaryDescription(self):
         result = create_sample_kmc_result(max_time=SHORT_TIME, num_initial_monos=20, max_monos=40)
         summary = analyze_adj_matrix(result[ADJ_MATRIX])
         # adj_analysis_to_stdout(summary)
@@ -651,29 +698,10 @@ class TestVisualization(unittest.TestCase):
         #       program to be visited. Currently, the test passes when the expected error message is returned.
         #       When fixed, this test can be updated to pass when expected results are returned.
         # Here, all the monomers are available at the beginning of the simulation; set type list for reproducibility
-        full_mono_type_list = [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, S, S, S, G, S, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, G, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, ]
-        seed = 41
-        num_monos = 92
         try:
-            mono_type_list = full_mono_type_list[0: num_monos]
-            initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(mono_type_list)]
-            initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
-            initial_state = create_initial_state(initial_events, initial_monomers)
-            result = run_kmc(DEF_RXN_RATES, initial_state, initial_events, t_max=2, random_seed=seed)
-
-            nodes = result[MONO_LIST]
-            adj = result[ADJ_MATRIX]
-            block = generate_mol(adj, nodes)
+            mono_type_list = [S, S, S, S, S, S, G, S, S, S, S, S, S, S, S]
+            b1_monomers = make_b1_mono_list(mono_type_list)
+            block = generate_mol(B1_ADJ, b1_monomers)
 
             # Here, trying to catch bug in B1 bond representation. Test will be updated when bug is fixed.
             self.assertFalse("I thought I'd fail!")
@@ -684,15 +712,9 @@ class TestVisualization(unittest.TestCase):
             Compute2DCoords(mol)
             MolToFile(mol, TEST_PNG, size=(2000, 1200))
             self.assertTrue(os.path.isfile(TEST_PNG))
-            # If desired, also check generated psfgen (may not help coverage... to be seen...)
-            gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", out_dir=SUB_DATA_DIR)
-            # If kept, create and check new "good" file
-            self.assertFalse(diff_lines(TCL_FILE_LOC, GOOD_TCL_NO_GROW_OUT))
         except InvalidDataError as e:
-            print(seed, num_monos)
             print(e.args[0])
             self.assertTrue("This program cannot currently" in e.args[0])
-            silent_remove(TCL_FILE_LOC, disable=DISABLE_REMOVE)
             silent_remove(TEST_PNG, disable=DISABLE_REMOVE)
             pass
 
