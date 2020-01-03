@@ -6,7 +6,6 @@ import unittest
 from ligninkmc.create_lignin import main, OPENING_MSG, DEF_BASENAME
 from common_wrangler.common import capture_stderr, capture_stdout, silent_remove, diff_lines
 
-
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 DISABLE_REMOVE = logger.isEnabledFor(logging.DEBUG)
@@ -250,8 +249,8 @@ class TestCreateLigninNoOutput(unittest.TestCase):
 
 
 class TestCreateLigninNormalUse(unittest.TestCase):
-    def testDefArgs(self):
-        test_input = ["-r", "10"]
+    def testMostlyDefArgs(self):
+        test_input = ["-r", "10", "-b"]
         # main(test_input)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n" \
                              "       1 oligomer(s) of chain length 10, with branching coefficient 0.0"
@@ -305,7 +304,7 @@ class TestCreateLigninNormalUse(unittest.TestCase):
             pass
 
     def testSmallConfig(self):
-        test_input = ["-c", SMALL_INI, "-r", "11", "-l", "1.0", "-a", "1e2"]
+        test_input = ["-c", SMALL_INI, "-r", "11", "-l", "1.0", "-a", "1e2", "-b"]
         # main(test_input)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n" \
                              "       1 oligomer(s) of chain length 10, with branching coefficient 0.0"
@@ -423,7 +422,7 @@ class TestCreateLigninNormalUse(unittest.TestCase):
     def testTCLGenOptions(self):
         try:
             test_input = ["-r", "8", "-i", "4", "-m", "4", "-f", "tcl", "-d", SUB_DATA_DIR,
-                          "--chain_id", "1", "--psf_fname", "birch", "--toppar_dir", "", "-a", "1.0"]
+                          "--chain_id", "1", "--psf_fname", "birch", "--toppar_dir", "", "-a", "1.0", "-x"]
             main(test_input)
             self.assertFalse(diff_lines(DEF_TCL_OUT, GOOD_TCL_OPTIONS_OUT))
         finally:
@@ -437,7 +436,7 @@ class TestDynamics(unittest.TestCase):
         try:
             for fname in expected_files:
                 silent_remove(fname)
-            test_input = ["-r", "10", "-i", "3", "-m", "15", "-dy", "-a", "1e6"]
+            test_input = ["-r", "10", "-i", "3", "-m", "15", "-dy", "-a", "1e6", "-x"]
             # main(test_input)
             with capture_stdout(main, test_input) as output:
                 self.assertTrue("Lignin KMC created 15 monomers, which formed:\n       "
@@ -456,7 +455,7 @@ class TestDynamics(unittest.TestCase):
         try:
             for fname in expected_files:
                 silent_remove(fname)
-            test_input = ["-r", "10", "-i", "3", "-m", "20", "-dy", "-a", "1e6", "-n", "2"]
+            test_input = ["-r", "10", "-i", "3", "-m", "20", "-dy", "-a", "1e6", "-n", "2", "-x"]
             # main(test_input)
             # testing a piece of output from each of 2 repeats
             with capture_stdout(main, test_input) as output:
@@ -477,7 +476,7 @@ class TestDynamics(unittest.TestCase):
         try:
             for fname in expected_files:
                 silent_remove(fname)
-            test_input = ["-r", "10", "-i", "3", "-m", "20", "-dy", "-a", "1e6", "-n", "4"]
+            test_input = ["-r", "10", "-i", "3", "-m", "20", "-dy", "-a", "1e6", "-n", "4", "-x"]
             # main(test_input)
             with capture_stdout(main, test_input) as output:
                 self.assertTrue("BO4:    8     BB:    4     B5:    2     B1:    0    5O4:    4    AO4:    0     "
@@ -500,7 +499,7 @@ class TestDynamics(unittest.TestCase):
         try:
             for fname in expected_files:
                 silent_remove(fname)
-            test_input = ["-r", "10", "-i", "6", "-m", "18", "-a", "1e6", "-dy", "-p", "-d", PLOT_DIR]
+            test_input = ["-r", "10", "-i", "6", "-m", "18", "-a", "1e6", "-dy", "-p", "-d", PLOT_DIR, "-x"]
             # main(test_input)
             with capture_stdout(main, test_input) as output:
                 self.assertTrue("1 oligomer(s) of chain length 18, with branching coefficient 0.111" in output)
@@ -517,7 +516,7 @@ class TestDynamics(unittest.TestCase):
             for fname in expected_files:
                 silent_remove(fname)
             test_input = ["-r", "6", "-i", "8", "-m", "16", "-a", "1e8, 1e6", "-sg", "5,10",
-                          "-n", "3", "-p", "-d", PLOT_DIR]
+                          "-n", "3", "-p", "-d", PLOT_DIR, "-x"]
             main(test_input)
             for fname in expected_files:
                 self.assertTrue(os.path.isfile(fname))
@@ -525,12 +524,27 @@ class TestDynamics(unittest.TestCase):
             silent_remove(TEMP_DIR, dir_with_files=True, disable=DISABLE_REMOVE)
             pass
 
+    def testTryOvercomeB1Error(self):
+        random_number = 1
+        test_input = ["-i", "5", "-m", "200", "-a", "1", "-e",
+                      "-sg", "1, 3, 5, 10", "-n", "3", "-r", str(random_number)]
+        with capture_stderr(main, test_input) as output:
+            self.assertTrue("Will repeat step" in output)
+            self.assertTrue("error in producing output" in output)
+
     # Do not include the following in test coverage--just an easy way to run this for its production output
     def testProduction(self):
-        new_out_dir = os.path.join(DATA_DIR, 'new_plots')
-
+        # new_out_dir = os.path.join(DATA_DIR, 'new_plots')
         # more efficient to just look at "1e8, 1e6, 1e4" and "1,  3, 5, 10"
-        plot_input = ["-i", "5", "-m", "200", "-a", "1e8, 1e6, 1e4, 1e2, 1",
-                      "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10", "-n", "5", "-p", "-d", new_out_dir]
-
-        main(plot_input)
+        # for a full list: "-a",  "1e8, 1e6, 1e4, 1e2, 1"
+        #                  "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10",
+        #                  "-n", "5"
+        #                  "-d", new_out_dir
+        plot_input = ["-i", "5", "-m", "200", "-a", "1", "-x",
+                      "-sg", "1, 3, 5, 10", "-n", "3", "-p", "-d", TEMP_DIR]
+        try:
+            with capture_stderr(main, plot_input) as output:
+                self.assertFalse(output)
+        finally:
+            silent_remove(TEMP_DIR, dir_with_files=True, disable=DISABLE_REMOVE)
+            pass
