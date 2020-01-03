@@ -672,8 +672,9 @@ class TestVisualization(unittest.TestCase):
         random_num = 21
         block = None
         result = None
+        print("Hey there! I'm starting!")
         try:
-            for num_monos in range(61, 112):
+            for num_monos in range(72, 81):
                 for random_num in range(1, 251):
                     mono_type_list = full_mono_type_list[0: num_monos]
                     initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(mono_type_list)]
