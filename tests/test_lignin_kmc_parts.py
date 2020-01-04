@@ -738,6 +738,25 @@ class TestAnalyzeKMCSummary(unittest.TestCase):
             self.assertTrue("bo4 reaction between oligomers with 16 and 17" in output)
             self.assertTrue("bo4 reaction between oligomers with 14 and 17" in output)
 
+    def testSSBO4OligOlig(self):
+        # TODO: Use this test to see an instance of beta-o-4 bond formation between oligomers
+        # This catches creating this type of linkage, for better understanding linkages that can be created. When done
+        # investigating, delete this test and the logic in the code that highlights when this linkage type is created.
+        # num_monos = 24
+        # random_num = 21
+        for num_monos in range(101, 201):
+            for random_num in range(1, 201):
+                initial_monomers = [Monomer(S, i) for i in range(num_monos)]
+                initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
+                initial_state = create_initial_state(initial_events, initial_monomers)
+                run_kmc(DEF_RXN_RATES, initial_state, initial_events, t_max=2, random_seed=random_num)
+                print(num_monos, random_num)
+        # since GROW is not added to event_dict, no additional monomers will be added
+        # with capture_stdout(run_kmc, DEF_RXN_RATES, initial_state, initial_events, t_max=2,
+        #                     random_seed=random_num) as output:
+        #     self.assertTrue("bo4 reaction between oligomers with 16 and 17" in output)
+        #     self.assertTrue("bo4 reaction between oligomers with 14 and 17" in output)
+
 
 class TestVisualization(unittest.TestCase):
     def testMakePNG(self):

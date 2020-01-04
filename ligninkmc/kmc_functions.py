@@ -428,10 +428,10 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
                         if bond[0] in mon.open and bond[1] in partner.open:
                             try:
                                 # todo: delete when questions re olig-olig b04 bond is resolved
-                                if size == (OLIGOMER, OLIGOMER):
-                                    if rxn_event[0] == BO4:
-                                        print(f"{rxn_event[0]} reaction between oligomers with {mon.identity} and "
-                                              f"{partner.identity}")
+                                if size == (OLIGOMER, OLIGOMER) and rxn_event[0] == BO4 and \
+                                        mon.type == S and partner.type == S:
+                                    raise InvalidDataError(f"{rxn_event[0]} reaction between oligomers with "
+                                                           f"{mon.identity} and {partner.identity}")
                                 # "/ cur_n**2" is like multiplying by concentration of each of 2 monomers,
                                 #     ignoring any molecules not tracked by this script
                                 rate = rxn_event[2][(mon.type, partner.type)][size] / (cur_n ** 2)
