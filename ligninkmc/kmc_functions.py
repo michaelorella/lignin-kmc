@@ -2,7 +2,7 @@
 # coding=utf-8
 
 """
-Code base for simulating the in planta polymerization of monolignols through Gillepsie algorithm adaptations.
+Code base for simulating the in planta polymerization of monolignols through Gillespie algorithm adaptations.
 Added the visualization tools here.
 """
 
@@ -16,12 +16,12 @@ from rdkit.Chem.Draw.MolDrawing import DrawingOptions
 from common_wrangler.common import (InvalidDataError, create_out_fname, warning, round_sig_figs)
 from ligninkmc.kmc_common import (Event, Monomer, AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q, GROW, TIME, OLIGOMER,
                                   MONOMER, AFFECTED, ADJ_MATRIX, MONO_LIST, MAX_NUM_DECIMAL, ATOMS, BONDS,
-                                  G, S, H, C, S4, G4, G7, B1_ALT, CHAIN_LEN, CHAIN_MONOS, CHAIN_BRANCHES,
+                                  G, S, H, C, S4, G4, G7, S7, B1_ALT, CHAIN_LEN, CHAIN_MONOS, CHAIN_BRANCHES,
                                   CHAIN_BRANCH_COEFF, RCF_BONDS, RCF_YIELDS, RCF_MONOS, RCF_BRANCHES, RCF_BRANCH_COEFF,
-                                  DEF_TCL_FNAME, DEF_CHAIN_ID, DEF_PSF_FNAME, DEF_TOPPAR, INT_TO_TYPE_DICT)
+                                  DEF_TCL_FNAME, DEF_CHAIN_ID, DEF_PSF_FNAME, DEF_TOPPAR, INT_TO_TYPE_DICT,
+                                  ATOM_BLOCKS, BOND_BLOCKS)
 
 DrawingOptions.bondLineWidth = 1.2
-S7 = 'S7'
 
 
 def find_fragments(adj):
@@ -279,7 +279,7 @@ def count_oligomer_yields(adj):
     return olig_len_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict
 
 
-def analyze_adj_matrix(adjacency):
+def analyze_adj_matrix(adjacency, break_co_bonds=False):
     """
     Performs the analysis for a single simulation to extract the relevant macroscopic properties, such as both the
     simulated frequency of different oligomer sizes and the number of each different type of bond before and after in
@@ -287,7 +287,9 @@ def analyze_adj_matrix(adjacency):
     count_oligomer_yields(adj) specifically.
 
     :param adjacency: scipy dok_matrix  -- the adjacency matrix for the lignin polymer that has been simulated
-    :return: A dictionary of results: Chain Lengths, RCF Yields, Bonds, and RCF Bonds
+    :param break_co_bonds: Boolean, to determine whether determine oligomers and remaining bonds after removing C-O
+        bonds to simulate RCF
+    :return: A dictionary of results, including: Chain Lengths, RCF Yields, Bonds, and RCF Bonds
     """
 
     # Remove any excess b1 bonds from the matrix, e.g. bonds that should be
@@ -300,11 +302,14 @@ def analyze_adj_matrix(adjacency):
 
     # Simulate the RCF process at complete conversion by breaking all of the
     # alkyl C-O bonds that were formed during the reaction
-    rcf_adj = break_bond_type(break_bond_type(break_bond_type(adjacency, BO4), AO4), C5O4)
+    if break_co_bonds:
+        rcf_adj = break_bond_type(break_bond_type(break_bond_type(adjacency, BO4), AO4), C5O4)
 
-    # Now count the bonds and yields remaining
-    rcf_yield_dict, rcf_monos_dict, rcf_branch_dict, rcf_branch_coeff_dict = count_oligomer_yields(rcf_adj)
-    rcf_bonds = count_bonds(rcf_adj)
+        # Now count the bonds and yields remaining
+        rcf_yield_dict, rcf_monos_dict, rcf_branch_dict, rcf_branch_coeff_dict = count_oligomer_yields(rcf_adj)
+        rcf_bonds = count_bonds(rcf_adj)
+    else:
+        rcf_yield_dict, rcf_monos_dict, rcf_branch_dict, rcf_branch_coeff_dict, rcf_bonds = None, None, None, None, None
 
     return {BONDS: bond_distributions, CHAIN_LEN: olig_yield_dict, CHAIN_MONOS:  olig_monos_dict,
             CHAIN_BRANCHES: olig_branch_dict, CHAIN_BRANCH_COEFF: olig_branch_coeff_dict,
@@ -420,10 +425,10 @@ def update_events(state_dict, adj, last_event, event_list, rate_list, rate_dict,
                         if bond[0] in mon.open and bond[1] in partner.open:
                             try:
                                 # todo: delete when questions re olig-olig b04 bond is resolved
-                                if size == (OLIGOMER, OLIGOMER):
-                                    if rxn_event[0] == BO4:
-                                        print(f"{rxn_event[0]} reaction between oligomers with {mon.identity} and "
-                                              f"{partner.identity}")
+                                if size == (OLIGOMER, OLIGOMER) and rxn_event[0] == BO4 and \
+                                        mon.type == S and partner.type == S:
+                                    raise InvalidDataError(f"{rxn_event[0]} reaction between oligomers with "
+                                                           f"{mon.identity} and {partner.identity}")
                                 # "/ cur_n**2" is like multiplying by concentration of each of 2 monomers,
                                 #     ignoring any molecules not tracked by this script
                                 rate = rxn_event[2][(mon.type, partner.type)][size] / (cur_n ** 2)
@@ -705,56 +710,6 @@ def generate_mol(adj, node_list):
     :param node_list: list
     :return: mol_str, str in standard molfile
     """
-    # define dictionary for atoms within each monomer
-    atom_blocks = {G: ('C 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \n'  # 1-7
-                       'C 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 \n'  # 8-9, 9-OH
-                       'O 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 \n'),  # 3-OMe, 3-OMe, 4-OH
-                   S: ('C 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \n'  # 1-7
-                       'C 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 \n'  # 8-9, 9-OH
-                       'O 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 \n'  # 3-OMe, 3-OMe, 4-OH
-                       'O 0 0 0 0 \nC 0 0 0 0 \n'),  # 5-OMe, 5-OMe
-                   C: ('C 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \n'  # 1-7
-                       'C 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 \nO 0 0 0 0 \nO 0 0 0 0 \n'),  # 8-9, 9-OH, 3-OH, 4-OH
-                   G4: ('C 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \n'  # 1-7
-                        'C 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 \n'  # 8-9, 9-OH
-                        'O 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 RAD=2\n'),  # 3-OMe, 3-OMe, 4-O
-                   S4: ('C 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \nC 0 0 0 0 \n'  # 1-7
-                        'C 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 \n'  # 8-9, 9-OH
-                        'O 0 0 0 0 \nC 0 0 0 0 \nO 0 0 0 0 RAD=2\n'  # 3-OMe, 3-OMe, 4-O
-                        'O 0 0 0 0 \nC 0 0 0 0 \n')}  # 5-OMe, 5-OMe
-
-    # Similarly define dictionary for bonds within each monomer -
-    # NOTE: THESE MAY NEED TO CHANGE DEPENDING ON INTER-UNIT LINKAGES
-
-    bond_blocks = {G7: ('1 1  2  \n2 2  3  \n1 3  4  \n1 4  5  \n'  # Aromatic ring 1->2, 2->3, 3->4, 4->5
-                        '2 5  6  \n1 6  1  \n2 1  7  \n'  # Aromatic ring 5->6, 6->1, Quinone methide propyl tail 1->A
-                        '1 7  8  \n1 8  9  \n'  # Propyl tail A->B, Propyl tail B->G
-                        '1 9  10 \n1 3  11 \n1 11 12 \n'  # Gamma hydroxyl G->OH, 3 methoxy 3->O, 3 methoxy O->12
-                        '2 4  13 \n'),  # 4 ketone 4->O
-                   G: ('2 1  2  \n1 2  3  \n2 3  4  \n1 4  5  \n'  # Aromatic ring 1->2, 2->3, 3->4, 4->5
-                       '2 5  6  \n1 6  1  \n'  # Aromatic ring 5->6, 6->1
-                       '1 1  7  \n2 7  8  \n'  # Ring - propyl tail 1->A, Alkene propyl tail A->B
-                       '1 8  9  \n1 9  10 \n'  # Propyl tail B->G, Gamma hydroxyl G->OH
-                       '1 3  11 \n1 11 12 \n'  # 3 methoxy 3->O, 3 methoxy O->12
-                       '1 4  13 \n'),  # 4 hydroxyl 4->OH
-                   S7: ('1 1  2  \n2 2  3  \n1 3  4  \n1 4  5  \n'  # Aromatic ring 1->2, 2->3, 3->4, 4->5
-                        '2 5  6  \n1 6  1  \n2 1  7  \n'  # Aromatic ring 5->6, 6->1, Quinone methide 1->A
-                        '1 7  8  \n1 8  9  \n1 9  10 \n'  # Propyl tail A->B, B->G, Gamma hydroxyl G->OH
-                        '1 3  11 \n1 11 12 \n'  # 3 methoxy 3->O, 3 methoxy O->12
-                        '2 4  13 \n1 5  14 \n'  # 4 ketone 4->O, 5 methoxy 5->O
-                        '1 14 15 \n'),  # 5 methoxy O->15
-                   S: ('2 1  2  \n1 2  3  \n2 3  4  \n1 4  5  \n'  # Aromatic ring 1->2, 2->3, 3->4, 4->5
-                       '2 5  6  \n1 6  1  \n'  # Aromatic ring 5->6, 6->1
-                       '1 1  7  \n2 7  8  \n'  # Ring - propyl tail 1->A,  Alkene propyl tail A->B
-                       '1 8  9  \n1 9  10 \n'  # Propyl tail B->G, Gamma hydroxyl G->OH
-                       '1 3  11 \n1 11 12 \n1 4  13 \n'  # 3 methoxy 3->O, 3 methoxy O->12, 4 hydroxyl 4->OH
-                       '1 5  14 \n1 14 15 \n'),  # 5 methoxy 5->O, 5 methoxy O->15
-                   C: ('2 1  2  \n1 2  3  \n1 2  3  \n2 3  4  \n1 4  5  \n' +  # Aromatic ring 1->2, 2->3, 3->4, 4->5
-                       '2 5  6  \n1 6  1  \n'  # Aromatic ring 5->6, 6->1
-                       '1 1  7  \n2 7  8  \n'  # Ring - propyl tail 1->A, Alkene propyl tail A->B
-                       '1 8  9  \n1 9  10 \n'  # Propyl tail B->G, Gamma hydroxyl G->OH
-                       '1 3  11 \n1 4  12 \n')}  # 3 hydroxyl 3->O, 4 hydroxyl 4->OH
-
     mol_str = '\n\n\n  0  0  0  0  0  0  0  0  0  0999 V3000\nM  V30 BEGIN CTAB\n'  # Header information
     mol_atom_blocks = 'M  V30 BEGIN ATOM\n'
     mol_bond_blocks = 'M  V30 BEGIN BOND\n'
@@ -779,28 +734,28 @@ def generate_mol(adj, node_list):
         if mon.type == G or mon.type == S:
             if mon.active == 0 or mon.active == -1:
                 if mon.type == G:
-                    atom_block = atom_blocks[G]
-                    bond_block = bond_blocks[G]
+                    atom_block = ATOM_BLOCKS[G]
+                    bond_block = BOND_BLOCKS[G]
                 else:
-                    atom_block = atom_blocks[S]
-                    bond_block = bond_blocks[S]
+                    atom_block = ATOM_BLOCKS[S]
+                    bond_block = BOND_BLOCKS[S]
             elif mon.active == 4:
                 if mon.type == G:
-                    atom_block = atom_blocks[G4]
-                    bond_block = bond_blocks[G]
+                    atom_block = ATOM_BLOCKS[G4]
+                    bond_block = BOND_BLOCKS[G]
                 else:
-                    atom_block = atom_blocks[S4]
-                    bond_block = bond_blocks[S]
+                    atom_block = ATOM_BLOCKS[S4]
+                    bond_block = BOND_BLOCKS[S]
             elif mon.active == 7:
                 if mon.type == G:
-                    atom_block = atom_blocks[G]
-                    bond_block = bond_blocks[G7]
+                    atom_block = ATOM_BLOCKS[G]
+                    bond_block = BOND_BLOCKS[G7]
                 else:
-                    atom_block = atom_blocks[S]
-                    bond_block = bond_blocks[S7]
+                    atom_block = ATOM_BLOCKS[S]
+                    bond_block = BOND_BLOCKS[S7]
         elif mon.type == C:
-            atom_block = atom_blocks[C]
-            bond_block = bond_blocks[C]
+            atom_block = ATOM_BLOCKS[C]
+            bond_block = BOND_BLOCKS[C]
         else:
             raise ValueError("Expected monomer types are {LIGNIN_SUBUNITS} but encountered type '{mon.type}'")
 
@@ -912,8 +867,8 @@ def generate_mol(adj, node_list):
                 # second clause above)
 
                 # Find the location of the alpha position
-                alpha_idx = mono_start_idx_atom[mono_indices[beta[tuple(bond_loc)]]] + \
-                            site_positions[7][mons[beta[tuple(bond_loc)]].type]
+                alpha_idx = mono_start_idx_atom[mono_indices[beta[tuple(bond_loc)]]] + site_positions[7][
+                    mons[beta[tuple(bond_loc)]].type]
 
                 # Add the alpha hydroxyl O atom
                 atoms.append(f'M  V30 {atom_line_num} O 0 0 0 0 \n')
@@ -950,6 +905,9 @@ def generate_mol(adj, node_list):
         #     1) Disconnect the original 1 -> A bond that existed from the not beta monomer
         #     2) Convert the new primary alcohol to an aldehyde
         if sorted(bond_loc) == [1, 8]:
+            # TODO: make sure all B1 bonds are correctly forms
+            warning("There are problems in how this program currently builds molecules with B1 bonds. Carefully "
+                    "check any output.")
             index_for_one = int(not beta[tuple(bond_loc)])
             # Convert the alpha alcohol on one's tail to an aldehyde
             alpha_idx = mono_start_idx_atom[mono_indices[index_for_one]
@@ -980,8 +938,7 @@ def generate_mol(adj, node_list):
                 del (bonds[alpha_ring_bond_index])
                 removed[BONDS] += 1
             except ValueError:
-                raise InvalidDataError("This program cannot currently generate a molecule with this beta-1 bond. Sorry!"
-                                       "\n    Try running again, as this bond type is only occasionally created.")
+                return None
 
     mol_bond_blocks = ''.join(bonds)
     mol_atom_blocks = ''.join(atoms)
@@ -994,22 +951,20 @@ def generate_mol(adj, node_list):
     return mol_str
 
 
-def write_patch(open_file, patch_name, segname, resid1, resid2=None):
+def write_patch(open_file, patch_name, seg_name, resid1, resid2=None):
     """
     Simple script to consistently format patch output for tcl script
     :param open_file: {TextIOWrapper}
     :param patch_name: str
-    :param segname: str
+    :param seg_name: str
     :param resid1: int
     :param resid2: int
     :return: what to write to file
     """
     if resid2:
-        open_file.write(f"patch {patch_name} {segname}:{resid1} {segname}:{resid2}\n")
+        open_file.write(f"patch {patch_name} {seg_name}:{resid1} {seg_name}:{resid2}\n")
     else:
-        # todo: delete print statement
-        print("single monomer patch")
-        open_file.write(f"patch {patch_name} {segname}:{resid1}\n")
+        open_file.write(f"patch {patch_name} {seg_name}:{resid1}\n")
 
 
 def gen_tcl(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FNAME, chain_id=DEF_CHAIN_ID,
@@ -1073,7 +1028,6 @@ def gen_tcl(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FNAME
             flipped_bond_matrix_tuple = (bond_matrix_tuple[1], bond_matrix_tuple[0])
             bond_loc1 = int(adj[bond_matrix_tuple])
             bond_loc2 = int(adj[flipped_bond_matrix_tuple])
-            # todo: remove print statements below
             if bond_loc1 == 8 and bond_loc2 == 4:  # Beta-O-4 linkage
                 write_patch(f, "BO4", chain_id, psf_patch_resid1, psf_patch_resid2)
             elif bond_loc1 == 4 and bond_loc2 == 8:  # Reverse beta-O-4 linkage.
@@ -1091,30 +1045,22 @@ def gen_tcl(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FNAME
             elif bond_loc1 == 7 and bond_loc2 == 4:  # alpha-O-4 linkage
                 write_patch(f, "AO4", chain_id, psf_patch_resid1, psf_patch_resid2)
             elif bond_loc1 == 4 and bond_loc2 == 7:  # Reverse alpha-O-4 linkage
-                print("AO4, 4")
                 write_patch(f, "AO4", chain_id, psf_patch_resid2, psf_patch_resid1)
             elif bond_loc1 == 4 and bond_loc2 == 5:  # 4O5 linkage
                 write_patch(f, "4O4", chain_id, psf_patch_resid1, psf_patch_resid2)
             elif bond_loc1 == 5 and bond_loc2 == 4:  # Reverse 4O5 linkage
-                print("4O4, 5")
                 write_patch(f, "4O4", chain_id, psf_patch_resid2, psf_patch_resid1)
             elif bond_loc1 == 8 and bond_loc2 == 1:  # Beta-1 linkage
-                print("B1, 8")
                 write_patch(f, "B1", chain_id, psf_patch_resid1, psf_patch_resid2)
             elif bond_loc1 == 1 and bond_loc2 == 8:  # Reverse beta-1 linkage
-                print("B1, 1")
                 write_patch(f, "B1", chain_id, psf_patch_resid2, psf_patch_resid1)
             elif bond_loc1 == -8 and bond_loc2 == 4:  # Beta-1 linkage remnant
-                print("O4AL, -8")
                 write_patch(f, "O4AL", chain_id, psf_patch_resid2)
-            elif bond_loc1 == 4 and bond_loc2 == -8:  # Reverse beta-1 remnant
-                print("O4AL, 4")
+            elif bond_loc2 == -8 and bond_loc1 == 4:  # Reverse beta-1 remnant
                 write_patch(f, "O4AL", chain_id, psf_patch_resid1)
             elif bond_loc1 == -8 and bond_loc2 == 1:  # Beta-1 linkage remnant (C1 variant)
-                print("C1AL, -8")
                 write_patch(f, "C1AL", chain_id, psf_patch_resid2)
-            elif bond_loc1 == 1 and bond_loc2 == -8:  # Reverse beta-1 remnant (C1 variant)
-                print("C1AL, 1")
+            elif bond_loc2 == -8 and bond_loc1 == 1:  # Reverse beta-1 remnant (C1 variant)
                 write_patch(f, "C1AL", chain_id, psf_patch_resid1)
             elif bond_loc1 == 8 and bond_loc2 == 8:  # beta-beta linkage
                 write_patch(f, "BB", chain_id, psf_patch_resid1, psf_patch_resid2)

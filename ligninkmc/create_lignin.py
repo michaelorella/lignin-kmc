@@ -51,6 +51,9 @@ DYNAMICS = 'dynamics_flag'
 OLIGOMERS = 'oligomers'
 MONOMERS = 'monomers'
 PLOT_BONDS = 'plot_bonds'
+SUPPRESS_SMI = 'suppress_smi_output'
+BREAK_CO = 'break_co_bonds'
+BYPASS_B1_ERROR = 'bypass_b1_error'
 
 PLOT_COLORS = [(0, 0, 0), (1, 0, 0), (0, 0, 1), (0, 0.6, 0), (0.6, 0, 0.6), (1, 0.549, 0),
                (0, 0.6, 0.6), (1, 0.8, 0), (0.6078, 0.2980, 0), (0.6, 0, 0), (0, 0, 0.6)]
@@ -78,7 +81,8 @@ DEF_CFG_VALS = {OUT_DIR: None, OUT_FORMAT_LIST: None, ADD_RATES: [DEF_ADD_RATE],
                 E_BARRIER_KCAL_MOL: DEF_E_BARRIER_KCAL_MOL, E_BARRIER_J_PART: None, SAVE_FILES: False,
                 SAVE_JSON: False, SAVE_PNG: False, SAVE_SMI: False, SAVE_SVG: False, SAVE_TCL: False,
                 CHAIN_ID: DEF_CHAIN_ID, PSF_FNAME: DEF_PSF_FNAME, TOPPAR_DIR: DEF_TOPPAR,
-                NUM_REPEATS: DEF_NUM_REPEATS, PLOT_BONDS: False,
+                NUM_REPEATS: DEF_NUM_REPEATS, PLOT_BONDS: False, SUPPRESS_SMI: False, BREAK_CO: False,
+                BYPASS_B1_ERROR: False,
                 }
 
 REQ_KEYS = {}
@@ -120,7 +124,7 @@ def plot_bond_error_bars(x_axis, y_axis_val_dicts, y_axis_std_dev_dicts, y_val_k
     plt.close()
 
 
-def get_avg_percent_bonds(bond_list, num_opts, adj_lists, num_trials):
+def get_avg_percent_bonds(bond_list, num_opts, adj_lists, num_trials, break_co_bonds=False):
     """
     Given adj_list for a set of options, with repeats for each option, find the avg and std dev of percent of each
     bond type
@@ -128,13 +132,15 @@ def get_avg_percent_bonds(bond_list, num_opts, adj_lists, num_trials):
     :param num_opts: number of options specified (should be length of adj_lists)
     :param adj_lists: list of lists of adjs: outer is for each option, inner is for each repeat
     :param num_trials: number of repeats (should be length of inner adj_lists list)
+    :param break_co_bonds: Boolean, to determine whether determine oligomers and remaining bonds after removing C-O
+        bonds to simulate RCF
     :return: avg_bonds, std_bonds: list of floats, list of floats: for each option tested, the average and std dev
                   of bond distributions (percentages)
     """
     analysis = []
     for i in range(num_opts):
         cur_adjs = adj_lists[i]
-        analysis.append([analyze_adj_matrix(cur_adjs[j]) for j in range(num_trials)])
+        analysis.append([analyze_adj_matrix(cur_adjs[j], break_co_bonds=break_co_bonds) for j in range(num_trials)])
 
     bond_percents = {}
     avg_bonds = {}
@@ -150,7 +156,7 @@ def get_avg_percent_bonds(bond_list, num_opts, adj_lists, num_trials):
 
 def create_bond_v_sg_plots(add_rate_str, cfg, sg_adjs):
     all_avg_bonds, all_std_bonds = get_avg_percent_bonds(BOND_TYPE_LIST, len(cfg[SG_RATIOS]), sg_adjs,
-                                                         cfg[NUM_REPEATS])
+                                                         cfg[NUM_REPEATS], cfg[BREAK_CO])
     title = f"Add rate {add_rate_str} monomer/s"
     x_axis_label = 'SG Ratio'
     y_axis_label = 'Bond Type Yield (%)'
@@ -215,10 +221,12 @@ def create_dynamics_plots(add_rate_str, bond_types, cfg, num_monos, num_oligs, s
                          x_axis_label, y_axis_label, title, fname)
 
 
-def adj_analysis_to_stdout(adj_results):
+def adj_analysis_to_stdout(adj_results, break_co_bonds=False):
     """
     Describe the meaning of the summary dictionary
     :param adj_results: a dictionary from analyze_adj_matrix
+    :param break_co_bonds: Boolean, to determine whether determine oligomers and remaining bonds after removing C-O
+        bonds to simulate RCF
     :return: n/a: prints to stdout
     """
     chain_len_results = adj_results[CHAIN_LEN]
@@ -231,11 +239,12 @@ def adj_analysis_to_stdout(adj_results):
     print(f"composed of the following bond types and number:")
     print_bond_type_num(lignin_bonds)
 
-    print("\nBreaking C-O bonds to simulate RCF results in:")
-    print_olig_distribution(adj_results[RCF_YIELDS], adj_results[RCF_BRANCH_COEFF])
+    if break_co_bonds:
+        print("\nBreaking C-O bonds to simulate RCF results in:")
+        print_olig_distribution(adj_results[RCF_YIELDS], adj_results[RCF_BRANCH_COEFF])
 
-    print(f"with the following remaining bond types and number:")
-    print_bond_type_num(adj_results[RCF_BONDS])
+        print(f"with the following remaining bond types and number:")
+        print_bond_type_num(adj_results[RCF_BONDS])
 
 
 def print_bond_type_num(lignin_bonds):
@@ -398,6 +407,8 @@ def parse_cmdline(argv=None):
                                                   f"as a single string. The \ndefault list contains the single "
                                                   f"addition rate of {DEF_ADD_RATE} monomers/s.",
                         default=[DEF_ADD_RATE])
+    parser.add_argument("-b", "--break_co_bonds", help=f"Flag to output results from C-O bonds to simulate RCF "
+                                                       f"results. The default is False.", action="store_true")
     parser.add_argument("-c", "--config", help="The location of the configuration file in the 'ini' format. This file "
                                                "can be used to \noverwrite default values such as for energies.",
                         default=None, type=read_cfg)
@@ -411,6 +422,13 @@ def parse_cmdline(argv=None):
                                                        f"ratio and # represents the addition rate. Note that this "
                                                        f"option \nsignificantly increases simulation time.",
                         action="store_true")
+    parser.add_argument("-e", "--bypass_b1_error", help=f"Currently, there is a problem in the function for generating "
+                                                        f"an rdKit molecule (which is required to produce SMILES "
+                                                        f"strings and for JSON, PNG, and SVG output), which by default "
+                                                        f"causes the program to exit with a warning message. This flag "
+                                                        f"instead has the program try again instead of exit, as this "
+                                                        f"type of bond only occasionally occurs. It will only retry "
+                                                        f"once, to avoid an infinite loop.", action="store_true")
     parser.add_argument("-f", "--output_format_list", help="The type(s) of output format to be saved. Provide as a "
                                                            "space- or comma-separated list. \nNote: if the list has "
                                                            "spaces, it must be enclosed in quotes, to be treated as "
@@ -465,6 +483,8 @@ def parse_cmdline(argv=None):
                                                          f"temperature must match the temperature at which the "
                                                          f"energy barriers were calculated. ",
                         default=DEF_TEMP)
+    parser.add_argument("-x", "--no_smi", help=f"Flag to suppress determining the SMILES string for the output, which "
+                                               f"is created by default.", action="store_true")
     parser.add_argument("--chain_id", help=f"Option for use when generating a tcl script: the chainID to be used in "
                                            f"generating a psf \nand/or pdb file from a tcl script (see LigninBuilder). "
                                            f"This should be one character. If a \nlonger ID is provided, it will be "
@@ -500,6 +520,9 @@ def parse_cmdline(argv=None):
                          TOPPAR_DIR: args.toppar_dir,
                          NUM_REPEATS: args.num_repeats,
                          PLOT_BONDS: args.plot_bonds,
+                         SUPPRESS_SMI: args.no_smi,
+                         BREAK_CO: args.break_co_bonds,
+                         BYPASS_B1_ERROR: args.bypass_b1_error,
                          }
         if args.config is None:
             args.config = DEF_CFG_VALS.copy()
@@ -596,21 +619,30 @@ def create_initial_state(initial_events, initial_monomers):
 
 
 def produce_output(adj_matrix, mono_list, cfg):
-    # Default out is SMILES
-    block = generate_mol(adj_matrix, mono_list)
-    mol = MolFromMolBlock(block)
-    smi_str = MolToSmiles(mol) + '\n'
-    # if SMI is to be saved, don't output to stdout
-    if cfg[SAVE_SMI]:
-        fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=SAVE_SMI)
-        str_to_file(smi_str, fname, print_info=True)
+    if cfg[SUPPRESS_SMI] and not (cfg[SAVE_JSON] or cfg[SAVE_PNG] or cfg[SAVE_SVG]):
+        format_list = [SAVE_TCL]
+        mol = None  # Make IDE happy
     else:
-        print("\nSMILES representation: \n", MolToSmiles(mol), "\n")
-    if cfg[SAVE_PNG] or cfg[SAVE_SVG] or cfg[SAVE_JSON]:
-        # PNG and SVG make 2D images and thus need coordinates
-        # JSON will save coordinates--zero's if not computed; might as well compute and save non-zero values
-        Compute2DCoords(mol)
-    for save_format in [SAVE_TCL, SAVE_JSON, SAVE_PNG, SAVE_SVG]:
+        # Default out is SMILES, which requires getting an rdKit molecule object; also required for everything
+        #    except the TCL format
+        format_list = [SAVE_TCL, SAVE_JSON, SAVE_PNG, SAVE_SVG]
+        block = generate_mol(adj_matrix, mono_list)
+        if not block:
+            return INVALID_DATA
+        mol = MolFromMolBlock(block)
+        smi_str = MolToSmiles(mol) + '\n'
+        # if SMI is to be saved, don't output to stdout
+        if cfg[SAVE_SMI]:
+            fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=SAVE_SMI)
+            str_to_file(smi_str, fname, print_info=True)
+        else:
+            print("\nSMILES representation: \n", MolToSmiles(mol), "\n")
+        if cfg[SAVE_PNG] or cfg[SAVE_SVG] or cfg[SAVE_JSON]:
+            # PNG and SVG make 2D images and thus need coordinates
+            # JSON will save coordinates--zero's if not computed; might as well compute and save non-zero values
+            Compute2DCoords(mol)
+
+    for save_format in format_list:
         if cfg[save_format]:
             fname = create_out_fname(cfg[BASENAME], base_dir=cfg[OUT_DIR], ext=save_format)
             if save_format == SAVE_TCL:
@@ -622,6 +654,7 @@ def produce_output(adj_matrix, mono_list, cfg):
             elif save_format == SAVE_PNG or save_format == SAVE_SVG:
                 MolToFile(mol, fname, size=cfg[IMAGE_SIZE])
             print(f"Wrote file: {fname}")
+    return GOOD_RET
 
 
 def initiate_state(add_rate, cfg, rep, sg_ratio):
@@ -805,41 +838,54 @@ def main(argv=None):
                 num_monos = []
                 num_oligs = []
                 adj_repeats = []
+                num_attempts = 0
+                if cfg[BYPASS_B1_ERROR]:
+                    max_attempts = 2
+                else:
+                    max_attempts = 1
 
                 for rep in range(cfg[NUM_REPEATS]):
+                    while num_attempts < max_attempts:
+                        # decide on initial monomers, based on given sg_ratio, and create initial oxidation events
+                        initial_events, initial_state = initiate_state(add_rate, cfg, rep, sg_ratio)
 
-                    # decide on initial monomers, based on given sg_ratio, and create initial oxidation events
-                    initial_events, initial_state = initiate_state(add_rate, cfg, rep, sg_ratio)
+                        # begin simulation
+                        result = run_kmc(cfg[RXN_RATES], initial_state, initial_events, n_max=cfg[MAX_MONOS],
+                                         t_max=cfg[SIM_TIME], sg_ratio=sg_ratio, dynamics=cfg[DYNAMICS])
 
-                    # begin simulation
-                    result = run_kmc(cfg[RXN_RATES], initial_state, initial_events, n_max=cfg[MAX_MONOS],
-                                     t_max=cfg[SIM_TIME], sg_ratio=sg_ratio, dynamics=cfg[DYNAMICS])
+                        if cfg[DYNAMICS]:
+                            last_adj = result[ADJ_MATRIX][-1]
+                            last_mono_list = result[MONO_LIST][-1]
+                            (bond_type_dict, olig_monos_dict, sum_monos_list, olig_count_dict,
+                             sum_count_list) = get_bond_type_v_time_dict(result[ADJ_MATRIX], sum_len_larger_than=2)
 
-                    if cfg[DYNAMICS]:
-                        last_adj = result[ADJ_MATRIX][-1]
-                        last_mono_list = result[MONO_LIST][-1]
-                        (bond_type_dict, olig_monos_dict, sum_monos_list, olig_count_dict,
-                         sum_count_list) = get_bond_type_v_time_dict(result[ADJ_MATRIX], sum_len_larger_than=2)
+                            for bond_type in BOND_TYPE_LIST:
+                                bond_types[bond_type].append(bond_type_dict[bond_type])
+                            num_monos.append(olig_count_dict[1])
+                            num_oligs.append(sum_count_list)
 
-                        for bond_type in BOND_TYPE_LIST:
-                            bond_types[bond_type].append(bond_type_dict[bond_type])
-                        num_monos.append(olig_count_dict[1])
-                        num_oligs.append(sum_count_list)
+                        else:
+                            last_adj = result[ADJ_MATRIX]
+                            last_mono_list = result[MONO_LIST]
 
-                    else:
-                        last_adj = result[ADJ_MATRIX]
-                        last_mono_list = result[MONO_LIST]
+                        adj_repeats.append(last_adj)
 
-                    adj_repeats.append(last_adj)
+                        # show results
+                        summary = analyze_adj_matrix(last_adj, break_co_bonds=cfg[BREAK_CO])
+                        adj_analysis_to_stdout(summary, break_co_bonds=cfg[BREAK_CO])
 
-                    # show results
-                    summary = analyze_adj_matrix(last_adj)
-                    adj_analysis_to_stdout(summary)
+                        # Outputs
+                        return_status = produce_output(last_adj, last_mono_list, cfg)
+                        if return_status == GOOD_RET:
+                            break
+                        else:
+                            num_attempts += 1
+                        if num_attempts >= max_attempts:
+                            raise InvalidDataError("Exiting program due to error in producing output.")
+                        else:
+                            warning("Will repeat step.")
 
-                    # Outputs
-                    produce_output(last_adj, last_mono_list, cfg)
-
-                    # save for potential plotting
+                # save for potential plotting
                 sg_adjs.append(adj_repeats)
 
                 # Now that all repeats done, create plots for dynamics, if applicable

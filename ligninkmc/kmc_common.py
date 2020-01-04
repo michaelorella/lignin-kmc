@@ -11,6 +11,7 @@ H = 'p-hydroxyphenyl'
 S4 = 'S4'
 G4 = 'G4'
 G7 = 'G7'
+S7 = 'S7'
 LIGNIN_SUBUNITS = [G, S, H, C]
 # Dict below likely to be changed when H added
 INT_TO_TYPE_DICT = {0: G, 1: S}
@@ -204,6 +205,147 @@ DEF_RXN_RATES = {C5O4: {(G, G): {MON_MON: 38335.8499454595, MON_OLI: 123.4206421
                      C: {MONOMER: 45384.2962145191, OLIGOMER: 45384.2962145191}}
                  }
 
+# define dictionary for atoms within each monomer
+ATOM_BLOCKS = {G: ('C 0 0 0 0 \n' +  # 1
+                   'C 0 0 0 0 \n' +  # 2
+                   'C 0 0 0 0 \n' +  # 3
+                   'C 0 0 0 0 \n' +  # 4
+                   'C 0 0 0 0 \n' +  # 5
+                   'C 0 0 0 0 \n' +  # 6
+                   'C 0 0 0 0 \n' +  # 7
+                   'C 0 0 0 0 \n' +  # 8
+                   'C 0 0 0 0 \n' +  # 9
+                   'O 0 0 0 0 \n' +  # 9-OH
+                   'O 0 0 0 0 \n' +  # 3-OMe
+                   'C 0 0 0 0 \n' +  # 3-OMe
+                   'O 0 0 0 0 \n'),  # 4-OH
+               S: ('C 0 0 0 0 \n' +  # 1
+                   'C 0 0 0 0 \n' +  # 2
+                   'C 0 0 0 0 \n' +  # 3
+                   'C 0 0 0 0 \n' +  # 4
+                   'C 0 0 0 0 \n' +  # 5
+                   'C 0 0 0 0 \n' +  # 6
+                   'C 0 0 0 0 \n' +  # 7
+                   'C 0 0 0 0 \n' +  # 8
+                   'C 0 0 0 0 \n' +  # 9
+                   'O 0 0 0 0 \n' +  # 9-OH
+                   'O 0 0 0 0 \n' +  # 3-OMe
+                   'C 0 0 0 0 \n' +  # 3-OMe
+                   'O 0 0 0 0 \n' +  # 4-OH
+                   'O 0 0 0 0 \n' +  # 5-OMe
+                   'C 0 0 0 0 \n'),  # 5-OMe
+               C: ('C 0 0 0 0 \n' +  # 1
+                   'C 0 0 0 0 \n' +  # 2
+                   'C 0 0 0 0 \n' +  # 3
+                   'C 0 0 0 0 \n' +  # 4
+                   'C 0 0 0 0 \n' +  # 5
+                   'C 0 0 0 0 \n' +  # 6
+                   'C 0 0 0 0 \n' +  # 7
+                   'C 0 0 0 0 \n' +  # 8
+                   'C 0 0 0 0 \n' +  # 9
+                   'O 0 0 0 0 \n' +  # 9-OH
+                   'O 0 0 0 0 \n' +  # 3-OH
+                   'O 0 0 0 0 \n'),  # 4-OH
+               G4: ('C 0 0 0 0 \n' +  # 1
+                    'C 0 0 0 0 \n' +  # 2
+                    'C 0 0 0 0 \n' +  # 3
+                    'C 0 0 0 0 \n' +  # 4
+                    'C 0 0 0 0 \n' +  # 5
+                    'C 0 0 0 0 \n' +  # 6
+                    'C 0 0 0 0 \n' +  # 7
+                    'C 0 0 0 0 \n' +  # 8
+                    'C 0 0 0 0 \n' +  # 9
+                    'O 0 0 0 0 \n' +  # 9-OH
+                    'O 0 0 0 0 \n' +  # 3-OMe
+                    'C 0 0 0 0 \n' +  # 3-OMe
+                    'O 0 0 0 0 RAD=2\n'),  # 4-O
+               S4: ('C 0 0 0 0 \n' +  # 1
+                    'C 0 0 0 0 \n' +  # 2
+                    'C 0 0 0 0 \n' +  # 3
+                    'C 0 0 0 0 \n' +  # 4
+                    'C 0 0 0 0 \n' +  # 5
+                    'C 0 0 0 0 \n' +  # 6
+                    'C 0 0 0 0 \n' +  # 7
+                    'C 0 0 0 0 \n' +  # 8
+                    'C 0 0 0 0 \n' +  # 9
+                    'O 0 0 0 0 \n' +  # 9-OH
+                    'O 0 0 0 0 \n' +  # 3-OMe
+                    'C 0 0 0 0 \n' +  # 3-OMe
+                    'O 0 0 0 0 RAD=2\n' +  # 4-O
+                    'O 0 0 0 0 \n' +  # 5-OMe
+                    'C 0 0 0 0 \n')}  # 5-OMe
+
+# Similarly define dictionary for bonds within each monomer -
+# NOTE: THESE MAY NEED TO CHANGE DEPENDING ON INTER-UNIT LINKAGES
+BOND_BLOCKS = {G7: ('1 1  2  \n' +  # Aromatic ring 1->2
+                    '2 2  3  \n' +  # Aromatic ring 2->3
+                    '1 3  4  \n' +  # Aromatic ring 3->4
+                    '1 4  5  \n' +  # Aromatic ring 4->5
+                    '2 5  6  \n' +  # Aromatic ring 5->6
+                    '1 6  1  \n' +  # Aromatic ring 6->1
+                    '2 1  7  \n' +  # Quinone methide propyl tail 1->A
+                    '1 7  8  \n' +  # Propyl tail A->B
+                    '1 8  9  \n' +  # Propyl tail B->G
+                    '1 9  10 \n' +  # Gamma hydroxyl G->OH
+                    '1 3  11 \n' +  # 3 methoxy 3->O
+                    '1 11 12 \n' +  # 3 methoxy O->12
+                    '2 4  13 \n'),  # 4 ketone 4->O
+               G: ('2 1  2  \n' +  # Aromatic ring 1->2
+                   '1 2  3  \n' +  # Aromatic ring 2->3
+                   '2 3  4  \n' +  # Aromatic ring 3->4
+                   '1 4  5  \n' +  # Aromatic ring 4->5
+                   '2 5  6  \n' +  # Aromatic ring 5->6
+                   '1 6  1  \n' +  # Aromatic ring 6->1
+                   '1 1  7  \n' +  # Ring - propyl tail 1->A
+                   '2 7  8  \n' +  # Alkene propyl tail A->B
+                   '1 8  9  \n' +  # Propyl tail B->G
+                   '1 9  10 \n' +  # Gamma hydroxyl G->OH
+                   '1 3  11 \n' +  # 3 methoxy 3->O
+                   '1 11 12 \n' +  # 3 methoxy O->12
+                   '1 4  13 \n'),  # 4 hydroxyl 4->OH
+               S7: ('1 1  2  \n' +  # Aromatic ring 1->2
+                    '2 2  3  \n' +  # Aromatic ring 2->3
+                    '1 3  4  \n' +  # Aromatic ring 3->4
+                    '1 4  5  \n' +  # Aromatic ring 4->5
+                    '2 5  6  \n' +  # Aromatic ring 5->6
+                    '1 6  1  \n' +  # Aromatic ring 6->1
+                    '2 1  7  \n' +  # Quinone methide 1->A
+                    '1 7  8  \n' +  # Propyl tail A->B
+                    '1 8  9  \n' +  # Propyl tail B->G
+                    '1 9  10 \n' +  # Gamma hydroxyl G->OH
+                    '1 3  11 \n' +  # 3 methoxy 3->O
+                    '1 11 12 \n' +  # 3 methoxy O->12
+                    '2 4  13 \n' +  # 4 ketone 4->O
+                    '1 5  14 \n' +  # 5 methoxy 5->O
+                    '1 14 15 \n'),  # 5 methoxy O->15
+               S: ('2 1  2  \n' +  # Aromatic ring 1->2
+                   '1 2  3  \n' +  # Aromatic ring 2->3
+                   '2 3  4  \n' +  # Aromatic ring 3->4
+                   '1 4  5  \n' +  # Aromatic ring 4->5
+                   '2 5  6  \n' +  # Aromatic ring 5->6
+                   '1 6  1  \n' +  # Aromatic ring 6->1
+                   '1 1  7  \n' +  # Ring - propyl tail 1->A
+                   '2 7  8  \n' +  # Alkene propyl tail A->B
+                   '1 8  9  \n' +  # Propyl tail B->G
+                   '1 9  10 \n' +  # Gamma hydroxyl G->OH
+                   '1 3  11 \n' +  # 3 methoxy 3->O
+                   '1 11 12 \n' +  # 3 methoxy O->12
+                   '1 4  13 \n' +  # 4 hydroxyl 4->OH
+                   '1 5  14 \n' +  # 5 methoxy 5->O
+                   '1 14 15 \n'),  # 5 methoxy O->15
+               C: ('2 1  2  \n' +  # Aromatic ring 1->2
+                   '1 2  3  \n' +  # Aromatic ring 2->3
+                   '2 3  4  \n' +  # Aromatic ring 3->4
+                   '1 4  5  \n' +  # Aromatic ring 4->5
+                   '2 5  6  \n' +  # Aromatic ring 5->6
+                   '1 6  1  \n' +  # Aromatic ring 6->1
+                   '1 1  7  \n' +  # Ring - propyl tail 1->A
+                   '2 7  8  \n' +  # Alkene propyl tail A->B
+                   '1 8  9  \n' +  # Propyl tail B->G
+                   '1 9  10 \n' +  # Gamma hydroxyl G->OH
+                   '1 3  11 \n' +  # 3 hydroxyl 3->O
+                   '1 4  12 \n')}  # 4 hydroxyl 4->OH
+
 
 class Event:
     """
@@ -271,8 +413,14 @@ class Event:
         return self.index < other.index
 
     def __hash__(self):
-        # The bash below is repeatable and gives similar results to the original hash, but now we do not explicitly
-        #    call it, because it was disturbing that results could change based on the kind of hash
+        # TODO: understand why the choice of hashing function affects results
+        #    original hash, which did not allow testing because of random salting:
+        #        return hash((tuple(self.index), self.key, self.bond))
+        #    replacement which gave different results (not immediately caught because there weren't tests yet...
+        #    I changed it as part of making the project testable:
+        #        key_as_num = sum([ord(x) % 32 for x in self.key])
+        #        return key_as_num + sum(self.index) * 1000 + int(self.rate * 10000)
+        #    The bash below is repeatable and gives similar results to the original hash
         # Note: changed from invoking python's hash function to provide more consistent output for testing
         #     see https://docs.python.org/3/reference/datamodel.html#object.__hash__
         #     "By default, the __hash__() values of str and bytes objects are “salted” with an unpredictable random
@@ -287,7 +435,7 @@ class Event:
         bond_list_str = "".join([str(x) for x in self.bond])
         bond_list_bytes = bond_list_str.encode()
         event_bytes = b''.join([index_bytes, key_bytes, bond_list_bytes])
-        # the hash call below only "right-sizes" the value; does not add salting
+        # the hash call below "right-sizes" the value
         return hash(int.from_bytes(event_bytes, 'big'))
 
 
