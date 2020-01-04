@@ -329,6 +329,7 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
         of the monomers and the bonds between them (if any)
     :param last_event: The previous Event that occurred, which will tell us what monomers were effected. When combined
         with the state dictionary, this allows for efficient updating of the set of event_dict that are possible
+        with the state dictionary, this allows for efficient updating of the set of event_dict that are possible
     :param event_dict: dict  -- The set of all possible unique event_dict that must be updated and returned from this
         method, implemented in a hash map where the event hash value is the key
     :param rate_vec: dict  -- The rates of all of the unique event_dict implemented in a hash map where the Event

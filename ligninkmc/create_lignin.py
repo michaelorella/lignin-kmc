@@ -221,7 +221,7 @@ def create_dynamics_plots(add_rate_str, bond_types, cfg, num_monos, num_oligs, s
                          x_axis_label, y_axis_label, title, fname)
 
 
-def adj_analysis_to_stdout(adj_results, break_co_bonds):
+def adj_analysis_to_stdout(adj_results, break_co_bonds=False):
     """
     Describe the meaning of the summary dictionary
     :param adj_results: a dictionary from analyze_adj_matrix
