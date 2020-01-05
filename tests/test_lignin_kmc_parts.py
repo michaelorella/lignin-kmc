@@ -584,10 +584,17 @@ class TestAnalyzeKMCSummary(unittest.TestCase):
         # TODO: Use this test to see an instance of beta-o-4 bond formation between oligomers
         # This catches creating this type of linkage, for better understanding linkages that can be created. When done
         # investigating, delete this test and the logic in the code that highlights when this linkage type is created.
-        # num_monos = 24
+        # What has been completed: up to 100 monomers;
+        #  101: 1-64, 101-133
+        #  102: 1-81
+        #  105: 1-91
+        #  199: 1-8, 101-102
+        #  200: 1-7
+        # num_monos = 101
         # random_num = 21
-        for num_monos in range(200, 201):
-            for random_num in range(1, 201):
+        for num_monos in range(105, 110):
+            print("hello!", num_monos)
+            for random_num in range(1, 201):  # (start again at 21) (change end to 201)
                 initial_monomers = [Monomer(S, i) for i in range(num_monos)]
                 initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
                 initial_state = create_initial_state(initial_events, initial_monomers)
