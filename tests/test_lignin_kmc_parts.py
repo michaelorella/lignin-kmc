@@ -628,46 +628,28 @@ class TestVisualization(unittest.TestCase):
         # TODO: Update test as the B1 bond problem is resolved. The variable in this test cause the broken part of the
         #       program to be visited. Currently, the test passes when the expected error message is returned.
         #       When fixed, this test can be updated to pass when expected results are returned.
-        # Here, all the monomers are available at the beginning of the simulation; set type list for reproducibility
-        ini_mono_type_list = [S, S, S, G, S]
-        random_num = 21
-        sg_ratio = 1.0
-        block = None
-        # result = None
-        first_in_range = 12
-        # 60-104, 1-5
-        # fname = create_out_fname(first_in_range, ext=".txt")  (105, 3)  60, 3; 24, 3
-        # with open(fname, "w") as w_file:
-        #     w_file.write("Hey there! I'm starting!\n")
-        print("Hey there! I'm starting!")
+
+        # Here, trying to catch bug in B1 bond representation. Test will be updated when bug is fixed.
         try:
-            for max_monos in range(first_in_range, first_in_range+60):
-                for random_num in range(1, 6):
+            ini_mono_type_list = [S, S, S, G, S]
+            sg_ratio = 1.0
+            max_monos = 12
+            random_num = 3
+            for max_monos in range(12, 13):
+                for random_num in range(2, 4):
                     initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(ini_mono_type_list)]
                     initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
                     initial_events.append(Event(GROW, [], rate=1e4))
                     initial_state = create_initial_state(initial_events, initial_monomers)
                     result = run_kmc(DEF_RXN_RATES, initial_state, initial_events, n_max=max_monos, t_max=2,
                                      random_seed=random_num, sg_ratio=sg_ratio)
-
+                    print(max_monos, random_num)
                     nodes = result[MONO_LIST]
                     adj = result[ADJ_MATRIX]
-                    block = generate_mol(adj, nodes)
-                    # with open(fname, "w") as w_file:
-                    #     w_file.write("{} {}\n".format(num_monos, random_num))
-                    print("{} {}".format(max_monos, random_num))
-
-            # Here, trying to catch bug in B1 bond representation. Test will be updated when bug is fixed.
-            self.assertFalse("I thought I'd fail!")
-            # After bug is fixed, add checks for correct generate_mol output
-            # Below not needed for testing functionality; for showing image to visually check
-            silent_remove(TEST_PNG)
-            mol = MolFromMolBlock(block)
-            Compute2DCoords(mol)
-            MolToFile(mol, TEST_PNG, size=(2000, 1200))
-            self.assertTrue(os.path.isfile(TEST_PNG))
+                    generate_mol(adj, nodes)
+                    with capture_stderr(generate_mol, adj, nodes) as output:
+                        self.assertTrue("B1 bonds" in output)
         except InvalidDataError as e:
-            print(max_monos, random_num)
             print(e.args[0])
             self.assertTrue("This program cannot currently" in e.args[0])
             silent_remove(TEST_PNG, disable=DISABLE_REMOVE)
