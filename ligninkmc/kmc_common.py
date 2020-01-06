@@ -413,19 +413,19 @@ class Event:
         return self.index < other.index
 
     def __hash__(self):
-        # TODO: understand why the choice of hashing function affects results
-        #    original hash, which did not allow testing because of random salting:
-        #        return hash((tuple(self.index), self.key, self.bond))
-        #    replacement which gave different results (not immediately caught because there weren't tests yet...
-        #    I changed it as part of making the project testable:
-        #        key_as_num = sum([ord(x) % 32 for x in self.key])
-        #        return key_as_num + sum(self.index) * 1000 + int(self.rate * 10000)
-        #    The bash below is repeatable and gives similar results to the original hash
         # Note: changed from invoking python's hash function to provide more consistent output for testing
         #     see https://docs.python.org/3/reference/datamodel.html#object.__hash__
         #     "By default, the __hash__() values of str and bytes objects are “salted” with an unpredictable random
         #     value. Although they remain constant within an individual Python process, they are not predictable
         #     between repeated invocations of Python."
+        # Original hash method, which did not allow testing because of random salting:
+        #    return hash((tuple(self.index), self.key, self.bond))
+        # Replacement hash method which gave consistent results, but unexpected changed outcomes
+        #    key_as_num = sum([ord(x) % 32 for x in self.key])
+        #    return key_as_num + sum(self.index) * 1000 + int(self.rate * 10000)
+        # The bash below is repeatable and gives similar results to the original hash. It is not directly invoked
+        #     in the package (unsettling that the hash method used for dictionary keys would change results), but it
+        #     is left in case there is any behind the scenes hashing
         if not self.index:
             index_join = 0
         else:

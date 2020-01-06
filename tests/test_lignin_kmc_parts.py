@@ -559,53 +559,6 @@ class TestAnalyzeKMCSummary(unittest.TestCase):
             self.assertTrue(good_chain_summary in output)
             self.assertTrue(good_bond_summary in output)
 
-    # def testBO4OligOlig(self):
-    #     # TODO: Use this test to see an instance of beta-o-4 bond formation between oligomers
-    #     # This catches creating this type of linkage, for better understanding linkages that can be created. When done
-    #     # investigating, delete this test and the logic in the code that highlights when this linkage type is created.
-    #
-    #     # minimize random calls by providing set list of monomer types
-    #     initial_mono_type_list = [S, S, G, S, S, S, G, S, S, S, G, S, S, G, S, G, S, G, G, S, S, S, S, S, S, S, S,
-    #                               S, S, S, G, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, G, S]
-    #     num_monos = 24
-    #     random_num = 21
-    #     initial_monomers = [Monomer(mono_type, i) for i, mono_type in
-    #                         enumerate(initial_mono_type_list[0:num_monos])]
-    #     initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
-    #     initial_state = create_initial_state(initial_events, initial_monomers)
-    #     # since GROW is not added to event_dict, no additional monomers will be added
-    #     # run_kmc(DEF_RXN_RATES, initial_state, initial_events, t_max=2, random_seed=random_num)
-    #     with capture_stdout(run_kmc, DEF_RXN_RATES, initial_state, initial_events, t_max=2,
-    #                         random_seed=random_num) as output:
-    #         self.assertTrue("bo4 reaction between oligomers with 37 and 2" in output)
-    #         pass
-
-    def testSSBO4OligOlig(self):
-        # TODO: Use this test to see an instance of beta-o-4 bond formation between oligomers
-        # This catches creating this type of linkage, for better understanding linkages that can be created. When done
-        # investigating, delete this test and the logic in the code that highlights when this linkage type is created.
-        # What has been completed: up to 100 monomers;
-        #  101: 1-64, 101-133
-        #  102: 1-81
-        #  105: 1-91
-        #  199: 1-8, 101-102
-        #  200: 1-7
-        # num_monos = 101
-        # random_num = 21
-        for num_monos in range(105, 110):
-            print("hello!", num_monos)
-            for random_num in range(1, 201):  # (start again at 21) (change end to 201)
-                initial_monomers = [Monomer(S, i) for i in range(num_monos)]
-                initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
-                initial_state = create_initial_state(initial_events, initial_monomers)
-                run_kmc(DEF_RXN_RATES, initial_state, initial_events, t_max=2, random_seed=random_num)
-                print(num_monos, random_num)
-        # since GROW is not added to event_dict, no additional monomers will be added
-        # with capture_stdout(run_kmc, DEF_RXN_RATES, initial_state, initial_events, t_max=2,
-        #                     random_seed=random_num) as output:
-        #     self.assertTrue("bo4 reaction between oligomers with 16 and 17" in output)
-        #     self.assertTrue("bo4 reaction between oligomers with 14 and 17" in output)
-
 
 class TestVisualization(unittest.TestCase):
     def testMakePNG(self):
@@ -676,39 +629,33 @@ class TestVisualization(unittest.TestCase):
         #       program to be visited. Currently, the test passes when the expected error message is returned.
         #       When fixed, this test can be updated to pass when expected results are returned.
         # Here, all the monomers are available at the beginning of the simulation; set type list for reproducibility
-        full_mono_type_list = [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, S, S, S, S, S, G, S, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, G, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S,
-                               S, S, S, S, S, S, G, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, ]
-        num_monos = 92
+        ini_mono_type_list = [S, S, S, G, S]
         random_num = 21
+        sg_ratio = 1.0
         block = None
         # result = None
-        first_in_range = 72
-        fname = create_out_fname(first_in_range, ext=".txt")
-        with open(fname, "w") as w_file:
-            w_file.write("Hey there! I'm starting!\n")
+        first_in_range = 12
+        # 60-104, 1-5
+        # fname = create_out_fname(first_in_range, ext=".txt")  (105, 3)  60, 3; 24, 3
+        # with open(fname, "w") as w_file:
+        #     w_file.write("Hey there! I'm starting!\n")
+        print("Hey there! I'm starting!")
         try:
-            for num_monos in range(first_in_range, first_in_range+9):
-                for random_num in range(1, 251):
-                    mono_type_list = full_mono_type_list[0: num_monos]
-                    initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(mono_type_list)]
+            for max_monos in range(first_in_range, first_in_range+60):
+                for random_num in range(1, 6):
+                    initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(ini_mono_type_list)]
                     initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
+                    initial_events.append(Event(GROW, [], rate=1e4))
                     initial_state = create_initial_state(initial_events, initial_monomers)
-                    result = run_kmc(DEF_RXN_RATES, initial_state, initial_events, t_max=2, random_seed=random_num)
+                    result = run_kmc(DEF_RXN_RATES, initial_state, initial_events, n_max=max_monos, t_max=2,
+                                     random_seed=random_num, sg_ratio=sg_ratio)
 
                     nodes = result[MONO_LIST]
                     adj = result[ADJ_MATRIX]
                     block = generate_mol(adj, nodes)
-                    with open(fname, "w") as w_file:
-                        w_file.write("{} {}\n".format(num_monos, random_num))
+                    # with open(fname, "w") as w_file:
+                    #     w_file.write("{} {}\n".format(num_monos, random_num))
+                    print("{} {}".format(max_monos, random_num))
 
             # Here, trying to catch bug in B1 bond representation. Test will be updated when bug is fixed.
             self.assertFalse("I thought I'd fail!")
@@ -720,7 +667,7 @@ class TestVisualization(unittest.TestCase):
             MolToFile(mol, TEST_PNG, size=(2000, 1200))
             self.assertTrue(os.path.isfile(TEST_PNG))
         except InvalidDataError as e:
-            print(num_monos, random_num)
+            print(max_monos, random_num)
             print(e.args[0])
             self.assertTrue("This program cannot currently" in e.args[0])
             silent_remove(TEST_PNG, disable=DISABLE_REMOVE)
@@ -744,10 +691,10 @@ class TestVisualization(unittest.TestCase):
         self.assertTrue(len(result[MONO_LIST]) == expected_num_t_steps)
         self.assertTrue(len(result[MONO_LIST][-1]) == num_monos)
         # want dict[key: [], ...] where the inner list is values by timestep
-        #                      instead of list of timesteps with [[key: val, ...], ... ]
+        #                         instead of list of timesteps with [[key: val, ...], ... ]
         adj_list = result[ADJ_MATRIX]
         (bond_type_dict, olig_len_dict, sum_list, olig_count_dict,
-         sum_count_list) = get_bond_type_v_time_dict(adj_list, sum_len_larger_than=10)
+            sum_count_list) = get_bond_type_v_time_dict(adj_list, sum_len_larger_than=10)
 
         # test results by checking sums
         good_bond_type_sum_dict = {BO4: 188, B1: 0, BB: 278, B5: 213, C5C5: 0, AO4: 0, C5O4: 164}

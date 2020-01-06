@@ -725,39 +725,9 @@ def generate_mol(adj, node_list):
     alpha_ring_location = 6
     alpha = 7
 
-    # to make IDE happy:
-    atom_block = None
-    bond_block = None
-
-    # Build the individual monomers before they are linked by anything
     for i, mon in enumerate(node_list):
-        if mon.type == G or mon.type == S:
-            if mon.active == 0 or mon.active == -1:
-                if mon.type == G:
-                    atom_block = ATOM_BLOCKS[G]
-                    bond_block = BOND_BLOCKS[G]
-                else:
-                    atom_block = ATOM_BLOCKS[S]
-                    bond_block = BOND_BLOCKS[S]
-            elif mon.active == 4:
-                if mon.type == G:
-                    atom_block = ATOM_BLOCKS[G4]
-                    bond_block = BOND_BLOCKS[G]
-                else:
-                    atom_block = ATOM_BLOCKS[S4]
-                    bond_block = BOND_BLOCKS[S]
-            elif mon.active == 7:
-                if mon.type == G:
-                    atom_block = ATOM_BLOCKS[G]
-                    bond_block = BOND_BLOCKS[G7]
-                else:
-                    atom_block = ATOM_BLOCKS[S]
-                    bond_block = BOND_BLOCKS[S7]
-        elif mon.type == C:
-            atom_block = ATOM_BLOCKS[C]
-            bond_block = BOND_BLOCKS[C]
-        else:
-            raise ValueError("Expected monomer types are {LIGNIN_SUBUNITS} but encountered type '{mon.type}'")
+        # Build the individual monomers before they are linked by anything
+        atom_block, bond_block = build_monomers(mon)
 
         # Extract each of the individual atoms from this monomer to add to the aggregate file
         lines = atom_block.splitlines(keepends=True)
@@ -949,6 +919,44 @@ def generate_mol(adj, node_list):
     mol_str += counts + mol_atom_blocks + mol_bond_blocks + 'M  V30 END CTAB\nM  END'
 
     return mol_str
+
+
+def build_monomers(mon):
+    """
+    As part of building a molecule, determine list of atoms and linkages, based on the monomer type and wht part is
+        active
+    :param mon: monomer object
+    :return: atom_block and bond_block: lists of atom types and bonding information for the given monomer
+    """
+    if mon.type == G or mon.type == S:
+        atom_block, bond_block = None, None  # Make IDE happy
+        if mon.active == 0 or mon.active == -1:
+            if mon.type == G:
+                atom_block = ATOM_BLOCKS[G]
+                bond_block = BOND_BLOCKS[G]
+            else:
+                atom_block = ATOM_BLOCKS[S]
+                bond_block = BOND_BLOCKS[S]
+        elif mon.active == 4:
+            if mon.type == G:
+                atom_block = ATOM_BLOCKS[G4]
+                bond_block = BOND_BLOCKS[G]
+            else:
+                atom_block = ATOM_BLOCKS[S4]
+                bond_block = BOND_BLOCKS[S]
+        elif mon.active == 7:
+            if mon.type == G:
+                atom_block = ATOM_BLOCKS[G]
+                bond_block = BOND_BLOCKS[G7]
+            else:
+                atom_block = ATOM_BLOCKS[S]
+                bond_block = BOND_BLOCKS[S7]
+    elif mon.type == C:
+        atom_block = ATOM_BLOCKS[C]
+        bond_block = BOND_BLOCKS[C]
+    else:
+        raise ValueError("Expected monomer types are {LIGNIN_SUBUNITS} but encountered type '{mon.type}'")
+    return atom_block, bond_block
 
 
 def write_patch(open_file, patch_name, seg_name, resid1, resid2=None):
