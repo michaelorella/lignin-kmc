@@ -255,7 +255,7 @@ __Event__(key, index, rate, bond)
 - rate = float = the rate of the event that is occurring (units consistent with time units in simulation)
 - bond = [int, int] = list of changes that need to be made to the adjacency matrix to perform the event
 
-The class that is used to define events, which can be unpacked by the `run` function to execute the events occurring in 
+The class that is used to define events, which can be unpacked by the `run_kmc` function to execute the events occurring in 
 the simulation.
 
 __Monomer__(type, index)
@@ -319,6 +319,7 @@ Used to count the yields of monomers, dimers, etc., when the simulation is compl
 
 __analyze_adj_matrix__(adjacency)
 - adjacency = dok_matrix = adjacency matrix
+- break_co_bonds = boolean to specify whether C-O bonds should be reomoved to simulate reactive catalytic fractionation (RCF)
 - return = dict() = maps different measurable quantities to their values predicted from the simulation
 
 Aggregates analysis of oligomer length and bond types, and these same properties post C-O bond cleavage.
