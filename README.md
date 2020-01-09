@@ -44,8 +44,6 @@ This project runs on Python ≥3.6 with the following packages installed:
 -  In either case, Conda will install any missing required dependencies when it does so, and thus this may take a few 
  minutes.
  
-- If you do not already have a `$HOME/.local/bin` directory, create one now, before installing lignin-kmc.
- 
 -  You can then install [lignin-kmc](https://pypi.org/project/common-wrangler/) using  pip (`pip install lignin-kmc`). 
 Additional dependencies will again be installed as required.
 
@@ -319,7 +317,7 @@ Used to count the yields of monomers, dimers, etc., when the simulation is compl
 
 __analyze_adj_matrix__(adjacency)
 - adjacency = dok_matrix = adjacency matrix
-- break_co_bonds = boolean to specify whether C-O bonds should be reomoved to simulate reactive catalytic fractionation (RCF)
+- break_co_bonds = boolean to specify whether C-O bonds should be removed to simulate reactive catalytic fractionation (RCF)
 - return = dict() = maps different measurable quantities to their values predicted from the simulation
 
 Aggregates analysis of oligomer length and bond types, and these same properties post C-O bond cleavage.
