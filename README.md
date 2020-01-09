@@ -152,7 +152,8 @@ options shown below, or by using a configuration file. These options can be view
        -m MAX_NUM_MONOMERS, --max_num_monomers MAX_NUM_MONOMERS
                              The maximum number of monomers to be studied. The default value is 10.
        -n NUM_REPEATS, --num_repeats NUM_REPEATS
-                             The number of times each combination of sg_ratio and add_rate will be tested. The default is 1.
+                             The number of times each combination of sg_ratio and add_rate will be tested. 
+                             The default is 1.
        -o OUTPUT_BASENAME, --output_basename OUTPUT_BASENAME
                              The base name for output file(s). If an extension is provided, it will determine 
                              the type of output. Currently supported output types are: 
@@ -253,8 +254,8 @@ __Event__(key, index, rate, bond)
 - rate = float = the rate of the event that is occurring (units consistent with time units in simulation)
 - bond = [int, int] = list of changes that need to be made to the adjacency matrix to perform the event
 
-The class that is used to define events, which can be unpacked by the `run_kmc` function to execute the events occurring in 
-the simulation.
+The class that is used to define events, which can be unpacked by the `run_kmc` function to execute the events 
+occurring in the simulation.
 
 __Monomer__(type, index)
 - type = str, limited to S, G, or C = indicates the monomer type. This class can be extended to include more monomer 
