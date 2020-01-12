@@ -15,12 +15,12 @@ segment L {
 }
 patch BB L:1 L:2
 patch BO4 L:3 L:2
-patch B5G L:4 L:3
-patch BO4 L:5 L:1
-patch BO4 L:6 L:4
+patch BO4 L:4 L:3
+patch B5G L:5 L:4
+patch B5G L:6 L:5
 patch BO4 L:7 L:6
-patch B5G L:8 L:5
-patch BO4 L:9 L:8
-patch BO4 L:10 L:9
+patch BB L:8 L:9
+patch 4O4 L:7 L:9
+patch BO4 L:10 L:8
 regenerate angles dihedrals
 writepsf lignin.psf

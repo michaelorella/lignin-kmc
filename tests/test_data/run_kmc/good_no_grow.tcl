@@ -27,18 +27,18 @@ segment L {
     residue 23 S
     residue 24 S
 }
-patch BB L:10 L:24
-patch BB L:2 L:14
-patch BB L:8 L:18
-patch BB L:20 L:23
-patch B5G L:15 L:5
-patch BB L:1 L:9
-patch BB L:4 L:19
-patch BB L:7 L:13
-patch BB L:17 L:21
-patch BB L:11 L:16
-patch BO4 L:12 L:24
-patch BB L:3 L:22
-patch BO4 L:6 L:17
+patch BB L:8 L:10
+patch BB L:2 L:15
+patch BB L:3 L:11
+patch BB L:4 L:21
+patch BB L:1 L:24
+patch BB L:9 L:16
+patch BB L:13 L:17
+patch BB L:18 L:20
+patch BO4 L:5 L:15
+patch BB L:19 L:23
+patch BB L:6 L:7
+patch BB L:14 L:22
+patch BO4 L:12 L:17
 regenerate angles dihedrals
 writepsf lignin.psf
