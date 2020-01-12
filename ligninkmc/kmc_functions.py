@@ -317,6 +317,17 @@ def analyze_adj_matrix(adjacency, break_co_bonds=False):
             RCF_BRANCHES: rcf_branch_dict, RCF_BRANCH_COEFF: rcf_branch_coeff_dict}
 
 
+def append_if_unique(unique_list, potential_new_item):
+    """
+    Instead of using a set, want to use a list for maintaining order
+    :param unique_list: list to potentially append
+    :param potential_new_item: item to append if not already in the list
+    :return: n/a, updated list
+    """
+    if potential_new_item not in unique_list:
+        unique_list.append(potential_new_item)
+
+
 def update_events(state_dict, adj, last_event, event_list, rate_list, ox_rates, possible_events, max_mon=500):
     """
     This method determines what the possible events are in a given state, where the state is the current simulation
@@ -353,7 +364,7 @@ def update_events(state_dict, adj, last_event, event_list, rate_list, ox_rates, 
 
         # Add an event to oxidize the monomer that was just added to the simulation
         oxidation_event = Event(OX, [cur_n - 1], ox_rates[state_dict[cur_n - 1][MONOMER].type][MONOMER])
-        state_dict[cur_n - 1][AFFECTED].add(oxidation_event)
+        append_if_unique(state_dict[cur_n - 1][AFFECTED], oxidation_event)
         event_list.append(oxidation_event)
         # "/ cur_n" is like multiplying by concentration, ignoring any molecules not tracked by this script
         rate_list.append(oxidation_event.rate / cur_n)
@@ -404,7 +415,7 @@ def update_events(state_dict, adj, last_event, event_list, rate_list, ox_rates, 
                     del rate_list[event_index]
 
             # Overwrite the old event_dict that could have been modified from this monomer being updated
-            state_dict[mon_id][AFFECTED] = set()
+            state_dict[mon_id][AFFECTED] = []
             cur_n, _ = adj.get_shape()
 
             for rxn_event in new_event_list:
@@ -416,7 +427,7 @@ def update_events(state_dict, adj, last_event, event_list, rate_list, ox_rates, 
 
                     # Add the event to the event_dict modifiable by changing the monomer, and update the set of all
                     # event_dict at the next time step
-                    state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], [mon.identity], rate))
+                    append_if_unique(state_dict[mon_id][AFFECTED], Event(rxn_event[0], [mon.identity], rate))
 
                 elif rxn_event and rxn_event[1] == 2:  # Bimolecular reaction event
                     update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, events_to_be_modified,
@@ -437,7 +448,8 @@ def update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, 
         # Sanitize the set of event_dict that can be effected
         if partner not in cleaned_partners:
             # Remove any old event_dict from
-            state_dict[partner.identity][AFFECTED].difference_update(events_to_be_modified)
+            for mod_event in events_to_be_modified:
+                append_if_unique(state_dict[partner.identity][AFFECTED], mod_event)
             cleaned_partners.add(partner)
 
         index = [mon.identity, partner.identity]
@@ -463,13 +475,15 @@ def update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, 
             # Add this to both the monomer and it's bonding partners list of event_dict that need to be
             # modified upon manipulation of either monomer
             # this -> other
-            state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], index, rate, bond))
-            state_dict[partner.identity][AFFECTED].add(Event(rxn_event[0], index, rate, bond))
+            event1 = Event(rxn_event[0], index, rate, bond)
+            append_if_unique(state_dict[mon_id][AFFECTED], event1)
+            append_if_unique(state_dict[partner.identity][AFFECTED], event1)
 
             # Switch the order
             # other -> this
-            state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], back, rate, alt))
-            state_dict[partner.identity][AFFECTED].add(Event(rxn_event[0], back, rate, alt))
+            event2 = Event(rxn_event[0], back, rate, alt)
+            append_if_unique(state_dict[mon_id][AFFECTED], event2)
+            append_if_unique(state_dict[partner.identity][AFFECTED], event2)
 
         # Add the bond from one monomer to the other in the reverse config if not symmetric
         if rxn_event[0] != BB and rxn_event[0] != C5C5:  # non-symmetric bond
@@ -484,13 +498,15 @@ def update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, 
                                            f"{rxn_event[0]}, bonding index {mon.identity} to "
                                            f"{partner.identity}")
                 # this -> other alt
-                state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], index, rate, alt))
-                state_dict[partner.identity][AFFECTED].add(Event(rxn_event[0], index, rate, alt))
+                event1 = Event(rxn_event[0], index, rate, alt)
+                append_if_unique(state_dict[mon_id][AFFECTED], event1)
+                append_if_unique(state_dict[partner.identity][AFFECTED], event1)
 
                 # Switch the order
                 # other -> this alt
-                state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], back, rate, bond))
-                state_dict[partner.identity][AFFECTED].add(Event(rxn_event[0], back, rate, bond))
+                event2 = Event(rxn_event[0], back, rate, bond)
+                append_if_unique(state_dict[mon_id][AFFECTED], event2)
+                append_if_unique(state_dict[partner.identity][AFFECTED], event2)
     # END LOOP OVER PARTNERS
 
 
@@ -626,7 +642,7 @@ def do_event(event, state, adj, sg_ratio=None, random_seed=None):
                     raise InvalidDataError(f"A numeric sg_ratio must be supplied. Instead, found{sg_note}")
 
             new_mon = Monomer(mon_type, current_size)
-            state[current_size] = {MONOMER: new_mon, AFFECTED: set()}
+            state[current_size] = {MONOMER: new_mon, AFFECTED: []}
 
 
 def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynamics=False, random_seed=None,

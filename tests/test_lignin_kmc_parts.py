@@ -254,29 +254,28 @@ class TestRunKMC(unittest.TestCase):
 
     def testSampleRunKMC(self):
         result = create_sample_kmc_result()
-        self.assertTrue(len(result[TIME]) == 43)
-        self.assertAlmostEqual(result[TIME][-1], 0.002224777676694563)
+        self.assertTrue(len(result[TIME]) == 41)
+        self.assertAlmostEqual(result[TIME][-1], 0.002627864716612143)
         self.assertTrue(len(result[MONO_LIST]) == 10)
         self.assertTrue(str(result[MONO_LIST][-1]) == '9: sinapyl alcohol is connected to '
                                                       '{0, 1, 2, 3, 4, 5, 6, 7, 8, 9} and active at position 4')
-        good_dok_keys = [(0, 1), (1, 0), (1, 2), (2, 1), (3, 2), (2, 3), (4, 0), (0, 4), (5, 3), (3, 5), (6, 5),
-                         (5, 6), (7, 4), (4, 7), (7, 8), (8, 7), (8, 9), (9, 8)]
-        good_dok_vals = [8.0, 8.0, 4.0, 8.0, 8.0, 5.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 8.0, 5.0, 4.0, 8.0, 4.0, 8.0]
+        good_dok_keys = [(0, 1), (1, 0), (1, 2), (2, 1), (2, 3), (3, 2), (3, 4), (4, 3), (4, 5), (5, 4), (5, 6),
+                         (6, 5), (7, 8), (8, 7), (8, 6), (6, 8), (7, 9), (9, 7)]
+        good_dok_vals = [8.0, 8.0, 4.0, 8.0, 4.0, 8.0, 5.0, 8.0, 5.0, 8.0, 4.0, 8.0, 8.0, 8.0, 5.0, 4.0, 4.0, 8.0]
 
         self.assertTrue(list(result[ADJ_MATRIX].keys()) == good_dok_keys)
         self.assertTrue(list(result[ADJ_MATRIX].values()) == good_dok_vals)
 
     def testSampleRunKMCCLignin(self):
         result = create_sample_kmc_result_c_lignin()
-        self.assertTrue(len(result[TIME]) == 45)
-        self.assertAlmostEqual(result[TIME][-1], 0.0022741585174056098)
+        self.assertTrue(len(result[TIME]) == 35)
+        self.assertAlmostEqual(result[TIME][-1], 0.001749379102515669)
         self.assertTrue(len(result[MONO_LIST]) == 12)
         self.assertTrue(str(result[MONO_LIST][-1]) == '11: caffeoyl alcohol is connected to '
-                                                      '{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11} and active at position 4')
-        good_dok_keys = [(1, 0), (0, 1), (0, 2), (2, 0), (3, 2), (2, 3), (3, 4), (4, 3), (5, 4), (4, 5), (6, 5),
-                         (5, 6), (7, 6), (6, 7), (8, 7), (7, 8), (8, 9), (9, 8), (10, 9), (9, 10), (10, 11), (11, 10)]
-        good_dok_vals = [5.0, 8.0, 4.0, 8.0, 8.0, 4.0, 4.0, 8.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 4.0, 8.0,
-                         8.0, 4.0, 4.0, 8.0]
+                                                      '{9, 10, 11} and active at position 0')
+        good_dok_keys = [(1, 0), (0, 1), (0, 2), (2, 0), (3, 2), (2, 3), (5, 4), (4, 5), (6, 7), (7, 6), (8, 7),
+                         (7, 8), (10, 9), (9, 10), (11, 9), (9, 11)]
+        good_dok_vals = [5.0, 8.0, 4.0, 8.0, 8.0, 4.0, 8.0, 5.0, 5.0, 8.0, 8.0, 4.0, 5.0, 8.0, 8.0, 4.0]
         self.assertTrue(list(result[ADJ_MATRIX].keys()) == good_dok_keys)
         self.assertTrue(list(result[ADJ_MATRIX].values()) == good_dok_vals)
 
@@ -627,7 +626,7 @@ class TestVisualization(unittest.TestCase):
         ini_mono_type_list = [S, S, S, G, S]
         sg_ratio = 1.0
         max_monos = 12
-        random_num = 2
+        random_num = 55
         initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(ini_mono_type_list)]
         initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
         initial_events.append(Event(GROW, [], rate=1e4))
@@ -636,7 +635,6 @@ class TestVisualization(unittest.TestCase):
                          random_seed=random_num, sg_ratio=sg_ratio)
         nodes = result[MONO_LIST]
         adj = result[ADJ_MATRIX]
-        # generate_mol(adj, nodes)
         with capture_stderr(generate_mol, adj, nodes) as output:
             self.assertTrue("B1 bonds" in output)
 
@@ -653,7 +651,7 @@ class TestVisualization(unittest.TestCase):
         # With dynamics, the MONO_LIST will be a list of monomer lists:
         #    the inner list is the usual MONO_LIST, but here is it saved for every time step
         t_steps = result[TIME]
-        expected_num_t_steps = 87
+        expected_num_t_steps = 61
         self.assertEqual(len(t_steps), expected_num_t_steps)
         self.assertTrue(len(result[MONO_LIST]) == expected_num_t_steps)
         self.assertTrue(len(result[MONO_LIST][-1]) == num_monos)
@@ -664,15 +662,14 @@ class TestVisualization(unittest.TestCase):
             sum_count_list) = get_bond_type_v_time_dict(adj_list, sum_len_larger_than=10)
 
         # test results by checking sums
-        good_bond_type_sum_dict = {BO4: 188, B1: 0, BB: 278, B5: 213, C5C5: 0, AO4: 0, C5O4: 164}
+        good_bond_type_sum_dict = {BO4: 16, BB: 171, B1: 0, B5: 119, C5C5: 0, AO4: 0, C5O4: 23}
         bond_type_sum_dict = {}
         for bond_type, val_list in bond_type_dict.items():
             self.assertEqual(len(val_list), expected_num_t_steps)
             bond_type_sum_dict[bond_type] = sum(val_list)
         self.assertEqual(bond_type_sum_dict, good_bond_type_sum_dict)
 
-        good_olig_len_sum_dict = {1: 1164, 2: 676, 3: 111, 4: 64, 5: 85, 6: 0, 7: 0, 8: 24, 9: 0, 10: 0, 11: 0, 12: 0,
-                                  13: 52, 14: 0, 15: 0, 16: 64, 17: 0, 18: 72, 19: 0, 20: 80, 21: 0, 22: 44}
+        good_olig_len_sum_dict = {1: 1112, 2: 474, 3: 21, 4: 56, 5: 45}
         olig_len_sum_dict = {}
         for olig_len, val_list in olig_len_dict.items():
             self.assertEqual(len(val_list), expected_num_t_steps)
