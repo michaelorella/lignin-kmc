@@ -363,6 +363,7 @@ def update_events(state_dict, adj, last_event, event_list, rate_list, ox_rates, 
                 rate_list[i] = rate_list[i] * (cur_n - 1) / cur_n
 
         # Add an event to oxidize the monomer that was just added to the simulation
+        # todo: why is a "grow" event necessary to allow oxidation? Can't oligomers be oxidized?
         oxidation_event = Event(OX, [cur_n - 1], ox_rates[state_dict[cur_n - 1][MONOMER].type][MONOMER])
         append_if_unique(state_dict[cur_n - 1][AFFECTED], oxidation_event)
         event_list.append(oxidation_event)
@@ -473,17 +474,12 @@ def update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, 
                                        f"{partner.identity} ")
 
             # Add this to both the monomer and it's bonding partners list of event_dict that need to be
-            # modified upon manipulation of either monomer
+            #     modified upon manipulation of either monomer
             # this -> other
             event1 = Event(rxn_event[0], index, rate, bond)
-            append_if_unique(state_dict[mon_id][AFFECTED], event1)
-            append_if_unique(state_dict[partner.identity][AFFECTED], event1)
-
-            # Switch the order
-            # other -> this
+            # Switch the order; other -> this
             event2 = Event(rxn_event[0], back, rate, alt)
-            append_if_unique(state_dict[mon_id][AFFECTED], event2)
-            append_if_unique(state_dict[partner.identity][AFFECTED], event2)
+            update_nonsymmetric_bond(event1, event2, mon_id, partner, state_dict)
 
         # Add the bond from one monomer to the other in the reverse config if not symmetric
         if rxn_event[0] != BB and rxn_event[0] != C5C5:  # non-symmetric bond
@@ -499,15 +495,17 @@ def update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, 
                                            f"{partner.identity}")
                 # this -> other alt
                 event1 = Event(rxn_event[0], index, rate, alt)
-                append_if_unique(state_dict[mon_id][AFFECTED], event1)
-                append_if_unique(state_dict[partner.identity][AFFECTED], event1)
-
-                # Switch the order
-                # other -> this alt
+                # Switch the order; other -> this alt
                 event2 = Event(rxn_event[0], back, rate, bond)
-                append_if_unique(state_dict[mon_id][AFFECTED], event2)
-                append_if_unique(state_dict[partner.identity][AFFECTED], event2)
+                update_nonsymmetric_bond(event1, event2, mon_id, partner, state_dict)
     # END LOOP OVER PARTNERS
+
+
+def update_nonsymmetric_bond(event1, event2, mon_id, partner, state_dict):
+    append_if_unique(state_dict[mon_id][AFFECTED], event1)
+    append_if_unique(state_dict[partner.identity][AFFECTED], event1)
+    append_if_unique(state_dict[mon_id][AFFECTED], event2)
+    append_if_unique(state_dict[partner.identity][AFFECTED], event2)
 
 
 def connect_monos(mon1, mon2):
