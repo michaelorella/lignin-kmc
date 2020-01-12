@@ -44,8 +44,6 @@ This project runs on Python ≥3.6 with the following packages installed:
 -  In either case, Conda will install any missing required dependencies when it does so, and thus this may take a few 
  minutes.
  
-- If you do not already have a `$HOME/.local/bin` directory, create one now, before installing lignin-kmc.
- 
 -  You can then install [lignin-kmc](https://pypi.org/project/common-wrangler/) using  pip (`pip install lignin-kmc`). 
 Additional dependencies will again be installed as required.
 
@@ -154,7 +152,8 @@ options shown below, or by using a configuration file. These options can be view
        -m MAX_NUM_MONOMERS, --max_num_monomers MAX_NUM_MONOMERS
                              The maximum number of monomers to be studied. The default value is 10.
        -n NUM_REPEATS, --num_repeats NUM_REPEATS
-                             The number of times each combination of sg_ratio and add_rate will be tested. The default is 1.
+                             The number of times each combination of sg_ratio and add_rate will be tested. 
+                             The default is 1.
        -o OUTPUT_BASENAME, --output_basename OUTPUT_BASENAME
                              The base name for output file(s). If an extension is provided, it will determine 
                              the type of output. Currently supported output types are: 
@@ -255,8 +254,8 @@ __Event__(key, index, rate, bond)
 - rate = float = the rate of the event that is occurring (units consistent with time units in simulation)
 - bond = [int, int] = list of changes that need to be made to the adjacency matrix to perform the event
 
-The class that is used to define events, which can be unpacked by the `run` function to execute the events occurring in 
-the simulation.
+The class that is used to define events, which can be unpacked by the `run_kmc` function to execute the events 
+occurring in the simulation.
 
 __Monomer__(type, index)
 - type = str, limited to S, G, or C = indicates the monomer type. This class can be extended to include more monomer 
@@ -319,6 +318,7 @@ Used to count the yields of monomers, dimers, etc., when the simulation is compl
 
 __analyze_adj_matrix__(adjacency)
 - adjacency = dok_matrix = adjacency matrix
+- break_co_bonds = boolean to specify whether C-O bonds should be removed to simulate reactive catalytic fractionation (RCF)
 - return = dict() = maps different measurable quantities to their values predicted from the simulation
 
 Aggregates analysis of oligomer length and bond types, and these same properties post C-O bond cleavage.
@@ -402,7 +402,7 @@ following points and be as detailed as possible:
 Pull requests are always welcome for suggestions to improve either the code or usability. Before submitting the pull 
 request, please ensure that your standalone code is working properly by both running the existing tests and adding 
 tests of any new functionality (at least 90% coverage). To run the existing tests, from the main directory, run `pytest`. 
-Currently (2019-11-27), test coverage is 98% for create_lignin.py, 100% for kmc_common.py, and 95% for kmc_functions.py.
+Currently (2019-11-27), test coverage is 99% for create_lignin.py, 100% for kmc_common.py, and 94% for kmc_functions.py.
 
 # License
 MIT © Michael Orella, Heather Mayes

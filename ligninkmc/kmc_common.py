@@ -11,6 +11,7 @@ H = 'p-hydroxyphenyl'
 S4 = 'S4'
 G4 = 'G4'
 G7 = 'G7'
+S7 = 'S7'
 LIGNIN_SUBUNITS = [G, S, H, C]
 # Dict below likely to be changed when H added
 INT_TO_TYPE_DICT = {0: G, 1: S}
@@ -145,108 +146,205 @@ DEF_E_BARRIER_KCAL_MOL = {C5O4: {(G, G): {(MONOMER, MONOMER): 11.2, (MONOMER, OL
                               C: {MONOMER: 11.1, OLIGOMER: 11.1}}}
 
 # These were calculated at 298 K from the DEF_E_BARRIER_KCAL_MOL
-DEF_RXN_RATES = {C5O4: {(G, G): {MON_MON: 38335.5972148372, MON_OLI: 123.419593715543, OLI_MON: 123.419593715543,
-                                 OLI_OLI: 3698609451.84164},
-                        (S, G): {MON_MON: 63606.8417529500, MON_OLI: 123.419593715543, OLI_MON: 123.419593715543,
-                                 OLI_OLI: 3698609451.84164},
-                        (C, C): {MON_MON: 11762.4692901771, MON_OLI: 11762.4692901771, OLI_MON: 11762.4692901771,
-                                 OLI_OLI: 11762.4692901771}},
-                 C5C5: {(G, G): {MON_MON: 4272.63018912086, MON_OLI: 22.8233180720356, OLI_MON: 22.8233180720356,
-                                 OLI_OLI: 10182201166.0217},
-                        (C, C): {MON_MON: 105537.166803781, MON_OLI: 105537.166803781, OLI_MON: 105537.166803781,
-                                 OLI_OLI: 105537.166803781}},
-                 B5: {(G, G): {MON_MON: 577740233.381881, MON_OLI: 348201801.431315, OLI_MON: 348201801.431315,
-                               OLI_OLI: 348201801.431315},
-                      (G, S): {MON_MON: 577740233.381881, MON_OLI: 348201801.431315, OLI_MON: 348201801.431315,
-                               OLI_OLI: 348201801.431315},
-                      (C, C): {MON_MON: 251507997491.634, MON_OLI: 348201801.431315, OLI_MON: 348201801.431315,
-                               OLI_OLI: 348201801.431315}},
-                 BB: {(G, G): {MON_MON: 958592907.607318, MON_OLI: 958592907.607318, OLI_MON: 958592907.607318,
-                               OLI_OLI: 958592907.607318},
-                      (S, G): {MON_MON: 106838377.218107, MON_OLI: 106838377.218107, OLI_MON: 106838377.218107,
-                               OLI_OLI: 106838377.218107},
-                      (G, S): {MON_MON: 106838377.218107, MON_OLI: 106838377.218107, OLI_MON: 106838377.218107,
-                               OLI_OLI: 106838377.218107},
-                      (S, S): {MON_MON: 958592907.607318, MON_OLI: 958592907.607318, OLI_MON: 958592907.607318,
-                               OLI_OLI: 958592907.607318},
-                      (C, C): {MON_MON: 32781102.2219828, MON_OLI: 32781102.2219828, OLI_MON: 32781102.2219828,
-                               OLI_OLI: 32781102.2219828}},
-                 BO4: {(G, G): {MON_MON: 149736731.431189, MON_OLI: 177267402.79460, OLI_MON: 177267402.794600,
-                                OLI_OLI: 177267402.794600},
-                       (S, G): {MON_MON: 1327129.87498242, MON_OLI: 177267402.79460, OLI_MON: 177267402.794600,
-                                OLI_OLI: 177267402.794600},
-                       (G, S): {MON_MON: 1860006.62719604, MON_OLI: 177267402.79460, OLI_MON: 177267402.794600,
-                                OLI_OLI: 177267402.794600},
-                       (S, S): {MON_MON: 407201.805441432, MON_OLI: 147913.051594236, OLI_MON: 147913.051594236,
-                                OLI_OLI: 147913.051594236},
-                       (C, C): {MON_MON: 1590507825.87210, MON_OLI: 692396712512.577, OLI_MON: 692396712512.577,
-                                OLI_OLI: 692396712512.577}},
-                 AO4: {(G, G): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
-                                OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265},
-                       (S, G): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
-                                OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265},
-                       (G, S): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
-                                OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265},
-                       (S, S): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
-                                OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265},
-                       (C, C): {MON_MON: 0.00416918917397265, MON_OLI: 0.00416918917397265,
-                                OLI_MON: 0.00416918917397265, OLI_OLI: 0.00416918917397265}},
-                 B1: {(G, G): {MON_OLI: 570703.795464849, OLI_MON: 570703.795464849, OLI_OLI: 570703.795464849},
-                      (S, G): {MON_OLI: 16485.4030071542, OLI_MON: 16485.4030071542, OLI_OLI: 16485.4030071542},
-                      (G, S): {MON_OLI: 89146.6234207596, OLI_MON: 89146.6234207596, OLI_OLI: 89146.6234207596},
-                      (S, S): {MON_OLI: 11762.4692901771, OLI_MON: 11762.4692901771, OLI_OLI: 11762.4692901771},
-                      (C, C): {MON_OLI: 570703.795464849, OLI_MON: 570703.795464849, OLI_OLI: 570703.795464849}},
-                 OX: {G: {MONOMER: 1360057059567.54, OLIGOMER: 149736731.431189},
-                      S: {MONOMER: 2256621533195.09, OLIGOMER: 151582896154.443},
-                      C: {MONOMER: 1360057059567.54, OLIGOMER: 1360057059567.54}},
-                 Q: {G: {MONOMER: 45383.9995564285, OLIGOMER: 45383.9995564285},
-                     S: {MONOMER: 16485.4030071542, OLIGOMER: 16485.4030071542},
-                     C: {MONOMER: 45383.9995564285, OLIGOMER: 45383.9995564285}}
+DEF_RXN_RATES = {C5O4: {(G, G): {MON_MON: 38335.8499454595, MON_OLI: 123.42064219497, OLI_MON: 123.42064219497,
+                                 OLI_OLI: 3698619760.88446},
+                        (S, G): {MON_MON: 63607.2504079451, MON_OLI: 123.42064219497, OLI_MON: 123.42064219497,
+                                 OLI_OLI: 3698619760.88446},
+                        (C, C): {MON_MON: 11762.5514428752, MON_OLI: 11762.5514428752, OLI_MON: 11762.5514428752,
+                                 OLI_OLI: 11762.5514428752}},
+                 C5C5: {(G, G): {MON_MON: 4272.6614650748, MON_OLI: 22.8235247337417, OLI_MON: 22.8235247337417,
+                                 OLI_OLI: 10182226127.8256},
+                        (C, C): {MON_MON: 105537.827130874, MON_OLI: 105537.827130874, OLI_MON: 105537.827130874,
+                                 OLI_OLI: 105537.827130874}},
+                 B5: {(G, G): {MON_MON: 577742199.338807, MON_OLI: 348203044.762421, OLI_MON: 348203044.762421,
+                               OLI_OLI: 348203044.762421},
+                      (G, S): {MON_MON: 577742199.338807, MON_OLI: 348203044.762421, OLI_MON: 348203044.762421,
+                               OLI_OLI: 348203044.762421},
+                      (C, C): {MON_MON: 251508346652.295, MON_OLI: 348203044.762421, OLI_MON: 348203044.762421,
+                               OLI_OLI: 348203044.762421}},
+                 BB: {(G, G): {MON_MON: 958596008.614987, MON_OLI: 958596008.614987, OLI_MON: 958596008.614987,
+                               OLI_OLI: 958596008.614987},
+                      (S, G): {MON_MON: 106838800.559028, MON_OLI: 106838800.559028, OLI_MON: 106838800.559028,
+                               OLI_OLI: 106838800.559028},
+                      (G, S): {MON_MON: 106838800.559028, MON_OLI: 106838800.559028, OLI_MON: 106838800.559028,
+                               OLI_OLI: 106838800.559028},
+                      (S, S): {MON_MON: 958596008.614987, MON_OLI: 958596008.614987, OLI_MON: 958596008.614987,
+                               OLI_OLI: 958596008.614987},
+                      (C, C): {MON_MON: 32781244.9563151, MON_OLI: 32781244.9563151, OLI_MON: 32781244.9563151,
+                               OLI_OLI: 32781244.9563151}},
+                 BO4: {(G, G): {MON_MON: 149737307.995724, MON_OLI: 177268075.446635, OLI_MON: 177268075.446635,
+                                OLI_OLI: 177268075.446635},
+                       (S, G): {MON_MON: 1327137.06459331, MON_OLI: 177268075.446635, OLI_MON: 177268075.446635,
+                                OLI_OLI: 177268075.446635},
+                       (G, S): {MON_MON: 1860016.49544686, MON_OLI: 177268075.446635, OLI_MON: 177268075.446635,
+                                OLI_OLI: 177268075.446635},
+                       (S, S): {MON_MON: 407204.170932281, MON_OLI: 147913.960505052, OLI_MON: 147913.960505052,
+                                OLI_OLI: 147913.960505052},
+                       (C, C): {MON_MON: 1590512704.08189, MON_OLI: 692397441265.176, OLI_MON: 692397441265.176,
+                                OLI_OLI: 692397441265.176}},
+                 AO4: {(G, G): {MON_MON: 0.00416923882420833, MON_OLI: 0.00416923882420833,
+                                OLI_MON: 0.00416923882420833, OLI_OLI: 0.00416923882420833},
+                       (S, G): {MON_MON: 0.00416923882420833, MON_OLI: 0.00416923882420833,
+                                OLI_MON: 0.00416923882420833, OLI_OLI: 0.00416923882420833},
+                       (G, S): {MON_MON: 0.00416923882420833, MON_OLI: 0.00416923882420833,
+                                OLI_MON: 0.00416923882420833, OLI_OLI: 0.00416923882420833},
+                       (S, S): {MON_MON: 0.00416923882420833, MON_OLI: 0.00416923882420833,
+                                OLI_MON: 0.00416923882420833, OLI_OLI: 0.00416923882420833},
+                       (C, C): {MON_MON: 0.00416923882420833, MON_OLI: 0.00416923882420833,
+                                OLI_MON: 0.00416923882420833, OLI_OLI: 0.00416923882420833}},
+                 B1: {(G, G): {MON_OLI: 570707.046887361, OLI_MON: 570707.046887361, OLI_OLI: 570707.046887361},
+                      (S, G): {MON_OLI: 16485.5163012079, OLI_MON: 16485.5163012079, OLI_OLI: 16485.5163012079},
+                      (G, S): {MON_OLI: 89147.1861838573, OLI_MON: 89147.1861838573, OLI_OLI: 89147.1861838573},
+                      (S, S): {MON_OLI: 11762.5514428752, OLI_MON: 11762.5514428752, OLI_OLI: 11762.5514428752},
+                      (C, C): {MON_OLI: 570707.046887361, OLI_MON: 570707.046887361, OLI_OLI: 570707.046887361}},
+                 OX: {G: {MONOMER: 1360058186601.25, OLIGOMER: 149737307.995724},
+                      S: {MONOMER: 2256623024338.81, OLIGOMER: 151583132040.064},
+                      C: {MONOMER: 1360058186601.25, OLIGOMER: 1360058186601.25}},
+                 Q: {G: {MONOMER: 45384.2962145191, OLIGOMER: 45384.2962145191},
+                     S: {MONOMER: 16485.5163012079, OLIGOMER: 16485.5163012079},
+                     C: {MONOMER: 45384.2962145191, OLIGOMER: 45384.2962145191}}
                  }
 
-# todo: remove MANUSCRIPT_RATES when debugging done
-MANUSCRIPT_RATES = {C5O4: {(G, G): {MON_MON: 5904261.55598695, MON_OLI: 80333.560184945, OLI_MON: 80333.560184945,
-                                    OLI_OLI: 31893540751.2937},
-                           (S, G): {MON_MON: 8626534.12830123, MON_OLI: 80333.560184945, OLI_MON: 80333.560184945,
-                                    OLI_OLI: 31893540751.2937}},
-                    C5C5: {(G, G): {MON_MON: 1141805.97148106, MON_OLI: 22698.3606666981, OLI_MON: 22698.3606666981,
-                                    OLI_OLI: 68083872447.6958}},
-                    B5: {(G, G): {MON_MON: 7941635722.59467, MON_OLI: 5435496317.66216, OLI_MON: 5435496317.66216,
-                                  OLI_OLI: 5435496317.66216},
-                         (G, S): {MON_MON: 7941635722.59467, MON_OLI: 5435496317.66216, OLI_MON: 5435496317.66216,
-                                  OLI_OLI: 5435496317.66216}},
-                    BB: {(G, G): {MON_MON: 11603278571.9039, MON_OLI: 11603278571.9039, OLI_MON: 11603278571.9039,
-                                  OLI_OLI: 11603278571.9039},
-                         (S, G): {MON_MON: 2243920367.77638, MON_OLI: 2243920367.77638, OLI_MON: 2243920367.77638,
-                                  OLI_OLI: 2243920367.77638},
-                         (S, S): {MON_MON: 11603278571.9039, MON_OLI: 11603278571.9039, OLI_MON: 11603278571.9039,
-                                  OLI_OLI: 11603278571.9039},
-                         (G, S): {MON_MON: 2243920367.77638, MON_OLI: 2243920367.77638, OLI_MON: 2243920367.77638,
-                                  OLI_OLI: 2243920367.77638}},
-                    BO4: {(G, G): {MON_MON: 2889268780.92427, MON_OLI: 3278522716.22094, OLI_MON: 3278522716.22094,
-                                   OLI_OLI: 3278522716.22094},
-                          (S, G): {MON_MON: 83919112.8376677, MON_OLI: 3278522716.22094, OLI_MON: 3278522716.22094,
-                                   OLI_OLI: 3278522716.22094},
-                          (G, S): {MON_MON: 108054134.329644, MON_OLI: 3278522716.22094, OLI_MON: 3278522716.22094,
-                                   OLI_OLI: 3278522716.22094},
-                          # below is where an entry is missing
-                          (S, S): {MON_MON: 34644086.8574001, MON_OLI: 16228844.7506668, OLI_MON: 16228844.7506668}},
-                    AO4: {(G, G): {MON_MON: 36.0239749057507, MON_OLI: 36.0239749057507, OLI_MON: 36.0239749057507,
-                                   OLI_OLI: 36.0239749057507},
-                          (S, G): {MON_MON: 36.0239749057507, MON_OLI: 36.0239749057507, OLI_MON: 36.0239749057507,
-                                   OLI_OLI: 36.0239749057507},
-                          (G, S): {MON_MON: 36.0239749057507, MON_OLI: 36.0239749057507, OLI_MON: 36.0239749057507,
-                                   OLI_OLI: 36.0239749057507},
-                          (S, S): {MON_MON: 36.0239749057507, MON_OLI: 36.0239749057507, OLI_MON: 36.0239749057507,
-                                   OLI_OLI: 36.0239749057507}},
-                    B1: {(G, G): {MON_OLI: 44607678.613794, OLI_MON: 44607678.613794, OLI_OLI: 44607678.613794},
-                         (S, G): {MON_OLI: 3138443.59211371, OLI_MON: 3138443.59211371, OLI_OLI: 3138443.59211371},
-                         (G, S): {MON_OLI: 11107513.4850607, OLI_MON: 11107513.4850607, OLI_OLI: 11107513.4850607},
-                         (S, S): {MON_OLI: 2437439.37772669, OLI_MON: 2437439.37772669, OLI_OLI: 2437439.37772669}},
-                    OX: {G: {MONOMER: 2659877051606.15, OLIGOMER: 2889268780.92427},
-                         S: {MONOMER: 3886264174644.99, OLIGOMER: 514384986527.191}},
-                    Q: {G: {MONOMER: 6699707.46979824, OLIGOMER: 6699707.46979824},
-                        S: {MONOMER: 3138443.59211371, OLIGOMER: 3138443.59211371}}}
+# define dictionary for atoms within each monomer
+ATOM_BLOCKS = {G: ('C 0 0 0 0 \n' +  # 1
+                   'C 0 0 0 0 \n' +  # 2
+                   'C 0 0 0 0 \n' +  # 3
+                   'C 0 0 0 0 \n' +  # 4
+                   'C 0 0 0 0 \n' +  # 5
+                   'C 0 0 0 0 \n' +  # 6
+                   'C 0 0 0 0 \n' +  # 7
+                   'C 0 0 0 0 \n' +  # 8
+                   'C 0 0 0 0 \n' +  # 9
+                   'O 0 0 0 0 \n' +  # 9-OH
+                   'O 0 0 0 0 \n' +  # 3-OMe
+                   'C 0 0 0 0 \n' +  # 3-OMe
+                   'O 0 0 0 0 \n'),  # 4-OH
+               S: ('C 0 0 0 0 \n' +  # 1
+                   'C 0 0 0 0 \n' +  # 2
+                   'C 0 0 0 0 \n' +  # 3
+                   'C 0 0 0 0 \n' +  # 4
+                   'C 0 0 0 0 \n' +  # 5
+                   'C 0 0 0 0 \n' +  # 6
+                   'C 0 0 0 0 \n' +  # 7
+                   'C 0 0 0 0 \n' +  # 8
+                   'C 0 0 0 0 \n' +  # 9
+                   'O 0 0 0 0 \n' +  # 9-OH
+                   'O 0 0 0 0 \n' +  # 3-OMe
+                   'C 0 0 0 0 \n' +  # 3-OMe
+                   'O 0 0 0 0 \n' +  # 4-OH
+                   'O 0 0 0 0 \n' +  # 5-OMe
+                   'C 0 0 0 0 \n'),  # 5-OMe
+               C: ('C 0 0 0 0 \n' +  # 1
+                   'C 0 0 0 0 \n' +  # 2
+                   'C 0 0 0 0 \n' +  # 3
+                   'C 0 0 0 0 \n' +  # 4
+                   'C 0 0 0 0 \n' +  # 5
+                   'C 0 0 0 0 \n' +  # 6
+                   'C 0 0 0 0 \n' +  # 7
+                   'C 0 0 0 0 \n' +  # 8
+                   'C 0 0 0 0 \n' +  # 9
+                   'O 0 0 0 0 \n' +  # 9-OH
+                   'O 0 0 0 0 \n' +  # 3-OH
+                   'O 0 0 0 0 \n'),  # 4-OH
+               G4: ('C 0 0 0 0 \n' +  # 1
+                    'C 0 0 0 0 \n' +  # 2
+                    'C 0 0 0 0 \n' +  # 3
+                    'C 0 0 0 0 \n' +  # 4
+                    'C 0 0 0 0 \n' +  # 5
+                    'C 0 0 0 0 \n' +  # 6
+                    'C 0 0 0 0 \n' +  # 7
+                    'C 0 0 0 0 \n' +  # 8
+                    'C 0 0 0 0 \n' +  # 9
+                    'O 0 0 0 0 \n' +  # 9-OH
+                    'O 0 0 0 0 \n' +  # 3-OMe
+                    'C 0 0 0 0 \n' +  # 3-OMe
+                    'O 0 0 0 0 RAD=2\n'),  # 4-O
+               S4: ('C 0 0 0 0 \n' +  # 1
+                    'C 0 0 0 0 \n' +  # 2
+                    'C 0 0 0 0 \n' +  # 3
+                    'C 0 0 0 0 \n' +  # 4
+                    'C 0 0 0 0 \n' +  # 5
+                    'C 0 0 0 0 \n' +  # 6
+                    'C 0 0 0 0 \n' +  # 7
+                    'C 0 0 0 0 \n' +  # 8
+                    'C 0 0 0 0 \n' +  # 9
+                    'O 0 0 0 0 \n' +  # 9-OH
+                    'O 0 0 0 0 \n' +  # 3-OMe
+                    'C 0 0 0 0 \n' +  # 3-OMe
+                    'O 0 0 0 0 RAD=2\n' +  # 4-O
+                    'O 0 0 0 0 \n' +  # 5-OMe
+                    'C 0 0 0 0 \n')}  # 5-OMe
+
+# Similarly define dictionary for bonds within each monomer -
+# NOTE: THESE MAY NEED TO CHANGE DEPENDING ON INTER-UNIT LINKAGES
+BOND_BLOCKS = {G7: ('1 1  2  \n' +  # Aromatic ring 1->2
+                    '2 2  3  \n' +  # Aromatic ring 2->3
+                    '1 3  4  \n' +  # Aromatic ring 3->4
+                    '1 4  5  \n' +  # Aromatic ring 4->5
+                    '2 5  6  \n' +  # Aromatic ring 5->6
+                    '1 6  1  \n' +  # Aromatic ring 6->1
+                    '2 1  7  \n' +  # Quinone methide propyl tail 1->A
+                    '1 7  8  \n' +  # Propyl tail A->B
+                    '1 8  9  \n' +  # Propyl tail B->G
+                    '1 9  10 \n' +  # Gamma hydroxyl G->OH
+                    '1 3  11 \n' +  # 3 methoxy 3->O
+                    '1 11 12 \n' +  # 3 methoxy O->12
+                    '2 4  13 \n'),  # 4 ketone 4->O
+               G: ('2 1  2  \n' +  # Aromatic ring 1->2
+                   '1 2  3  \n' +  # Aromatic ring 2->3
+                   '2 3  4  \n' +  # Aromatic ring 3->4
+                   '1 4  5  \n' +  # Aromatic ring 4->5
+                   '2 5  6  \n' +  # Aromatic ring 5->6
+                   '1 6  1  \n' +  # Aromatic ring 6->1
+                   '1 1  7  \n' +  # Ring - propyl tail 1->A
+                   '2 7  8  \n' +  # Alkene propyl tail A->B
+                   '1 8  9  \n' +  # Propyl tail B->G
+                   '1 9  10 \n' +  # Gamma hydroxyl G->OH
+                   '1 3  11 \n' +  # 3 methoxy 3->O
+                   '1 11 12 \n' +  # 3 methoxy O->12
+                   '1 4  13 \n'),  # 4 hydroxyl 4->OH
+               S7: ('1 1  2  \n' +  # Aromatic ring 1->2
+                    '2 2  3  \n' +  # Aromatic ring 2->3
+                    '1 3  4  \n' +  # Aromatic ring 3->4
+                    '1 4  5  \n' +  # Aromatic ring 4->5
+                    '2 5  6  \n' +  # Aromatic ring 5->6
+                    '1 6  1  \n' +  # Aromatic ring 6->1
+                    '2 1  7  \n' +  # Quinone methide 1->A
+                    '1 7  8  \n' +  # Propyl tail A->B
+                    '1 8  9  \n' +  # Propyl tail B->G
+                    '1 9  10 \n' +  # Gamma hydroxyl G->OH
+                    '1 3  11 \n' +  # 3 methoxy 3->O
+                    '1 11 12 \n' +  # 3 methoxy O->12
+                    '2 4  13 \n' +  # 4 ketone 4->O
+                    '1 5  14 \n' +  # 5 methoxy 5->O
+                    '1 14 15 \n'),  # 5 methoxy O->15
+               S: ('2 1  2  \n' +  # Aromatic ring 1->2
+                   '1 2  3  \n' +  # Aromatic ring 2->3
+                   '2 3  4  \n' +  # Aromatic ring 3->4
+                   '1 4  5  \n' +  # Aromatic ring 4->5
+                   '2 5  6  \n' +  # Aromatic ring 5->6
+                   '1 6  1  \n' +  # Aromatic ring 6->1
+                   '1 1  7  \n' +  # Ring - propyl tail 1->A
+                   '2 7  8  \n' +  # Alkene propyl tail A->B
+                   '1 8  9  \n' +  # Propyl tail B->G
+                   '1 9  10 \n' +  # Gamma hydroxyl G->OH
+                   '1 3  11 \n' +  # 3 methoxy 3->O
+                   '1 11 12 \n' +  # 3 methoxy O->12
+                   '1 4  13 \n' +  # 4 hydroxyl 4->OH
+                   '1 5  14 \n' +  # 5 methoxy 5->O
+                   '1 14 15 \n'),  # 5 methoxy O->15
+               C: ('2 1  2  \n' +  # Aromatic ring 1->2
+                   '1 2  3  \n' +  # Aromatic ring 2->3
+                   '2 3  4  \n' +  # Aromatic ring 3->4
+                   '1 4  5  \n' +  # Aromatic ring 4->5
+                   '2 5  6  \n' +  # Aromatic ring 5->6
+                   '1 6  1  \n' +  # Aromatic ring 6->1
+                   '1 1  7  \n' +  # Ring - propyl tail 1->A
+                   '2 7  8  \n' +  # Alkene propyl tail A->B
+                   '1 8  9  \n' +  # Propyl tail B->G
+                   '1 9  10 \n' +  # Gamma hydroxyl G->OH
+                   '1 3  11 \n' +  # 3 hydroxyl 3->O
+                   '1 4  12 \n')}  # 4 hydroxyl 4->OH
 
 
 class Event:
@@ -320,8 +418,25 @@ class Event:
         #     "By default, the __hash__() values of str and bytes objects are “salted” with an unpredictable random
         #     value. Although they remain constant within an individual Python process, they are not predictable
         #     between repeated invocations of Python."
-        key_as_num = sum([ord(x) % 32 for x in self.key])
-        return key_as_num + sum(self.index) * 1000 + int(self.rate * 10000)
+        # Original hash method, which did not allow testing because of random salting:
+        #    return hash((tuple(self.index), self.key, self.bond))
+        # Replacement hash method which gave consistent results, but unexpected changed outcomes
+        #    key_as_num = sum([ord(x) % 32 for x in self.key])
+        #    return key_as_num + sum(self.index) * 1000 + int(self.rate * 10000)
+        # The bash below is repeatable and gives similar results to the original hash. It is not directly invoked
+        #     in the package (unsettling that the hash method used for dictionary keys would change results), but it
+        #     is left in case there is any behind the scenes hashing
+        if not self.index:
+            index_join = 0
+        else:
+            index_join = int("".join([str(x) for x in self.index]))
+        index_bytes = index_join.to_bytes((index_join.bit_length() + 7) // 8, 'big')
+        key_bytes = self.key.encode()
+        bond_list_str = "".join([str(x) for x in self.bond])
+        bond_list_bytes = bond_list_str.encode()
+        event_bytes = b''.join([index_bytes, key_bytes, bond_list_bytes])
+        # the hash call below "right-sizes" the value
+        return hash(int.from_bytes(event_bytes, 'big'))
 
 
 class Monomer:
