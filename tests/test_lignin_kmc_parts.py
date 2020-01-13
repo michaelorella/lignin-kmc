@@ -225,19 +225,6 @@ def create_sample_kmc_result(max_time=1., num_initial_monos=3, max_monos=10, sg_
 
 # Tests #
 
-class TestRunKMC(unittest.TestCase):
-    def testSampleRunKMC(self):
-        result = create_sample_kmc_result()
-        print("Time steps: ", len(result[TIME]))
-        print("Last time: ", result[TIME][-1])
-        print("Num monomers: ", len(result[MONO_LIST]))
-        print("Last monomer: ", str(result[MONO_LIST][-1]))
-        self.assertTrue(len(result[TIME]) == 42)
-        self.assertAlmostEqual(result[TIME][-1], 0.0016042367245131094)
-        self.assertTrue(len(result[MONO_LIST]) == 10)
-        self.assertTrue(str(result[MONO_LIST][-1]) == '9: sinapyl alcohol is connected to '
-                                                      '{0, 1, 2, 3, 4, 5, 6, 7, 8, 9} and active at 4')
-
 
 # noinspection DuplicatedCode
 class TestAnalyzeKMCParts(unittest.TestCase):
@@ -320,143 +307,8 @@ class TestAnalyzeKMCParts(unittest.TestCase):
         self.assertTrue(np.array_equal(broken_adj, good_broken_adj))
 
 
-class TestAnalyzeKMCSummary(unittest.TestCase):
-    def testKMCResultSummary(self):
-        result = create_sample_kmc_result()
-        summary = analyze_adj_matrix(result[ADJ_MATRIX])
-        print("RCF Chain Len Dict: ", summary[RCF_YIELDS])
-        print("RCF Bonds created: ", summary[RCF_BONDS])
-        self.assertTrue(summary[CHAIN_LEN] == {10: 1})
-        self.assertTrue(summary[BONDS] == {BO4: 5, B1: 0, BB: 1, B5: 3, C5C5: 0, AO4: 0, C5O4: 0})
-        self.assertTrue(summary[RCF_YIELDS] == {1: 3, 2: 2, 3: 1})
-        self.assertTrue(summary[RCF_BONDS] == {BO4: 0, B1: 0, BB: 1, B5: 3, C5C5: 0, AO4: 0, C5O4: 0})
-
-
 # noinspection DuplicatedCode
 class TestVisualization(unittest.TestCase):
-    def testIniRates(self):
-        run_multi = False
-        if run_multi:
-            fun = par.delayed(run)
-            num_jobs = 4
-        else:
-            fun = None
-            num_jobs = None
-        sg_ratio = 1.1
-
-        # minimize random calls
-        monomer_type_list = [S, G]
-        initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(monomer_type_list)]
-        max_monos = 32
-        num_repeats = 4
-        initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
-        num_rates = 3
-        # FYI: np.logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0)[source]
-        add_rates = np.logspace(4, 12, num_rates)
-        add_rates_result_list = []
-
-        # will add to random seed in the iterations to insure using a different seed for each repeat
-        random_seed = 2
-
-        for add_rate in add_rates:
-            initial_state = create_initial_state(initial_events, initial_monomers)
-            initial_events.append(Event(GROW, [], rate=add_rate))
-            if run_multi:
-                results = par.Parallel(n_jobs=num_jobs)([fun(rates=DEF_RXN_RATES, initialState=initial_state,
-                                                             initialEvents=initial_events, nMax=max_monos, tFinal=1,
-                                                             random_seed=random_seed + i)
-                                                         for i in range(num_repeats)])
-            else:
-                results = [run(rates=DEF_RXN_RATES, initialState=initial_state, initialEvents=initial_events,
-                               nMax=max_monos, tFinal=1, sg_ratio=sg_ratio, random_seed=random_seed + i)
-                           for i in range(num_repeats)]
-            add_rates_result_list.append(results)
-
-        av_bo4_bonds, std_bo4_bonds = get_avg_num_bonds(BO4, num_rates, add_rates_result_list, num_repeats)
-        # print(av_bo4_bonds, std_bo4_bonds)
-        good_av_bo4 = [0.4674731182795699, 0.20259259259259257, 0.07575757575757576]
-        good_std_bo4 = [0.019759435984878556, 0.03448026810929533, 0.017766726362967535]
-        self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))
-        self.assertTrue(np.allclose(std_bo4_bonds, good_std_bo4))
-
-    def testMultiProc(self):
-        # Note: this test did not increase coverage. Added to help debug notebook.
-        # Checking how much the joblib parallelization helped: with 200 monos and 4 sg_options, n_jobs=4:
-        #     with run_multi: Ran 1 test in 30.875s
-        #     without run_multi: Ran 1 test in 85.104s
-        run_multi = False
-        if run_multi:
-            fun = par.delayed(run)
-            num_jobs = 4
-        else:
-            fun = None
-            num_jobs = None
-        sg_opts = [0.1, 2.33, 10]
-        num_sg_opts = len(sg_opts)
-        num_repeats = 4
-        # minimize random number use; here don't set distribution because iterating sg_ratio
-        monomer_draw = [0.77132064, 0.02075195, 0.63364823, 0.74880388, 0.49850701, 0.22479665,
-                        0.19806286, 0.76053071, 0.16911084, 0.08833981, 0.68535982, 0.95339335,
-                        0.00394827, 0.51219226, 0.81262096, 0.61252607, 0.72175532, 0.29187607,
-                        0.91777412, 0.71457578, 0.54254437, 0.14217005, 0.37334076]
-        num_monos = len(monomer_draw)
-
-        sg_result_list = []
-
-        # will add to random seed in the iterations to insure using a different seed for each repeat
-        random_seed = 10
-        for sg_ratio in sg_opts:
-            # Set the percentage of S
-            pct_s = sg_ratio / (1 + sg_ratio)
-
-            # Make choices about what kinds of monomers there are and create them
-            # make the seed sg_ratio so doesn't use the same seed for each iteration
-            initial_monomers = create_initial_monomers(pct_s, monomer_draw)
-
-            # Initialize the monomers, event_dict, and state
-            initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
-            initial_state = create_initial_state(initial_events, initial_monomers)
-
-            if run_multi:
-                results = par.Parallel(n_jobs=num_jobs)([fun(rates=DEF_RXN_RATES, initialState=initial_state,
-                                                             initialEvents=initial_events, nMax=num_monos, tFinal=1,
-                                                             random_seed=random_seed + i)
-                                                         for i in range(num_repeats)])
-            else:
-                results = [run(rates=DEF_RXN_RATES, initialState=initial_state,
-                               initialEvents=initial_events, nMax=num_monos, tFinal=1, random_seed=random_seed + i)
-                           for i in range(num_repeats)]
-            sg_result_list.append(results)
-
-        av_bo4_bonds, std_bo4_bonds = get_avg_num_bonds(BO4, num_sg_opts, sg_result_list, num_repeats)
-        good_av_bo4 = [0.10443722943722944, 0.09921633126934984, 0.11126373626373626]
-        good_std_bo4 = [0.04908160791277051, 0.04111725435423655, 0.05947976674343671]
-        self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))
-        self.assertTrue(np.allclose(std_bo4_bonds, good_std_bo4))
-
-    def testNoGrowth(self):
-        # Here, all the monomers are available at the beginning of the simulation
-        # minimize random calls by providing set list of monomer types
-        initial_mono_type_list = [S, S, G, S, S, S, G, S, S, S, G, S, S, G, S, G, S, G, G, S, S, S, S, S, S, S,
-                                  S, S, S, G, S, G, S, S, S, S, G, S, S, S, G, S, G, S, G, S, G, S, S, S, S, G,
-                                  S, S, G, G, S, G, S, S, G, S, S, S, S, S, S, S, G, S, S, S, S, S, S, G, G, G,
-                                  S, S, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, G, S, S, S, S, G, S, S, G,
-                                  G, S, S, S, S, S, S, S, S, S, S, S, S, G, S, S, G, S, G, S, S, S, S, S, S, S,
-                                  S, S, S, G, G, S, S, S, G, S, G, S, G, S, S, S, S, S, S, S, S, S, G, S, G, S,
-                                  S, S, S, S, S, S, S, G, S, S, S, G, S, G, G, S, G, S, S, G, S, S, S, S, G, S, ]
-        num_monos = len(initial_mono_type_list)
-        initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(initial_mono_type_list)]
-        initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
-        initial_state = create_initial_state(initial_events, initial_monomers)
-        # since GROW is not added to event_dict, no additional monomers will be added
-
-        result = run(rates=DEF_RXN_RATES, initialState=initial_state, initialEvents=initial_events,
-                     nMax=num_monos, tFinal=1, random_seed=10)
-        self.assertTrue(len(result[TIME]) == 500)
-        self.assertAlmostEqual(result[TIME][-1], 0.03219764120594697)
-        self.assertTrue(len(result[MONO_LIST]) == 182)
-
-
     def testCompareVersions(self):
         monomer_types = [[G, S, G, G, S, S, S, G, S, S, G, G, S, G, G, G, G, S, G, G, G, S, G, S, S, S, G, S, S, G, G],
                          [S, S, G, G, S, G, S, G, G, G, G, S, S, S, S, S, G, S, S, S, G, G, S, G, S, G, S, S, G, S, S],
@@ -473,13 +325,10 @@ class TestVisualization(unittest.TestCase):
             initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
             initial_state = create_initial_state(initial_events, initial_monomers)
             results = run(rates=DEF_RXN_RATES, initialState=initial_state, initialEvents=initial_events,
-                          nMax=num_monos, tFinal=1, random_seed=random_seed)
+                          nMax=num_monos, tFinal=1, random_seed=random_seed + i)
             sg_result_list.append(results)
 
         av_bo4_bonds, std_bo4_bonds = get_avg_num_bonds_single_option(BO4, sg_result_list, num_repeats)
         print("Average fraction BO4 bonds: {:.3f}".format(av_bo4_bonds))
         print("Std dev fraction BO4 bonds: {:.3f}".format(std_bo4_bonds))
         self.assertLess(av_bo4_bonds, .2)
-        # self.assertTrue(np.allclose(av_bo4_bonds, 0.12817059483726148))
-        # self.assertTrue(np.allclose(std_bo4_bonds, 0.020492364262714738))
-
