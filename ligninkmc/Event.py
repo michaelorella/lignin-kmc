@@ -81,7 +81,7 @@ class Event:
         return self.index == other.index and self.bond == other.bond and self.key == other.key
     
     def __hash__(self):
-        # # attempt at repeatable hash
+        # # 3) Latest hash; repeatable and similar results to original hash
         # if not self.index:
         #     index_join = 0
         # else:
@@ -95,8 +95,9 @@ class Event:
         # # the hash call below "right-sizes" the value, but since it is hashing an int, will be repeatable
         # event_hash = hash(temp)
 
-        # 2) second hash
-        event_hash = hash ((tuple(self.index), self.key, self.bond))
+        # # 2) second hash
+        # key_as_num = sum([ord(x) % 32 for x in self.key])
+        # event_hash = key_as_num + sum(self.index) * 1000 + int(self.rate * 10000)
 
         # 1) original hash
         event_hash = hash ((tuple(self.index), self.key, self.bond))
