@@ -82,20 +82,20 @@ class Event:
     
     def __hash__(self):
         # attempt at repeatable hash
-        if not self.index:
-            index_join = 0
-        else:
-            index_join = int("".join([str(x) for x in self.index]))
-        index_bytes = index_join.to_bytes((index_join.bit_length() + 7) // 8, 'big')
-        key_bytes = self.key.encode()
-        bond_list_str = "".join([str(x) for x in self.bond])
-        bond_list_bytes =  bond_list_str.encode()
-        event_bytes = b''.join([index_bytes, key_bytes, bond_list_bytes])
-        temp = int.from_bytes(event_bytes, 'big')
-        # the hash call below "right-sizes" the value, but since it is hashing an int, will be repeatable
-        event_hash = hash(temp)
+        # if not self.index:
+        #     index_join = 0
+        # else:
+        #     index_join = int("".join([str(x) for x in self.index]))
+        # index_bytes = index_join.to_bytes((index_join.bit_length() + 7) // 8, 'big')
+        # key_bytes = self.key.encode()
+        # bond_list_str = "".join([str(x) for x in self.bond])
+        # bond_list_bytes =  bond_list_str.encode()
+        # event_bytes = b''.join([index_bytes, key_bytes, bond_list_bytes])
+        # temp = int.from_bytes(event_bytes, 'big')
+        # # the hash call below "right-sizes" the value, but since it is hashing an int, will be repeatable
+        # event_hash = hash(temp)
 
         # # original hash
-        # event_hash = hash ((tuple(self.index), self.key, self.bond))
+        event_hash = hash ((tuple(self.index), self.key, self.bond))
 
-        return  event_hash
+        return event_hash
