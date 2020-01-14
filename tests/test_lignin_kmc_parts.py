@@ -14,11 +14,11 @@ from common_wrangler.common import (InvalidDataError, capture_stdout, silent_rem
 from ligninkmc.create_lignin import (DEF_TEMP, calc_rates, create_initial_monomers, create_initial_events,
                                      degree, create_initial_state, overall_branching_coefficient,
                                      adj_analysis_to_stdout, get_bond_type_v_time_dict)
-from ligninkmc.kmc_common import (Event, Monomer, G, S, H, C, C5O4, OX, C5C5, B5, BB, BO4, AO4, B1, DEF_RXN_RATES,
+from ligninkmc.kmc_common import (Event, Monomer, G, S, H, C, C5O4, OX, C5C5, B5, BB, BO4, AO4, B1, Q, DEF_RXN_RATES,
                                   MON_OLI, MONOMER, GROW, TIME, MONO_LIST, ADJ_MATRIX, CHAIN_LEN, BONDS,
                                   RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_BARRIER_KCAL_MOL, MAX_NUM_DECIMAL)
 from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_tcl, find_fragments, fragment_size, break_bond_type,
-                                     analyze_adj_matrix, count_oligomer_yields, count_bonds)
+                                     analyze_adj_matrix, count_oligomer_yields, count_bonds, do_event, update_events)
 
 
 # logging.basicConfig(level=logging.DEBUG)
@@ -210,6 +210,137 @@ class TestEvent(unittest.TestCase):
         self.assertTrue(events_a == events_b)
         check_set = {events_a[0], events_b[0]}
         self.assertTrue(len(check_set) == 1)
+
+
+class TestChemistry(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def testSSOxidation(self):
+        num_monos = 2
+        init_mons = [Monomer(S, i) for i in range(num_monos)]
+        init_evs = create_initial_events(init_mons, DEF_RXN_RATES)
+        state = create_initial_state(init_evs, init_mons)
+        adj = dok_matrix((num_monos, num_monos))
+
+        do_event(init_evs[0], state, adj)
+
+        actives = [state[i][MONOMER] for i in state if state[i][MONOMER].active == 4]
+        self.assertEqual(len(actives), 1, msg=f'The active monomers are {actives}, but we only expected 1')
+
+        affected_mon = state[init_evs[0].index[0]][MONOMER]
+        self.assertEqual(affected_mon, actives[0])
+        
+        for i in state:
+            mon = state[i][MONOMER]
+            with self.subTest(monomer=mon):
+                self.assertEqual(mon.open, {4, 8}, msg=f'Open sites were expected to be (4, 8), but got {mon.open}')
+                self.assertEqual(mon.type, S, msg=f'Expected the monomer type to stay {S}, but found {mon.type}')
+                self.assertEqual(mon.connectedTo, {i}, msg=f'Monomer should not be connected to anything but itself, got {mon.connectedTo}')
+
+    def testSSOxNewEvents(self):
+        num_monos = 2
+        init_mons = [Monomer(S, i) for i in range(num_monos)]
+        init_evs = create_initial_events(init_mons, DEF_RXN_RATES)
+        state = create_initial_state(init_evs, init_mons)
+        adj = dok_matrix((num_monos, num_monos))
+
+        rate_dict = DEF_RXN_RATES
+
+        possible_events = {0: [[OX, 1, rate_dict[OX]]],
+                           4: [[B1, 2, rate_dict[B1], [1, 8]], [C5O4, 2, rate_dict[C5O4], [4, 5]],
+                               [AO4, 2, rate_dict[AO4], [4, 7]], [BO4, 2, rate_dict[BO4], [4, 8]],
+                               [C5C5, 2, rate_dict[C5C5], [5, 5]], [B5, 2, rate_dict[B5], [5, 8]],
+                               [BB, 2, rate_dict[BB], [8, 8]]],
+                           7: [[Q, 1, rate_dict[Q]], [AO4, 2, rate_dict[AO4], [7, 4]]],
+                           -1: [[]]
+                           }
+
+        rate_list = []
+        for event in init_evs:
+            rate_list.append(event.rate / num_monos)
+
+        first_event = init_evs[0]
+        evs = init_evs[:]
+        do_event(first_event, state, adj)
+        update_events(state, adj, first_event, evs, rate_list, DEF_RXN_RATES[OX], possible_events, max_mon=num_monos)
+
+        affected_mon = state[init_evs[0].index[0]][MONOMER]
+        other_mon = state[1 - init_evs[0].index[0]][MONOMER]
+
+        # But we should see only the oxidation of monomer 1 now as the
+        # possible event
+        self.assertEqual(len(evs), 1)
+
+        only_event = evs[0]
+        self.assertEqual(only_event, init_evs[1])
+        self.assertEqual(only_event.index[0], other_mon.identity)
+        self.assertEqual(only_event.key, OX)
+
+    def testSSOxOx(self):
+        num_monos = 2
+        init_mons = [Monomer(S, i) for i in range(num_monos)]
+        init_evs = create_initial_events(init_mons, DEF_RXN_RATES)
+        state = create_initial_state(init_evs, init_mons)
+        adj = dok_matrix((num_monos, num_monos))
+
+        rate_dict = DEF_RXN_RATES
+
+        possible_events = {0: [[OX, 1, rate_dict[OX]]],
+                           4: [[B1, 2, rate_dict[B1], [1, 8]], [C5O4, 2, rate_dict[C5O4], [4, 5]],
+                               [AO4, 2, rate_dict[AO4], [4, 7]], [BO4, 2, rate_dict[BO4], [4, 8]],
+                               [C5C5, 2, rate_dict[C5C5], [5, 5]], [B5, 2, rate_dict[B5], [5, 8]],
+                               [BB, 2, rate_dict[BB], [8, 8]]],
+                           7: [[Q, 1, rate_dict[Q]], [AO4, 2, rate_dict[AO4], [7, 4]]],
+                           -1: [[]]
+                           }
+
+        rate_list = []
+        for event in init_evs:
+            rate_list.append(event.rate / num_monos)
+
+        first_event = init_evs[0]
+        evs = init_evs[:]
+        do_event(first_event, state, adj)
+        update_events(state, adj, first_event, evs, rate_list, DEF_RXN_RATES[OX], possible_events, max_mon=num_monos)
+
+        event_to_do = evs[0]
+
+        do_event(event_to_do, state, adj)
+
+        # Now both monomers should be oxidized
+        actives = [state[i][MONOMER] for i in state if state[i][MONOMER].active == 4]
+        self.assertEqual(len(actives), 2, msg=f'The active monomers are {actives}, but we expected 2')
+        
+        for i in state:
+            mon = state[i][MONOMER]
+            with self.subTest(monomer=mon):
+                self.assertEqual(mon.open, {4, 8}, msg=f'Open sites were expected to be (4, 8), but got {mon.open}')
+                self.assertEqual(mon.type, S, msg=f'Expected the monomer type to stay {S}, but found {mon.type}')
+                self.assertEqual(mon.connectedTo, {i}, msg=f'Monomer should not be connected to anything but itself, got {mon.connectedTo}')
+
+        update_events(state, adj, event_to_do, evs, rate_list, DEF_RXN_RATES[OX], possible_events, max_mon=num_monos)
+
+        # Now we should get to see all kinds of possibilities between the bonds
+        # These were the events that I saw when running the notebooks that were used in the manuscript
+        new_events = evs[:]
+        expected_events = {Event(BB, [0, 1], 0, (8, 8)),
+                           Event(BB, [1, 0], 0, (8, 8)),
+                           Event(BO4, [0, 1], 0, (4, 8)),
+                           Event(BO4, [1, 0], 0, (4, 8)),
+                           Event(BO4, [0, 1], 0, (8, 4)),
+                           Event(BO4, [1, 0], 0, (8, 4))}
+        for i, event in enumerate(new_events):
+            self.assertTrue(event.key in [BO4, BB])
+            with self.subTest(i=i):
+                self.assertIn(event, expected_events)
+                expected_events.remove(event)
+
+        self.assertEqual(expected_events, set())
+        self.assertEqual(len(new_events), 6)
 
 
 class TestCreateInitialMonomers(unittest.TestCase):
