@@ -82,24 +82,24 @@ class Event:
     
     def __hash__(self):
         # # 3) Latest hash; repeatable and similar results to original hash
-        # if not self.index:
-        #     index_join = 0
-        # else:
-        #     index_join = int("".join([str(x) for x in self.index]))
-        # index_bytes = index_join.to_bytes((index_join.bit_length() + 7) // 8, 'big')
-        # key_bytes = self.key.encode()
-        # bond_list_str = "".join([str(x) for x in self.bond])
-        # bond_list_bytes =  bond_list_str.encode()
-        # event_bytes = b''.join([index_bytes, key_bytes, bond_list_bytes])
-        # temp = int.from_bytes(event_bytes, 'big')
-        # # the hash call below "right-sizes" the value, but since it is hashing an int, will be repeatable
-        # event_hash = hash(temp)
+        if not self.index:
+            index_join = 0
+        else:
+            index_join = int("".join([str(x) for x in self.index]))
+        index_bytes = index_join.to_bytes((index_join.bit_length() + 7) // 8, 'big')
+        key_bytes = self.key.encode()
+        bond_list_str = "".join([str(x) for x in self.bond])
+        bond_list_bytes = bond_list_str.encode()
+        event_bytes = b''.join([index_bytes, key_bytes, bond_list_bytes])
+        temp = int.from_bytes(event_bytes, 'big')
+        # the hash call below "right-sizes" the value, but since it is hashing an int, will be repeatable
+        event_hash = hash(temp)
 
         # # 2) second hash
         # key_as_num = sum([ord(x) % 32 for x in self.key])
         # event_hash = key_as_num + sum(self.index) * 1000 + int(self.rate * 10000)
 
         # 1) original hash
-        event_hash = hash ((tuple(self.index), self.key, self.bond))
+        # event_hash = hash ((tuple(self.index), self.key, self.bond))
 
         return event_hash

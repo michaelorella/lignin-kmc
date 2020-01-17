@@ -435,6 +435,7 @@ def run(nMax=10, tFinal=10, rates=None, initialState=None, initialEvents=None, d
         adjList = []
         monList = []
 
+    bond_num = 0
     #Run the Gillespie algorithm
     while t[-1] < tFinal and len(eventDict) > 0:        
         #Find the total rate for all of the possible events and choose which event to do
@@ -452,24 +453,44 @@ def run(nMax=10, tFinal=10, rates=None, initialState=None, initialEvents=None, d
 
         j = np.random.choice(hashes, p=allRates/rtot)
         event = eventDict[j]
-        
-        #See how much time has passed before this event happened
+
         # See how much time has passed before this event happened; rounding to reduce platform dependency
         dt = round_sig_figs((1 / rtot) * np.log(1 / rand_num))
         t.append(t[-1] + dt)
 
-        #Do the event and update the state
+        # Do the event and update the state
+        if event.key != 'oxidation':
+            bond_num += 1
+            print(f"Bonding event {bond_num}: {event.key} for index/indices {event.index} chosen")
+            print("   ", state[event.index[0]]['monomer'])
+            if event.key != Q:
+                print("   ", state[event.index[1]]['monomer'])
+        # non_ox_events = {'b5': [[28, 2]], 'bb': [[8, 12]]}
+        # if event.key in non_ox_events:
+        #     if event.index in non_ox_events[event.key]:
+        #         print(f"\n{event.key} between {event.index} chosen")
+        #         print(state[event.index[0]]['monomer'])
+        #         print(state[event.index[1]]['monomer'])
         doEvent(event,state,adj, sg_ratio=sg_ratio)
-
         if dynamics:
             adjList.append(adj.copy())
             monList.append([copy.copy(state[i][MONOMER]) for i in state])
 
-        #Check the new state for what events are possible
-        updateEvents(monomers = state, adj = adj, lastEvent = event, events = eventDict, rateVec = rvec,
-                     r = rates, maxMon = nMax)
+        # Check the new state for what events are possible
+        updateEvents(monomers=state, adj=adj, lastEvent=event, events=eventDict, rateVec=rvec,
+                     r=rates, maxMon=nMax)
+        if event.key != 'oxidation':
+            print(f"    After updating:")
+            print("   ", state[event.index[0]]['monomer'])
+            if event.key != Q:
+                print("   ", state[event.index[1]]['monomer'])
+            print("")  # added for a pausing point :-)
+        # if event.key in non_ox_events:
+        #     if event.index in non_ox_events[event.key]:
+        #         print(f"After  updating:")
+        #         print(state[event.index[0]]['monomer'])
+        #         print(state[event.index[1]]['monomer'])
 
     if dynamics:
-
         return {'time':t,'monomers':monList,'adjacency_matrix':adjList}    
     return {'time':t,'monomers':[state[i][MONOMER] for i in state],'adjacency_matrix':adj}
