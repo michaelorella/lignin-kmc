@@ -280,6 +280,7 @@ class TestRunKMC(unittest.TestCase):
         self.assertTrue(list(result[ADJ_MATRIX].values()) == good_dok_vals)
 
 
+# noinspection DuplicatedCode
 class TestAnalyzeKMCParts(unittest.TestCase):
     def testFindOneFragment(self):
         a = dok_matrix((2, 2))
@@ -556,6 +557,7 @@ class TestAnalyzeKMCSummary(unittest.TestCase):
             self.assertTrue(good_bond_summary in output)
 
 
+# noinspection DuplicatedCode
 class TestVisualization(unittest.TestCase):
     def testMakePNG(self):
         # smoke test only--that it doesn't fail, not that it looks correct (that's outside the scope of this package)
@@ -621,7 +623,7 @@ class TestVisualization(unittest.TestCase):
             pass
 
     def testB1BondGenMol(self):
-        # TODO: Update test as the B1 bond problem is resolved.
+        # TODO: Update test when the B1 bond problem is resolved.
         ini_mono_type_list = [S, S, S, G, S]
         sg_ratio = 1.0
         max_monos = 12
@@ -655,7 +657,7 @@ class TestVisualization(unittest.TestCase):
         self.assertTrue(len(result[MONO_LIST]) == expected_num_t_steps)
         self.assertTrue(len(result[MONO_LIST][-1]) == num_monos)
         # want dict[key: [], ...] where the inner list is values by timestep
-        #                         instead of list of timesteps with [[key: val, ...], ... ]
+        #                         instead of list of time steps with [[key: val, ...], ... ]
         adj_list = result[ADJ_MATRIX]
         (bond_type_dict, olig_len_dict, sum_list, olig_count_dict,
             sum_count_list) = get_bond_type_v_time_dict(adj_list, sum_len_larger_than=10)

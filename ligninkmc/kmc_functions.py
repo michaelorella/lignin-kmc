@@ -363,7 +363,6 @@ def update_events(state_dict, adj, last_event, event_list, rate_list, ox_rates, 
                 rate_list[i] = rate_list[i] * (cur_n - 1) / cur_n
 
         # Add an event to oxidize the monomer that was just added to the simulation
-        # todo: why is a "grow" event necessary to allow oxidation? Can't oligomers be oxidized?
         oxidation_event = Event(OX, [cur_n - 1], ox_rates[state_dict[cur_n - 1][MONOMER].type][MONOMER])
         append_if_unique(state_dict[cur_n - 1][AFFECTED], oxidation_event)
         event_list.append(oxidation_event)
