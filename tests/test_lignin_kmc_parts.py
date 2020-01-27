@@ -326,6 +326,10 @@ class TestVisualization(unittest.TestCase):
             olig_len_dict = countYields(results[ADJ_MATRIX])
             print(f"last timestep: {results[TIME][-1]:.3f}; max time is 2 s")
             print(olig_len_dict)
+        # mol = MolFromMolBlock(block)
+        # Compute2DCoords(mol)
+        # MolToFile(mol, TEST_PNG, size=(2000, 1000))
+
 
     def testCompareVersions(self):
         monomer_types = [[G, S, G, G, S, S, S, G, S, S, G, G, S, G, G, G, G, S, G, G, G, S, G, S, S, S, G, S, S, G, G],

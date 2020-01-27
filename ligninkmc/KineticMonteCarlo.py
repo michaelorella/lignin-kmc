@@ -128,14 +128,17 @@ def updateEvents(monomers = None, adj = None, lastEvent = None, events=None, rat
                     
             #Get the sets of activated monomers that we could bind with
             ox = set(); quinone = set()
+            neither = set()
             
             otherIDs = [x for x in monomers if x != monId]
             for other in otherIDs:
-                #Don't allow connections that would cyclize the polymer!
+                # Don't allow connections that would cyclize the polymer!
                 if monomers[other][MONOMER].active == 4 and monomers[other][MONOMER].identity not in mon.connectedTo:
                     ox.add(monomers[other][MONOMER])
                 elif monomers[other][MONOMER].active == 7 and monomers[other][MONOMER].identity not in mon.connectedTo:
                     quinone.add(monomers[other][MONOMER])
+                else:
+                    neither.add(monomers[other][MONOMER])
             bondingPartners = {'bo4': ox, 'b5':ox, '5o4':ox,'55':ox, 'bb':ox, 'b1':ox, 'ao4':quinone}
 
             #Obtain the events that are affected by a change to the monomer that was just acted on
@@ -465,12 +468,6 @@ def run(nMax=10, tFinal=10, rates=None, initialState=None, initialEvents=None, d
             print("   ", state[event.index[0]]['monomer'])
             if event.key != Q:
                 print("   ", state[event.index[1]]['monomer'])
-        # non_ox_events = {'b5': [[28, 2]], 'bb': [[8, 12]]}
-        # if event.key in non_ox_events:
-        #     if event.index in non_ox_events[event.key]:
-        #         print(f"\n{event.key} between {event.index} chosen")
-        #         print(state[event.index[0]]['monomer'])
-        #         print(state[event.index[1]]['monomer'])
         doEvent(event,state,adj, sg_ratio=sg_ratio)
         if dynamics:
             adjList.append(adj.copy())
@@ -485,11 +482,8 @@ def run(nMax=10, tFinal=10, rates=None, initialState=None, initialEvents=None, d
             if event.key != Q:
                 print("   ", state[event.index[1]]['monomer'])
             print("")  # added for a pausing point :-)
-        # if event.key in non_ox_events:
-        #     if event.index in non_ox_events[event.key]:
-        #         print(f"After  updating:")
-        #         print(state[event.index[0]]['monomer'])
-        #         print(state[event.index[1]]['monomer'])
+        else:
+            print(f"ox {event.index[0]}")
 
     if dynamics:
         return {'time':t,'monomers':monList,'adjacency_matrix':adjList}    
