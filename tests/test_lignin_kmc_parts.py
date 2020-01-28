@@ -6,8 +6,8 @@ import joblib as par
 import numpy as np
 from scipy.sparse import dok_matrix
 from ligninkmc.kmc_functions import (G, S, C, MONOMER, OLIGOMER, C5O4, C5C5, B5, BB, BO4, AO4, B1, OX, Q, B1_ALT,
-                                     run_kmc, break_bond_type, count_bonds, count_oligomer_yields, ADJ_MATRIX, Monomer, INT_TO_TYPE_DICT,
-                                     Event, MAX_NUM_DECIMAL, GROW)
+                                     run_kmc, break_bond_type, count_bonds, count_oligomer_yields, ADJ_MATRIX, Monomer,
+                                     INT_TO_TYPE_DICT, Event, MAX_NUM_DECIMAL, GROW)
 
 # Constants
 AFFECTED = 'affected'
@@ -277,7 +277,6 @@ class TestAnalyzeKMCParts(unittest.TestCase):
         print("Olig_len_dict: ", olig_len_dict)
         # good_olig_len_dict = {10: 1}
         # self.assertTrue(olig_len_dict == good_olig_len_dict)
-
 
     def testCountBonds(self):
         good_bond_dict = {BO4: 2, B1: 0, BB: 1, B5: 1, C5C5: 0, AO4: 0, C5O4: 0}
