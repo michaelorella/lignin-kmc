@@ -83,8 +83,12 @@ def updateEvents(monomers = None,adj = None ,lastEvent = None,events = {},rateVe
     if lastEvent.key != 'grow':
         #Remove the last event that we just did from the set of events that can be performed
         leHash = hash(lastEvent)
+
+        print(f'Updating events based on {lastEvent} with hash value {leHash}')
+        print(f'Before removing this event, the dictionary is {events} with rates {rateVec}')
         del(events[leHash])
         del(rateVec[leHash])
+        print(f'After removing this event, the dictionary is {events} with rates {rateVec}')
         csradj = adj.tocsr(copy=True)
         
         #Make sure to keep track of which partners have been "cleaned" already - i.e. what monomers have already had all of the old events removed
@@ -112,8 +116,12 @@ def updateEvents(monomers = None,adj = None ,lastEvent = None,events = {},rateVe
             bondingPartners = { 'bo4':ox,'b5':ox,'5o4':ox,'55':ox,'bb':ox,'b1':ox,
                                 'ao4':quinone}
 
+            print(f'Possible bonding partners are {bondingPartners}')
+
             #Obtain the events that are affected by a change to the monomer that was just acted on
             eventsToBeModified = monomers[monId]['affected']
+
+            print(f'Modified events = {eventsToBeModified}')
 
             #Get the codes for the events that are possible based on how the current monomer behaves
             activePos = mon.active
@@ -125,6 +133,9 @@ def updateEvents(monomers = None,adj = None ,lastEvent = None,events = {},rateVe
                 if evHash in events:
                     del(events[evHash]) 
                     del(rateVec[evHash])
+
+
+            print(f'After removal of any affected events the events are {events}')
 
             #Overwrite the old events that could have been modified from this monomer being updated
             monomers[monId]['affected'] = set()
@@ -138,7 +149,12 @@ def updateEvents(monomers = None,adj = None ,lastEvent = None,events = {},rateVe
                     
                     #Add the event to the set of events modifiable by changing the monomer, and update the set of all 
                     #events at the next time step
-                    monomers[monId]['affected'].add( Event( item[0] , [mon.identity] , rate ) )
+                    new_ev = Event( item[0] , [mon.identity] , rate )
+                    monomers[monId]['affected'].add( new_ev )
+
+                    print(f'The new affected monomers are {monomers[monId]["affected"]}')
+                    print(f'The hash value of the new event was {hash(new_ev)}')
+
                     
                 elif item and item[1] == 2: #Bimolecular reaction event
                     bond = tuple(item[3])
@@ -168,13 +184,19 @@ def updateEvents(monomers = None,adj = None ,lastEvent = None,events = {},rateVe
 
                             #Add this to both the monomer and it's bonding partners list of events that need to be modified
                             #upon manipulation of either monomer
-                            monomers[monId]['affected'].add ( Event ( item[0] , index , rate , bond ) ) # this -> other
-                            monomers[partner.identity]['affected'].add ( Event ( item[0] , index , rate , bond ) ) # this -> other
+                            new_ev = Event ( item[0] , index , rate , bond )
+                            monomers[monId]['affected'].add ( new_ev ) # this -> other
+                            monomers[partner.identity]['affected'].add ( new_ev ) # this -> other
                             
+                            print(f'The first event (this->other) is {new_ev} with hash {hash(new_ev)}')
                             
+
+                            new_ev = Event ( item[0] , back , rate , alt )
                             #Switch the order
-                            monomers[monId]['affected'].add ( Event ( item[0] , back , rate , alt ) ) #other -> this
-                            monomers[partner.identity]['affected'].add ( Event ( item[0] , back , rate , alt ) ) #other -> this
+                            monomers[monId]['affected'].add ( new_ev ) #other -> this
+                            monomers[partner.identity]['affected'].add ( new_ev ) #other -> this
+
+                            print(f'The first event (other->this) is {new_ev} with hash {hash(new_ev)}')
                         
                         
                         #Add the bond from one monomer to the other in the reverse config if not symmetric
@@ -191,12 +213,17 @@ def updateEvents(monomers = None,adj = None ,lastEvent = None,events = {},rateVe
                                     print(size)
                                     raise
                                 
-                                monomers[monId]['affected'].add ( Event ( item[0] , index , rate , alt ) ) # this -> other alt
-                                monomers[partner.identity]['affected'].add ( Event ( item[0] , index , rate , alt ) ) # this -> other alt
+                                new_ev = Event ( item[0] , index , rate , alt )
+                                monomers[monId]['affected'].add ( new_ev ) # this -> other alt
+                                monomers[partner.identity]['affected'].add ( new_ev ) # this -> other alt
+
+                                print(f'The second event (this->other) is {new_ev} with hash {hash(new_ev)}')
                                 
                                 #Switch the order
-                                monomers[monId]['affected'].add ( Event ( item[0] , back , rate , bond ) ) # other -> this alt
-                                monomers[partner.identity]['affected'].add ( Event ( item[0] , back , rate , bond ) ) # other -> this alt
+                                new_ev = Event ( item[0] , back , rate , bond )
+                                monomers[monId]['affected'].add ( new_ev ) # other -> this alt
+                                monomers[partner.identity]['affected'].add ( new_ev ) # other -> this alt
+                                print(f'The second event (other->this) is {new_ev} with hash {hash(new_ev)}')
                     
                     #END LOOP OVER PARTNERS
                 #END UNIMOLECULAR/BIMOLECULAR BRANCH

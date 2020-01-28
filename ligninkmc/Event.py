@@ -74,4 +74,18 @@ class Event:
         return self.index == other.index and self.bond == other.bond and self.key == other.key
     
     def __hash__(self):
-        return hash ( ( tuple(self.index), self.key , self.bond ) )
+        # return hash((tuple(self.index), self.key, self.bond))
+        # key_as_num = sum([ord(x) % 32 for x in self.key])
+        # return key_as_num + sum(self.index) * 1000 + int(self.rate * 10000)
+
+        if not self.index:
+            index_join = 0
+        else:
+            index_join = int("".join([str(x) for x in self.index]))
+        index_bytes = index_join.to_bytes((index_join.bit_length() + 7) // 8, 'big')
+        key_bytes = self.key.encode()
+        bond_list_str = "".join([str(x) for x in self.bond])
+        bond_list_bytes = bond_list_str.encode()
+        event_bytes = b''.join([index_bytes, key_bytes, bond_list_bytes])
+        # the hash call below "right-sizes" the value
+        return hash(int.from_bytes(event_bytes, 'big'))
