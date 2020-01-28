@@ -8,12 +8,14 @@ from rdkit.Chem.Draw.MolDrawing import MolDrawing, DrawingOptions
 import itertools
 import re
 
+from ligninkmc.KineticMonteCarlo import C, S, G
+
 DrawingOptions.bondLineWidth = 1.2
 
 
 def generateMol(adj,nodeList): 
     #define dictionary for atoms within each monomer
-    atomBlocks = {'G':( 'C 0 0 0 0 \n' + #1
+    atomBlocks = {G:( 'C 0 0 0 0 \n' + #1
                         'C 0 0 0 0 \n' + #2
                         'C 0 0 0 0 \n' + #3
                         'C 0 0 0 0 \n' + #4
@@ -26,7 +28,7 @@ def generateMol(adj,nodeList):
                         'O 0 0 0 0 \n' + #3-OMe
                         'C 0 0 0 0 \n' + #3-OMe
                         'O 0 0 0 0 \n'), #4-OH
-                 'S': ( 'C 0 0 0 0 \n' + #1
+                 S: ( 'C 0 0 0 0 \n' + #1
                         'C 0 0 0 0 \n' + #2
                         'C 0 0 0 0 \n' + #3
                         'C 0 0 0 0 \n' + #4
@@ -41,7 +43,7 @@ def generateMol(adj,nodeList):
                         'O 0 0 0 0 \n' + #4-OH
                         'O 0 0 0 0 \n' + #5-OMe
                         'C 0 0 0 0 \n'),  #5-OMe
-                 'C': ( 'C 0 0 0 0 \n' + #1
+                 C: ( 'C 0 0 0 0 \n' + #1
                         'C 0 0 0 0 \n' + #2
                         'C 0 0 0 0 \n' + #3
                         'C 0 0 0 0 \n' + #4
@@ -97,7 +99,7 @@ def generateMol(adj,nodeList):
                         '1 3  11 \n' + #3 methoxy 3->O
                         '1 11 12 \n' + #3 methoxy O->12
                         '2 4  13 \n' ),#4 ketone 4->O
-                  'G':( '2 1  2  \n' +  #Aromatic ring 1->2
+                  G:( '2 1  2  \n' +  #Aromatic ring 1->2
                         '1 2  3  \n' +  #Aromatic ring 2->3
                         '2 3  4  \n' +  #Aromatic ring 3->4
                         '1 4  5  \n' +  #Aromatic ring 4->5
@@ -125,7 +127,7 @@ def generateMol(adj,nodeList):
                         '2 4  13 \n' + #4 ketone 4->O
                         '1 5  14 \n' + #5 methoxy 5->O
                         '1 14 15 \n' ),#5 methoxy O->15
-                  'S':( '2 1  2  \n' +  #Aromatic ring 1->2
+                  S:( '2 1  2  \n' +  #Aromatic ring 1->2
                         '1 2  3  \n' +  #Aromatic ring 2->3
                         '2 3  4  \n' +  #Aromatic ring 3->4
                         '1 4  5  \n' +  #Aromatic ring 4->5
@@ -140,7 +142,7 @@ def generateMol(adj,nodeList):
                         '1 4  13 \n' + #4 hydroxyl 4->OH
                         '1 5  14 \n' + #5 methoxy 5->O
                         '1 14 15 \n' ),#5 methoxy O->15
-                  'C':( '2 1  2  \n' +  #Aromatic ring 1->2
+                  C:( '2 1  2  \n' +  #Aromatic ring 1->2
                         '1 2  3  \n' +  #Aromatic ring 2->3
                         '2 3  4  \n' +  #Aromatic ring 3->4
                         '1 4  5  \n' +  #Aromatic ring 4->5
@@ -162,7 +164,8 @@ def generateMol(adj,nodeList):
     monomerStartIdxAtom = []
     removed = {'bonds':0,'atoms':0}
 
-    sitePositions = {4:{2:11,1:12,0:12},8:{x:7 for x in [0,1,2]},10:{x:9 for x in [0,1,2]},5:{x:4 for x in [0,1,2]},7:{x:6 for x in [0,1,2]},1:{x:0 for x in [0,1,2]},10:{x:9 for x in [0,1,2]}}
+    sitePositions = {1: {x: 0 for x in [G, S, C]}, 4: {C: 11, S: 12, G: 12}, 5: {x: 4 for x in [G, S, C]},
+                     7: {x: 6 for x in [G, S, C]}, 8: {x: 7 for x in [G, S, C]}, 10: {x: 9 for x in [G, S, C]}}
     ALPHA_BETA_ALKENE_LOCATION = 7
     ALPHA_RING_LOCATION = 6
     ALPHA = 7
@@ -170,29 +173,29 @@ def generateMol(adj,nodeList):
     
     #Build the individual monomers before they are linked by anything
     for i , mon in enumerate(nodeList):
-        if mon.type == 0:
+        if mon.type == G:
             if mon.active == 0 or mon.active == -1:
-                atomBlock = atomBlocks['G']
-                bondBlock = bondBlocks['G']
+                atomBlock = atomBlocks[G]
+                bondBlock = bondBlocks[G]
             elif mon.active == 4:
                 atomBlock = atomBlocks['G4']
-                bondBlock = bondBlocks['G']
+                bondBlock = bondBlocks[G]
             elif mon.active == 7:
-                atomBlock = atomBlocks['G']
+                atomBlock = atomBlocks[G]
                 bondBlock = bondBlocks['G7']
-        elif mon.type == 1:
+        elif mon.type == S:
             if mon.active == 0 or mon.active == -1:
-                atomBlock = atomBlocks['S']
-                bondBlock = bondBlocks['S']
+                atomBlock = atomBlocks[S]
+                bondBlock = bondBlocks[S]
             elif mon.active == 4:
                 atomBlock = atomBlocks['S4']
-                bondBlock = bondBlocks['S']
+                bondBlock = bondBlocks[S]
             elif mon.active == 7:
-                atomBlock = atomBlocks['S']
+                atomBlock = atomBlocks[S]
                 bondBlock = bondBlocks['S7']
-        elif mon.type == 2:
-            atomBlock = atomBlocks['C']
-            bondBlock = bondBlocks['C']
+        elif mon.type == C:
+            atomBlock = atomBlocks[C]
+            bondBlock = bondBlocks[C]
         
         
         #Extract each of the individual atoms from this monomer to add to the aggregate file
