@@ -462,7 +462,7 @@ def run(nMax=10, tFinal=10, rates=None, initialState=None, initialEvents=None, d
         t.append(t[-1] + dt)
 
         # Do the event and update the state
-        if event.key != 'oxidation':
+        if event.key != 'oxidation' and event.key != GROW:
             bond_num += 1
             print(f"Bonding event {bond_num}: {event.key} for index/indices {event.index} chosen")
             print("   ", state[event.index[0]]['monomer'])
@@ -476,14 +476,16 @@ def run(nMax=10, tFinal=10, rates=None, initialState=None, initialEvents=None, d
         # Check the new state for what events are possible
         updateEvents(monomers=state, adj=adj, lastEvent=event, events=eventDict, rateVec=rvec,
                      r=rates, maxMon=nMax)
-        if event.key != 'oxidation':
+        if event.key != 'oxidation' and event.key != GROW:
             print(f"    After updating:")
             print("   ", state[event.index[0]]['monomer'])
             if event.key != Q:
                 print("   ", state[event.index[1]]['monomer'])
             print("")  # added for a pausing point :-)
-        else:
+        elif event.key == 'oxidation':
             print(f"ox {event.index[0]}")
+        elif event.key == GROW:
+            print(f"added: {state[len(state)-1][MONOMER]}")
 
     if dynamics:
         return {'time':t,'monomers':monList,'adjacency_matrix':adjList}    
