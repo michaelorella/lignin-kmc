@@ -2,7 +2,6 @@
 import logging
 import unittest
 from collections import OrderedDict
-import joblib as par
 import numpy as np
 from scipy.sparse import dok_matrix
 from ligninkmc import Monomer, Event, run
@@ -266,7 +265,6 @@ class TestAnalyzeKMCParts(unittest.TestCase):
         print("Olig_len_dict: ", olig_len_dict)
         # good_olig_len_dict = {10: 1}
         # self.assertTrue(olig_len_dict == good_olig_len_dict)
-
 
     def testCountBonds(self):
         good_bond_dict = {BO4: 2, B1: 0, BB: 1, B5: 1, C5C5: 0, AO4: 0, C5O4: 0}
