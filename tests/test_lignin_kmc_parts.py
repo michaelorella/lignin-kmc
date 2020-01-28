@@ -333,6 +333,24 @@ class TestVisualization(unittest.TestCase):
         Compute2DCoords(mol)
         MolToFile(mol, TEST_PNG, size=(2400, 2000))
 
+    def testCheckSBonding(self):
+        # will add to random seed in the iterations to insure using a different seed for each repeat
+        random_seed = 10
+        # Initialize the monomers, event_dict, and state
+        initial_monomers = [Monomer(S, m) for m in range(32)]
+        num_monos = len(initial_monomers)
+        initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
+        initial_state = create_initial_state(initial_events, initial_monomers)
+        result = run(rates=DEF_RXN_RATES, initialState=initial_state, initialEvents=initial_events,
+                     nMax=num_monos, tFinal=2, random_seed=random_seed)
+        olig_len_dict = countYields(result[ADJ_MATRIX])
+        print(f"last timestep: {result[TIME][-1]:.3f}; max time is 2 s")
+        print(olig_len_dict)
+        block = generateMol(result[ADJ_MATRIX], result[MONO_LIST])
+        mol = MolFromMolBlock(block)
+        Compute2DCoords(mol)
+        MolToFile(mol, TEST_PNG, size=(2400, 2000))
+
     def testCompareVersions(self):
         monomer_types = [[G, S, G, G, S, S, S, G, S, S, G, G, S, G, G, G, G, S, G, G, G, S, G, S, S, S, G, S, S, G, G],
                          [S, S, G, G, S, G, S, G, G, G, G, S, S, S, S, S, G, S, S, S, G, G, S, G, S, G, S, S, G, S, S],
