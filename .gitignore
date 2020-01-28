@@ -1,28 +1,53 @@
-  
+# Test notebooks
+*.ipynb_checkpoints  
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# C extensions
+*.so
+
+# Distribution / packaging
+bin/
 build/
-tests/test_data/run_kmc/psfgen.tcl
-__pycache__
-.idea/
-.ipynb_checkpoints/
-notebooks/Example-hm.ipynb
-notebooks/Example_again.ipynb
-notebooks/testing.ipynb
+develop-eggs/
 dist/
-lignin-kmc.iml
-ligninkmc.egg-info/
-ligninkmc/__pycache__/
-/.eggs/
-Lignin Polymerization Notebook.ipynb
-temp*
-/updated_PlottingResults.ipynb
-plots/
-.tox
-/update.sh
-/tests/test_data/run_kmc/lignin-kmc-out.sdf
-/tests/test_data/orella_plots/
-/tests/test_data/new_plots/
-/tests/test_bond_formation.py
-/mono_olig_v_step*.png
-/bond_dist_v_step*.png
-/tests/test_data/run_kmc/test.png
-/tests/test_data/plots_for_testing/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+
+# Translations
+*.mo
+
+# Mr Developer
+.mr.developer.cfg
+.project
+.pydevproject
+
+# Rope
+.ropeproject
+
+# Django stuff:
+*.log
+*.pot
+
+# Sphinx documentation
+docs/_build/
