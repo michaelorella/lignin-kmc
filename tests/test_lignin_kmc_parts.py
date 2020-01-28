@@ -2,8 +2,10 @@
 import logging
 import unittest
 from collections import OrderedDict
-import joblib as par
 import numpy as np
+from rdkit.Chem.Draw import MolToFile
+from rdkit.Chem.rdDepictor import Compute2DCoords
+from rdkit.Chem.rdmolfiles import MolFromMolBlock
 from scipy.sparse import dok_matrix
 from ligninkmc import Monomer, Event, run
 from ligninkmc.Analysis import (breakBond, countBonds, countYields)
@@ -330,7 +332,6 @@ class TestVisualization(unittest.TestCase):
         # Compute2DCoords(mol)
         # MolToFile(mol, TEST_PNG, size=(2000, 1000))
 
-
     def testCompareVersions(self):
         monomer_types = [[G, S, G, G, S, S, S, G, S, S, G, G, S, G, G, G, G, S, G, G, G, S, G, S, S, S, G, S, S, G, G],
                          [S, S, G, G, S, G, S, G, G, G, G, S, S, S, S, S, G, S, S, S, G, G, S, G, S, G, S, S, G, S, S],
@@ -356,3 +357,20 @@ class TestVisualization(unittest.TestCase):
         self.assertLess(av_bo4_bonds, .2)
         self.assertTrue(np.allclose(av_bo4_bonds, 0.1305421363392378))
         self.assertTrue(np.allclose(std_bo4_bonds, 0.06510116457722083))
+
+    def testCheckSBonding(self):
+        # will add to random seed in the iterations to insure using a different seed for each repeat
+        random_seed = 10
+        # Initialize the monomers, event_dict, and state
+        initial_monomers = [Monomer(S, m) for m in range(30)]
+        num_monos = len(initial_monomers)
+        initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
+        initial_state = create_initial_state(initial_events, initial_monomers)
+        results = run(rates=DEF_RXN_RATES, initialState=initial_state, initialEvents=initial_events,
+                      nMax=num_monos, tFinal=2, random_seed=random_seed)
+        olig_len_dict = countYields(results[ADJ_MATRIX])
+        print(f"last timestep: {results[TIME][-1]:.3f}; max time is 2 s")
+        print(olig_len_dict)
+        mol = MolFromMolBlock(block)
+        Compute2DCoords(mol)
+        MolToFile(mol, TEST_PNG, size=(2000, 1000))
