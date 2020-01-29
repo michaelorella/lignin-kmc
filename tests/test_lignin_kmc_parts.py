@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 import joblib as par
 import numpy as np
-from rdkit.Chem import MolFromMolBlock
+from rdkit.Chem import (MolFromMolBlock, GetMolFrags)
 from rdkit.Chem.AllChem import Compute2DCoords
 from rdkit.Chem.Draw import MolToFile
 from scipy.sparse import dok_matrix
@@ -626,7 +626,7 @@ class TestVisualization(unittest.TestCase):
         # TODO: Update test when the B1 bond problem is resolved.
         ini_mono_type_list = [S, S, S, G, S]
         sg_ratio = 1.0
-        max_monos = 12
+        max_monos = 500
         random_num = 55
         initial_monomers = [Monomer(mono_type, i) for i, mono_type in enumerate(ini_mono_type_list)]
         initial_events = create_initial_events(initial_monomers, DEF_RXN_RATES)
@@ -636,8 +636,20 @@ class TestVisualization(unittest.TestCase):
                          random_seed=random_num, sg_ratio=sg_ratio)
         nodes = result[MONO_LIST]
         adj = result[ADJ_MATRIX]
+
         with capture_stderr(generate_mol, adj, nodes) as output:
-            self.assertTrue("B1 bonds" in output)
+            self.assertFalse(output)
+
+        mol = MolFromMolBlock(generate_mol(adj, nodes))
+        mols = GetMolFrags(mol)
+
+        analysis = analyze_adj_matrix(adj)
+        frag_sizes = analysis[CHAIN_LEN]
+
+        # Make sure there are the same number of separate fragments calculated by RDKIT
+        # as we get from just separating the alternate B1
+        self.assertEqual(np.sum(list(frag_sizes.values())), len(mols))
+
 
     def testDynamics(self):
         # Tests procedures in the Dynamics.ipynb
