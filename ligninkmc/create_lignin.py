@@ -93,7 +93,7 @@ OPENING_MSG = f"Running Lignin-KMC version {__version__}. " \
 
 def plot_bond_error_bars(x_axis, y_axis_val_dicts, y_axis_std_dev_dicts, y_val_key_list, x_axis_label, y_axis_label,
                          plot_title, plot_fname):
-    plt.figure(figsize=(3.5, 3.5))
+    plt.figure(figsize=(3, 5))
     for y_idx, y_key in enumerate(y_val_key_list):
         plt.errorbar(x_axis, y_axis_val_dicts[y_key], yerr=y_axis_std_dev_dicts[y_key], linestyle='none', marker='.',
                      markersize=10, markerfacecolor=PLOT_COLORS[y_idx], markeredgecolor=PLOT_COLORS[y_idx],

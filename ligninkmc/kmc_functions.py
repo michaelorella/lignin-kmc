@@ -903,8 +903,7 @@ def generate_mol(adj, node_list):
         #     2) Convert the new primary alcohol to an aldehyde
         if sorted(bond_loc) == [1, 8]:
             # TODO: make sure all B1 bonds are correctly forms
-            warning("There are problems in how this program currently builds molecules with B1 bonds. Carefully "
-                    "check any output.")
+            warning("There are problems in how this program currently builds molecules with B1 bonds.")
             index_for_one = int(not beta[tuple(bond_loc)])
             # Convert the alpha alcohol on one's tail to an aldehyde
             alpha_idx = mono_start_idx_atom[mono_indices[index_for_one]

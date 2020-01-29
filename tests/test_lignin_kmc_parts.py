@@ -636,6 +636,7 @@ class TestVisualization(unittest.TestCase):
                          random_seed=random_num, sg_ratio=sg_ratio)
         nodes = result[MONO_LIST]
         adj = result[ADJ_MATRIX]
+        # generate_mol(adj, nodes)
         with capture_stderr(generate_mol, adj, nodes) as output:
             self.assertTrue("B1 bonds" in output)
 
@@ -676,10 +677,6 @@ class TestVisualization(unittest.TestCase):
             self.assertEqual(len(val_list), expected_num_t_steps)
             olig_len_sum_dict[olig_len] = sum(val_list)
         self.assertEqual(olig_len_sum_dict, good_olig_len_sum_dict)
-
-        # sum_sums = int(sum(sum_list))
-        # good_sum_sum_list = 312
-        # self.assertEqual(sum_sums, good_sum_sum_list)
 
     def testIniRates(self):
         # Note: this test did not increase coverage. Added to help debug notebook.
