@@ -744,7 +744,7 @@ def generate_mol(adj, node_list):
     bond_line_num = 1
     mono_start_idx_bond = []
     mono_start_idx_atom = []
-    removed = {BONDS: 0, ATOMS: 0}
+    removed = {BONDS: [], ATOMS: 0}
 
     site_positions = {1: {x: 0 for x in [G, S, C]}, 4: {C: 11, S: 12, G: 12}, 5: {x: 4 for x in [G, S, C]},
                       7: {x: 6 for x in [G, S, C]}, 8: {x: 7 for x in [G, S, C]}, 10: {x: 9 for x in [G, S, C]}}
@@ -843,13 +843,16 @@ def generate_mol(adj, node_list):
             for i in range(2):
                 if adj[pair[i]] == 8 and mons[i].active != 7:  # Monomer index is bound through beta
                     # Find the bond index corresponding to alkene bond
-                    alkene_bond_index = mono_start_idx_bond[mono_indices[i]] + alpha_beta_alkene_location - \
-                                        removed[BONDS]
+                    alkene_bond_index = mono_start_idx_bond[mono_indices[i]] + alpha_beta_alkene_location
+                    bonds_removed_before = len([x for x in removed[BONDS]
+                                                if x < alkene_bond_index])
+                    alkene_bond_index -= bonds_removed_before
 
                     # Get all of the required bond information (index,order,monIdx1,monIdx2)
                     bond_vals = re.split(' +', bonds[alkene_bond_index])[2:]
                     try:
-                        assert (int(bond_vals[0]) == alkene_bond_index + removed[BONDS])
+                        assert (int(bond_vals[0]) == alkene_bond_index
+                                + len(removed[BONDS]))
                     except AssertionError:
                         print(f'Expected index: {bond_vals[0]}, Index obtained: {alkene_bond_index}')
 
@@ -898,6 +901,7 @@ def generate_mol(adj, node_list):
                     bonds.append(f'M  V30 {bond_line_num} 1 {alpha_idx} {other_idx} \n')
                     bond_line_num += 1
 
+
         # For the B1 bond:
         #     1) Disconnect the original 1 -> A bond that existed from the not beta monomer
         #     2) Convert the new primary alcohol to an aldehyde
@@ -921,14 +925,24 @@ def generate_mol(adj, node_list):
             #     was added last
             try:
                 oxygen_atom_index = max(others)
+
                 bonds = re.sub(f'1 {alpha_idx} {oxygen_atom_index}',
                                f'2 {alpha_idx} {oxygen_atom_index}', temp).splitlines(keepends=True)
 
                 # Find where the index for the bond is and remove it from the array
-                alpha_ring_bond_index = mono_start_idx_bond[mono_indices[index_for_one]
-                                                            ] + alpha_ring_location - removed[BONDS]
+                alpha_ring_bond_index = (mono_start_idx_bond[mono_indices[
+                                                            index_for_one]]
+                                                        + alpha_ring_location)
+
+                bonds_removed_before = len([x for x in removed[BONDS]
+                                                if x < alpha_ring_bond_index])
+                alpha_ring_bond_index -= bonds_removed_before
+
+                # Only should be subtracting number of removed bonds that came BEFORE this location!
+                true_bond_index = int(re.split(' +', bonds[alpha_ring_bond_index])[2])
+
                 del (bonds[alpha_ring_bond_index])
-                removed[BONDS] += 1
+                removed[BONDS] += [true_bond_index]
             except ValueError:
                 raise ValueError(f'Could mot find the bond connecting α-carbon (atom index {alpha_idx}) to the alcohol '
                                  f'(could not identify the oxygen atom index).')
@@ -938,7 +952,7 @@ def generate_mol(adj, node_list):
 
     mol_atom_blocks += 'M  V30 END ATOM \n'
     mol_bond_blocks += 'M  V30 END BOND \n'
-    counts = f'M  V30 COUNTS {atom_line_num - 1 - removed[ATOMS]} {bond_line_num - 1 - removed[BONDS]} 0 0 0\n'
+    counts = f'M  V30 COUNTS {atom_line_num - 1 - removed[ATOMS]} {bond_line_num - 1 - len(removed[BONDS])} 0 0 0\n'
     mol_str += counts + mol_atom_blocks + mol_bond_blocks + 'M  V30 END CTAB\nM  END'
 
     return mol_str
