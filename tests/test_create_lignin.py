@@ -293,7 +293,7 @@ class TestCreateLigninNormalUse(unittest.TestCase):
             self.assertFalse(diff_lines(TEST_SMI_OUT_TEMP_DIR, GOOD_TEST_SMI_OUT))
         finally:
             silent_remove(TEST_SMI_OUT_TEMP_DIR, disable=DISABLE_REMOVE)
-            silent_remove(TEMP_DIR, disable=DISABLE_REMOVE)
+            silent_remove(TEMP_DIR, dir_with_files=True, disable=DISABLE_REMOVE)
             silent_remove(INNER_TEMP_DIR, disable=DISABLE_REMOVE)
             pass
 
@@ -521,23 +521,39 @@ class TestDynamics(unittest.TestCase):
             silent_remove(TEMP_DIR, dir_with_files=True, disable=DISABLE_REMOVE)
             pass
 
-    def testTryOvercomeB1Error(self):
-        random_number = 1
-        test_input = ["-i", "5", "-m", "200", "-a", "1", "-e",
-                      "-sg", "1, 3, 5, 10", "-n", "3", "-r", str(random_number)]
+    def testCheckForValenceError(self):
+        # todo: fix valence error
+        random_seed = 1
+        test_input = ["-i", "5", "-m", "200", "-a", "1",
+                      "-sg", "1, 3, 5, 10", "-n", "3", "-r", str(random_seed)]
+        # main(test_input)
         with capture_stderr(main, test_input) as output:
-            self.assertTrue("Will repeat step" in output)
-            self.assertTrue("error in producing output" in output)
+            if output:
+                print("Encountered error:\n", output)
+            self.assertFalse(output)
 
-    # Do not include the following in test coverage--just an easy way to run this for its production output
+    def testCheckSBonding(self):
+        random_seed = 10
+        test_input = ["-i", "2", "-m", "64", "-a", "1e2",
+                      "-sg", "10000000", "-r", str(random_seed)]
+        # main(test_input)
+        with capture_stderr(main, test_input) as output:
+            self.assertFalse("Exiting program due to error in producing output" in output)
+
+    # Added as an easy way to run this for its production output
     def testProduction(self):
         # new_out_dir = os.path.join(DATA_DIR, 'new_plots')
         # more efficient to just look at "1e8, 1e6, 1e4" and "1,  3, 5, 10"
         # for a full list: "-a",  "1e8, 1e6, 1e4, 1e2, 1"
         #                  "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10",
         #                  "-n", "5"m "-d", new_out_dir
-        plot_input = ["-i", "5", "-m", "200", "-a", "1", "-x",
-                      "-sg", "1, 3, 5, 10", "-n", "3", "-p", "-d", TEMP_DIR]
+        plot_input = ["-x", "-p",
+                      # next line: testing
+                      "-i", "5", "-m", "100", "-a", "1", "-sg", "1, 10", "-n", "3", "-d", TEMP_DIR,
+                      # # alt lines: production
+                      # "-i", "2", "-m", "500", "-l", "1e5", "-a", "1e8, 1e6, 1e4, 1e2, 1",
+                      # "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10", "-n", "100", "-d", new_out_dir,
+                      ]
         try:
             with capture_stderr(main, plot_input) as output:
                 self.assertFalse(output)

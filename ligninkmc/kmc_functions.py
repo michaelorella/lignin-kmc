@@ -750,7 +750,7 @@ def generate_mol(adj, node_list):
                       7: {x: 6 for x in [G, S, C]}, 8: {x: 7 for x in [G, S, C]}, 10: {x: 9 for x in [G, S, C]}}
     alpha_beta_alkene_location = 7
     alpha_ring_location = 6
-    alpha = 7
+    alpha_carbon_index = 7
 
     for i, mon in enumerate(node_list):
         # Build the individual monomers before they are linked by anything
@@ -810,8 +810,8 @@ def generate_mol(adj, node_list):
 
     for pair in paired_adj:
         # Find the types of bonds and indices associated with each of the elements in the adjacency matrix
-        # Indices are extracted as tuples (row,col) and we just want the row for each        
-        mono_indices, _ = pair
+        # Indices are extracted as tuples (row,col) and we just want the row for each, as list for consistent order
+        mono_indices = [x[0] for x in pair]
 
         # Get the monomers corresponding to the indices in this bond
         mons = [None, None]
@@ -905,14 +905,10 @@ def generate_mol(adj, node_list):
             index_for_one = int(not beta[tuple(bond_loc)])
             # Convert the alpha alcohol on one's tail to an aldehyde
             alpha_idx = mono_start_idx_atom[mono_indices[index_for_one]
-                                            ] + site_positions[alpha][mons[index_for_one].type]
+                                            ] + site_positions[alpha_carbon_index][mons[index_for_one].type]
 
             # Temporarily join the bonds so that we can find the string
             temp = ''.join(bonds)
-
-            # Here was bug, as {2} wasn't escaped properly before we were looking
-            # for the string 'M 2V30...' which could never be found and resulted
-            # in the value error - see PEP498
             matches = re.findall(rf'M {{2}}V30 [0-9]+ 1 {alpha_idx} [0-9]+', temp)
 
             # Find the bond connecting the alpha to the alcohol
@@ -934,9 +930,8 @@ def generate_mol(adj, node_list):
                 del (bonds[alpha_ring_bond_index])
                 removed[BONDS] += 1
             except ValueError:
-                raise ValueError(f'Couldn\'t find the bond connecting α-carbon '
-                                 f'to the alcohol. We think α-carbon={alpha_idx}, '
-                                 f'but can\'t identify the oxygen index.')
+                raise ValueError(f'Could mot find the bond connecting α-carbon (atom index {alpha_idx}) to the alcohol '
+                                 f'(could not identify the oxygen atom index).')
 
     mol_bond_blocks = ''.join(bonds)
     mol_atom_blocks = ''.join(atoms)
