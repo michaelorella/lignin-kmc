@@ -81,113 +81,110 @@ options shown below, or by using a configuration file. These options can be view
  
     Running Lignin-KMC version 0.2.2. Please cite: https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.9b03534
      
-    usage: _jb_unittest_runner.py [-h] [-a ADD_RATES] [-c CONFIG] [-d OUT_DIR]
-                                  [-dy] [-e] [-f OUTPUT_FORMAT_LIST]
+    usage: _jb_unittest_runner.py [-h] [-a ADD_RATES] [-b] [-c CONFIG]
+                                  [-d OUT_DIR] [-dy] [-f OUTPUT_FORMAT_LIST]
                                   [-i INITIAL_NUM_MONOMERS] [-l LENGTH_SIMULATION]
                                   [-m MAX_NUM_MONOMERS] [-n NUM_REPEATS]
                                   [-o OUTPUT_BASENAME] [-p] [-r RANDOM_SEED]
                                   [-s IMAGE_SIZE] [-sg SG_RATIOS]
-                                  [-t TEMPERATURE_IN_K] [--chain_id CHAIN_ID]
+                                  [-t TEMPERATURE_IN_K] [-x] [--chain_id CHAIN_ID]
                                   [--psf_fname PSF_FNAME]
                                   [--toppar_dir TOPPAR_DIR]
-     
+    
     Create lignin chain(s) composed of 'S' (syringyl) and/or 'G' (guaiacol) monolignols, as described in:
-       Orella, M., Gani, T. Z. H., Vermaas, J. V., Stone, M. L., Anderson, E. M., Beckham, G. T., 
-       Brushett, Fikile R., Roman-Leshkov, Y. (2019). Lignin-KMC: A Toolkit for Simulating Lignin Biosynthesis.
-       ACS Sustainable Chemistry & Engineering. https://doi.org/10.1021/acssuschemeng.9b03534. C-Lignin can be 
-       modeled with the functions in this package, as shown in ipynb examples in our project package on github 
-       (https://github.com/michaelorella/lignin-kmc/), but not currently from the command line. If this 
-       functionality is desired, please start a new issue on the github.
-     
-       By default, the Gibbs free energy barriers from this reference will be used, as specified in Tables S1 and S2.
-       Alternately, the user may specify values, which should be specified as a dict of dict of dicts in a 
-       specified configuration file (specified with '-c') using the 'e_barrier_in_kcal_mol' or 'e_barrier_in_j_particle'
-       parameters with corresponding units (kcal/mol or joules/particle, respectively), in a configuration file 
-       (see '-c'). The format is (bond_type: monomer(s) involved: units involved: delta_g_298), for example:
-           barriers_kcalmol = {oxidation: {'G': {monomer: 0.9, oligomer: 6.3}, 'S': {{{MONOMER}: 0.6, {OLIGOMER}: 2.2}}, ...}.
-       The default output is a SMILES string printed to standard out.
-     
-       All command-line options may alternatively be specified in a configuration file. Command-line (non-default) 
-       selections will override configuration file specifications.
-     
+      Orella, M., Gani, T. Z. H., Vermaas, J. V., Stone, M. L., Anderson, E. M., Beckham, G. T., 
+      Brushett, Fikile R., Roman-Leshkov, Y. (2019). Lignin-KMC: A Toolkit for Simulating Lignin Biosynthesis.
+      ACS Sustainable Chemistry & Engineering. https://doi.org/10.1021/acssuschemeng.9b03534. C-Lignin can be 
+      modeled with the functions in this package, as shown in ipynb examples in our project package on github 
+      (https://github.com/michaelorella/lignin-kmc/), but not currently from the command line. If this 
+      functionality is desired, please start a new issue on the github.
+    
+      By default, the Gibbs free energy barriers from this reference will be used, as specified in Tables S1 and S2.
+      Alternately, the user may specify values, which should be specified as a dict of dict of dicts in a 
+      specified configuration file (specified with '-c') using the 'e_barrier_in_kcal_mol' or 'e_barrier_in_j_particle'
+      parameters with corresponding units (kcal/mol or joules/particle, respectively), in a configuration file 
+      (see '-c'). The format is (bond_type: monomer(s) involved: units involved: ea_vals), for example:
+          ea_dict = {oxidation: {'G': {monomer: 0.9, oligomer: 6.3}, 'S': {{{MONOMER}: 0.6, {OLIGOMER}: 2.2}}, ...}.
+      The default output is a SMILES string printed to standard out.
+    
+      All command-line options may alternatively be specified in a configuration file. Command-line (non-default) 
+      selections will override configuration file specifications.
+    
     optional arguments:
-       -h, --help            show this help message and exit
-       -a ADD_RATES, --add_rates ADD_RATES
-                             A comma-separated list of the rates of monomer addition to the system (in monomers/second), 
-                             to be used when the 'max_num_monomers' ('-m' option) is larger than 'initial_num_monomers' 
-                             ('-i' option), thus specifying monomer addition. The simulation will end when either there 
-                             are no more possible reactions (including monomer addition) or when the 'length_simulation' 
-                             ('-l' option) is reached, whichever comes first. Note: if there are spaces in the list of 
-                             addition rates, the list must be enclosed in quotes to be read as a single string. The 
-                             default list contains the single addition rate of 1.0 monomers/s.
-       -c CONFIG, --config CONFIG
-                             The location of the configuration file in the 'ini' format. This file can be used to 
-                             overwrite default values such as for energies.
-       -d OUT_DIR, --out_dir OUT_DIR
-                             The directory where output files will be saved. The default is the current directory.
-       -dy, --dynamics_flag  Select this option if dynamics (results per timestep) are requested. If chosen, plots of 
-                             monomers and oligomers vs timestep, and bond type percent vs timestep, will be saved. 
-                             They will be named 'bond_dist_v_step_*_#.png' and 'mono_olig_v_step_*_#.png', where * 
-                             represents the S:G ratio and # represents the addition rate. Note that this option 
-                             significantly increases simulation time.
-       -e, --energy_barriers_flag
-                             By default, the reaction rates will be based on the energy barriers in kcal/mol to be used 
-                             to calculate reaction rates at 298.15 K. If this flag is used, the rates use to produce the 
-                             original manuscript plots will be used (missing one term). Alternate sets of energy 
-                             barriers can be specified; see the main help message.
-       -f OUTPUT_FORMAT_LIST, --output_format_list OUTPUT_FORMAT_LIST
-                             The type(s) of output format to be saved. Provide as a space- or comma-separated list. 
-                             Note: if the list has spaces, it must be enclosed in quotes, to be treated as a single 
-                             string. The currently supported types are: 'json', 'png', 'smi', 'svg', 'tcl'. 
-                             The 'json' option will save a json format of RDKit's 'mol' (molecule) object. The 'tcl' 
-                             option will create a file for use with VMD to generate a psf file and 3D molecules, 
-                             as described in LigninBuilder, https://github.com/jvermaas/LigninBuilder, 
-                             https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.8b05665. 
-                             A base name for the saved files can be provided with the '-o' option. Otherwise, the 
-                             base name will be 'lignin-kmc-out'.
-       -i INITIAL_NUM_MONOMERS, --initial_num_monomers INITIAL_NUM_MONOMERS
-                             The initial number of monomers to be included in the simulation. The default is 2.
-       -l LENGTH_SIMULATION, --length_simulation LENGTH_SIMULATION
-                             The length of simulation (simulation time) in seconds. The default is 3600 s.
-       -m MAX_NUM_MONOMERS, --max_num_monomers MAX_NUM_MONOMERS
-                             The maximum number of monomers to be studied. The default value is 10.
-       -n NUM_REPEATS, --num_repeats NUM_REPEATS
-                             The number of times each combination of sg_ratio and add_rate will be tested. 
-                             The default is 1.
-       -o OUTPUT_BASENAME, --output_basename OUTPUT_BASENAME
-                             The base name for output file(s). If an extension is provided, it will determine 
-                             the type of output. Currently supported output types are: 
-                             'json', 'png', 'smi', 'svg', 'tcl'. Multiple output formats can be selected with the 
-                             '-f' option. If the '-f' option is selected and no output base name provided, a default 
-                             base name of 'lignin-kmc-out' will be used.
-       -p, --plot_bonds      Flag to produce plots of the percent of each bond type versus S:G ratio(s). One plot will 
-                             be created per addition rate, named 'bond_dist_v_sg_#.png', where # represents 
-                             the addition rate.
-       -r RANDOM_SEED, --random_seed RANDOM_SEED
-                             A positive integer to be used as a seed value for testing. The default is not to use a 
-                             seed, to allow pseudorandom lignin creation.
-       -s IMAGE_SIZE, --image_size IMAGE_SIZE
-                             The output size of svg or png files in pixels. The default size is (1200, 300) pixels. 
-                             To use a different size, provide two integers, separated by a space or a comma. 
-                             Note: if the list of two numbers has any spaces in it, it must be enclosed in quotes.
-       -sg SG_RATIOS, --sg_ratios SG_RATIOS
-                             A comma-separated list of the S:G (guaiacol:syringyl) ratios to be tested. 
-                             If there are spaces, the list must be enclosed in quotes to be read as a single string. 
-                             The default list contains the single value 1.
-       -t TEMPERATURE_IN_K, --temperature_in_k TEMPERATURE_IN_K
-                             The temperature (in K) at which to model lignin biosynthesis. The default is 298.15 K.
-                             Note: this temperature must match the temperature at which the energy barriers were calculated. 
-       --chain_id CHAIN_ID   Option for use when generating a tcl script: the chainID to be used in generating a psf 
-                             and/or pdb file from a tcl script (see LigninBuilder). This should be one character. If a 
-                             longer ID is provided, it will be truncated to the first character. The default value is L.
-       --psf_fname PSF_FNAME
-                             Option for use when generating a tcl script: the file name for psf and pdb files that will 
-                             be produced from running a tcl produced by this package (see LigninBuilder). The default 
-                             value is lignin.
-       --toppar_dir TOPPAR_DIR
-                             Option for use when generating a tcl script: the directory name where VMD should look for 
-                             the toppar file(s) when running the tcl file in VMD (see LigninBuilder). The default value 
-                             is 'toppar/'.
+      -h, --help            show this help message and exit
+      -a ADD_RATES, --add_rates ADD_RATES
+                            A comma-separated list of the rates of monomer addition to the system (in monomers/second), 
+                            to be used when the 'max_num_monomers' ('-m' option) is larger than 'initial_num_monomers' 
+                            ('-i' option), thus specifying monomer addition. The simulation will end when either there 
+                            are no more possible reactions (including monomer addition) or when the 'length_simulation' 
+                            ('-l' option) is reached, whichever comes first. Note: if there are spaces in the list of 
+                            addition rates, the list must be enclosed in quotes to be read as a single string. The 
+                            default list contains the single addition rate of 1.0 monomers/s.
+      -b, --break_co_bonds  Flag to output results from C-O bonds to simulate RCF results. The default is False.
+      -c CONFIG, --config CONFIG
+                            The location of the configuration file in the 'ini' format. This file can be used to 
+                            overwrite default values such as for energies.
+      -d OUT_DIR, --out_dir OUT_DIR
+                            The directory where output files will be saved. The default is the current directory.
+      -dy, --dynamics_flag  Select this option if dynamics (results per timestep) are requested. If chosen, plots of 
+                            monomers and oligomers vs timestep, and bond type percent vs timestep, will be saved. 
+                            They will be named 'bond_dist_v_step_*_#.png' and 'mono_olig_v_step_*_#.png', where * 
+                            represents the S:G ratio and # represents the addition rate. Note that this option 
+                            significantly increases simulation time.
+      -f OUTPUT_FORMAT_LIST, --output_format_list OUTPUT_FORMAT_LIST
+                            The type(s) of output format to be saved. Provide as a space- or comma-separated list. 
+                            Note: if the list has spaces, it must be enclosed in quotes, to be treated as a single 
+                            string. The currently supported types are: 'json', 'png', 'smi', 'svg', 'tcl'. 
+                            The 'json' option will save a json format of RDKit's 'mol' (molecule) object. The 'tcl' 
+                            option will create a file for use with VMD to generate a psf file and 3D molecules, 
+                            as described in LigninBuilder, https://github.com/jvermaas/LigninBuilder, 
+                            https://pubs.acs.org/doi/abs/10.1021/acssuschemeng.8b05665. 
+                            A base name for the saved files can be provided with the '-o' option. Otherwise, the 
+                            base name will be 'lignin-kmc-out'.
+      -i INITIAL_NUM_MONOMERS, --initial_num_monomers INITIAL_NUM_MONOMERS
+                            The initial number of monomers to be included in the simulation. The default is 2.
+      -l LENGTH_SIMULATION, --length_simulation LENGTH_SIMULATION
+                            The length of simulation (simulation time) in seconds. The default is 3600 s.
+      -m MAX_NUM_MONOMERS, --max_num_monomers MAX_NUM_MONOMERS
+                            The maximum number of monomers to be studied. The default value is 10.
+      -n NUM_REPEATS, --num_repeats NUM_REPEATS
+                            The number of times each combination of sg_ratio and add_rate will be tested. The default is 1.
+      -o OUTPUT_BASENAME, --output_basename OUTPUT_BASENAME
+                            The base name for output file(s). If an extension is provided, it will determine 
+                            the type of output. Currently supported output types are: 
+                            'json', 'png', 'smi', 'svg', 'tcl'. Multiple output formats can be selected with the 
+                            '-f' option. If the '-f' option is selected and no output base name provided, a default 
+                            base name of 'lignin-kmc-out' will be used.
+      -p, --plot_bonds      Flag to produce plots of the percent of each bond type versus S:G ratio(s). One plot will 
+                            be created per addition rate, named 'bond_dist_v_sg_#.png', where # represents 
+                            the addition rate.
+      -r RANDOM_SEED, --random_seed RANDOM_SEED
+                            A positive integer to be used as a seed value for testing. The default is not to use a 
+                            seed, to allow pseudorandom lignin creation.
+      -s IMAGE_SIZE, --image_size IMAGE_SIZE
+                            The output size of svg or png files in pixels. The default size is (1200, 300) pixels. 
+                            To use a different size, provide two integers, separated by a space or a comma. 
+                            Note: if the list of two numbers has any spaces in it, it must be enclosed in quotes.
+      -sg SG_RATIOS, --sg_ratios SG_RATIOS
+                            A comma-separated list of the S:G (guaiacol:syringyl) ratios to be tested. 
+                            If there are spaces, the list must be enclosed in quotes to be read as a single string. 
+                            The default list contains the single value 1.
+      -t TEMPERATURE_IN_K, --temperature_in_k TEMPERATURE_IN_K
+                            The temperature (in K) at which to model lignin biosynthesis. The default is 298.15 K.
+                            Note: this temperature must match the temperature at which the energy barriers were calculated. 
+      -x, --no_smi          Flag to suppress determining the SMILES string for the output, which is created by default.
+      --chain_id CHAIN_ID   Option for use when generating a tcl script: the chainID to be used in generating a psf 
+                            and/or pdb file from a tcl script (see LigninBuilder). This should be one character. If a 
+                            longer ID is provided, it will be truncated to the first character. The default value is L.
+      --psf_fname PSF_FNAME
+                            Option for use when generating a tcl script: the file name for psf and pdb files that will 
+                            be produced from running a tcl produced by this package (see LigninBuilder). The default 
+                            value is lignin.
+      --toppar_dir TOPPAR_DIR
+                            Option for use when generating a tcl script: the directory name where VMD should look for 
+                            the toppar file(s) when running the tcl file in VMD (see LigninBuilder). The default value 
+                            is 'toppar/'.
+
 
 For example, to use an S to G ratio of 2.5, 12 initial monomers, and up to 18 monomers, with the remaining variables 
 left as their default values, enter:

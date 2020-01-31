@@ -522,10 +522,8 @@ class TestDynamics(unittest.TestCase):
             pass
 
     def testCheckForValenceError(self):
-        # todo: fix valence error
         random_seed = 1
-        test_input = ["-i", "5", "-m", "200", "-a", "1",
-                      "-sg", "1, 3, 5, 10", "-n", "3", "-r", str(random_seed)]
+        test_input = ["-i", "5", "-m", "200", "-a", "1", "-sg", "1, 3, 5, 10", "-n", "3", "-r", str(random_seed)]
         # main(test_input)
         with capture_stderr(main, test_input) as output:
             if output:
@@ -534,8 +532,7 @@ class TestDynamics(unittest.TestCase):
 
     def testCheckSBonding(self):
         random_seed = 10
-        test_input = ["-i", "2", "-m", "64", "-a", "1e2",
-                      "-sg", "10000000", "-r", str(random_seed)]
+        test_input = ["-i", "2", "-m", "64", "-a", "1e2", "-sg", "10000000", "-r", str(random_seed)]
         # main(test_input)
         with capture_stderr(main, test_input) as output:
             self.assertFalse("Exiting program due to error in producing output" in output)
@@ -543,10 +540,6 @@ class TestDynamics(unittest.TestCase):
     # Added as an easy way to run this for its production output
     def testProduction(self):
         # new_out_dir = os.path.join(DATA_DIR, 'new_plots')
-        # more efficient to just look at "1e8, 1e6, 1e4" and "1,  3, 5, 10"
-        # for a full list: "-a",  "1e8, 1e6, 1e4, 1e2, 1"
-        #                  "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10",
-        #                  "-n", "5"m "-d", new_out_dir
         plot_input = ["-x", "-p",
                       # next line: testing
                       "-i", "5", "-m", "100", "-a", "1", "-sg", "1, 10", "-n", "3", "-d", TEMP_DIR,

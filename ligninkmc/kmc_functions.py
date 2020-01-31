@@ -459,18 +459,12 @@ def update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, 
         size = (quick_frag_size(mon), quick_frag_size(partner))
         if bond[0] in mon.open and bond[1] in partner.open:
             try:
-                # todo: delete when questions re olig-olig b04 bond is resolved
-                if size == (OLIGOMER, OLIGOMER) and rxn_event[0] == BO4 and \
-                        mon.type == S and partner.type == S:
-                    raise InvalidDataError(f"{rxn_event[0]} reaction between oligomers with "
-                                           f"{mon.identity} and {partner.identity}")
                 # "/ cur_n**2" is like multiplying by concentration of each of 2 monomers,
                 #     ignoring any molecules not tracked by this script
                 rate = rxn_event[2][(mon.type, partner.type)][size] / (cur_n ** 2)
             except KeyError:
-                raise InvalidDataError(f"Error while attempting to update event_dict: event "
-                                       f"{rxn_event[0]} between indices {mon.identity} and "
-                                       f"{partner.identity} ")
+                raise InvalidDataError(f"Error while attempting to update event_dict: event {rxn_event[0]} between "
+                                       f"indices {mon.identity} and {partner.identity} ")
 
             # Add this to both the monomer and it's bonding partners list of event_dict that need to be
             #     modified upon manipulation of either monomer

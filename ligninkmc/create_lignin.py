@@ -8,8 +8,6 @@ Multiple output options, from tcl files to plots
 import argparse
 import os
 import sys
-from _ctypes import ArgumentError
-
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import (defaultdict)
@@ -588,9 +586,6 @@ def create_initial_monomers(pct_s, monomer_draw):
                          "S", otherwise
     :return: list of Monomer objects of specified type
     """
-    # TODO: If want more than 2 monomer options, need to change logic; that will require an overhaul, since
-    #       sg_ratio is often used. However, until we have Gibbs free energy barriers for bonding between more than
-    #       just S and G, no need to update
     # if mon_choice < pct_s, make it an S; that is, the evaluation comes back True (=1='S');
     #     otherwise, get False = 0 = 'G'. Since only two options (True/False) only works for 2 monomers
     return [Monomer(INT_TO_TYPE_DICT[int(mono_type_draw < pct_s)], i) for i, mono_type_draw in enumerate(monomer_draw)]
