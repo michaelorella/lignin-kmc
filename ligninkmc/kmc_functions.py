@@ -845,8 +845,7 @@ def generate_mol(adj, node_list):
                     # Get all of the required bond information (index,order,monIdx1,monIdx2)
                     bond_vals = re.split(' +', bonds[alkene_bond_index])[2:]
                     try:
-                        assert (int(bond_vals[0]) == alkene_bond_index
-                                + len(removed[BONDS]))
+                        assert (int(bond_vals[0]) == alkene_bond_index + len(removed[BONDS]))
                     except AssertionError:
                         print(f'Expected index: {bond_vals[0]}, Index obtained: {alkene_bond_index}')
 
@@ -895,7 +894,6 @@ def generate_mol(adj, node_list):
                     bonds.append(f'M  V30 {bond_line_num} 1 {alpha_idx} {other_idx} \n')
                     bond_line_num += 1
 
-
         # For the B1 bond:
         #     1) Disconnect the original 1 -> A bond that existed from the not beta monomer
         #     2) Convert the new primary alcohol to an aldehyde
@@ -915,6 +913,8 @@ def generate_mol(adj, node_list):
                 bound_atoms = re.split(' +', possibility)[4:]
                 others.extend([int(x) for x in bound_atoms if int(x) != alpha_idx])
 
+            # TODO: Fix the section below--it does not work; for now, simply catch the error and provide a
+            #   descriptive failure message (instead of a stack trace)
             # The oxygen atom should have the greatest index of the atoms bound to the alpha position because it
             #     was added last
             try:
