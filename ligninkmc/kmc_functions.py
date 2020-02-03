@@ -459,18 +459,12 @@ def update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, 
         size = (quick_frag_size(mon), quick_frag_size(partner))
         if bond[0] in mon.open and bond[1] in partner.open:
             try:
-                # todo: delete when questions re olig-olig b04 bond is resolved
-                if size == (OLIGOMER, OLIGOMER) and rxn_event[0] == BO4 and \
-                        mon.type == S and partner.type == S:
-                    raise InvalidDataError(f"{rxn_event[0]} reaction between oligomers with "
-                                           f"{mon.identity} and {partner.identity}")
                 # "/ cur_n**2" is like multiplying by concentration of each of 2 monomers,
                 #     ignoring any molecules not tracked by this script
                 rate = rxn_event[2][(mon.type, partner.type)][size] / (cur_n ** 2)
             except KeyError:
-                raise InvalidDataError(f"Error while attempting to update event_dict: event "
-                                       f"{rxn_event[0]} between indices {mon.identity} and "
-                                       f"{partner.identity} ")
+                raise InvalidDataError(f"Error while attempting to update event_dict: event {rxn_event[0]} between "
+                                       f"indices {mon.identity} and {partner.identity} ")
 
             # Add this to both the monomer and it's bonding partners list of event_dict that need to be
             #     modified upon manipulation of either monomer
@@ -744,13 +738,13 @@ def generate_mol(adj, node_list):
     bond_line_num = 1
     mono_start_idx_bond = []
     mono_start_idx_atom = []
-    removed = {BONDS: 0, ATOMS: 0}
+    removed = {BONDS: [], ATOMS: 0}
 
     site_positions = {1: {x: 0 for x in [G, S, C]}, 4: {C: 11, S: 12, G: 12}, 5: {x: 4 for x in [G, S, C]},
                       7: {x: 6 for x in [G, S, C]}, 8: {x: 7 for x in [G, S, C]}, 10: {x: 9 for x in [G, S, C]}}
     alpha_beta_alkene_location = 7
     alpha_ring_location = 6
-    alpha = 7
+    alpha_carbon_index = 7
 
     for i, mon in enumerate(node_list):
         # Build the individual monomers before they are linked by anything
@@ -810,7 +804,7 @@ def generate_mol(adj, node_list):
 
     for pair in paired_adj:
         # Find the types of bonds and indices associated with each of the elements in the adjacency matrix
-        # Indices are extracted as tuples (row,col) and we just want the row for each
+        # Indices are extracted as tuples (row,col) and we just want the row for each, as list for consistent order
         mono_indices = [x[0] for x in pair]
 
         # Get the monomers corresponding to the indices in this bond
@@ -843,13 +837,15 @@ def generate_mol(adj, node_list):
             for i in range(2):
                 if adj[pair[i]] == 8 and mons[i].active != 7:  # Monomer index is bound through beta
                     # Find the bond index corresponding to alkene bond
-                    alkene_bond_index = mono_start_idx_bond[mono_indices[i]] + alpha_beta_alkene_location - \
-                                        removed[BONDS]
+                    alkene_bond_index = mono_start_idx_bond[mono_indices[i]] + alpha_beta_alkene_location
+                    bonds_removed_before = len([x for x in removed[BONDS]
+                                                if x < alkene_bond_index])
+                    alkene_bond_index -= bonds_removed_before
 
                     # Get all of the required bond information (index,order,monIdx1,monIdx2)
                     bond_vals = re.split(' +', bonds[alkene_bond_index])[2:]
                     try:
-                        assert (int(bond_vals[0]) == alkene_bond_index + removed[BONDS])
+                        assert (int(bond_vals[0]) == alkene_bond_index + len(removed[BONDS]))
                     except AssertionError:
                         print(f'Expected index: {bond_vals[0]}, Index obtained: {alkene_bond_index}')
 
@@ -902,17 +898,14 @@ def generate_mol(adj, node_list):
         #     1) Disconnect the original 1 -> A bond that existed from the not beta monomer
         #     2) Convert the new primary alcohol to an aldehyde
         if sorted(bond_loc) == [1, 8]:
-            # TODO: make sure all B1 bonds are correctly forms
-            warning("There are problems in how this program currently builds molecules with B1 bonds. Carefully "
-                    "check any output.")
             index_for_one = int(not beta[tuple(bond_loc)])
             # Convert the alpha alcohol on one's tail to an aldehyde
             alpha_idx = mono_start_idx_atom[mono_indices[index_for_one]
-                                            ] + site_positions[alpha][mons[index_for_one].type]
+                                            ] + site_positions[alpha_carbon_index][mons[index_for_one].type]
 
             # Temporarily join the bonds so that we can find the string
             temp = ''.join(bonds)
-            matches = re.findall(f'M {2}V30 [0-9]+ 1 {alpha_idx} [0-9]+', temp)
+            matches = re.findall(rf'M {{2}}V30 [0-9]+ 1 {alpha_idx} [0-9]+', temp)
 
             # Find the bond connecting the alpha to the alcohol
             others = []
@@ -926,23 +919,34 @@ def generate_mol(adj, node_list):
             #     was added last
             try:
                 oxygen_atom_index = max(others)
+
                 bonds = re.sub(f'1 {alpha_idx} {oxygen_atom_index}',
                                f'2 {alpha_idx} {oxygen_atom_index}', temp).splitlines(keepends=True)
 
                 # Find where the index for the bond is and remove it from the array
-                alpha_ring_bond_index = mono_start_idx_bond[mono_indices[index_for_one]
-                                                            ] + alpha_ring_location - removed[BONDS]
+                alpha_ring_bond_index = (mono_start_idx_bond[mono_indices[
+                                                            index_for_one]]
+                                                        + alpha_ring_location)
+
+                bonds_removed_before = len([x for x in removed[BONDS]
+                                                if x < alpha_ring_bond_index])
+                alpha_ring_bond_index -= bonds_removed_before
+
+                # Only should be subtracting number of removed bonds that came BEFORE this location!
+                true_bond_index = int(re.split(' +', bonds[alpha_ring_bond_index])[2])
+
                 del (bonds[alpha_ring_bond_index])
-                removed[BONDS] += 1
+                removed[BONDS] += [true_bond_index]
             except ValueError:
-                return None
+                raise ValueError(f'Could mot find the bond connecting α-carbon (atom index {alpha_idx}) to the alcohol '
+                                 f'(could not identify the oxygen atom index).')
 
     mol_bond_blocks = ''.join(bonds)
     mol_atom_blocks = ''.join(atoms)
 
     mol_atom_blocks += 'M  V30 END ATOM \n'
     mol_bond_blocks += 'M  V30 END BOND \n'
-    counts = f'M  V30 COUNTS {atom_line_num - 1 - removed[ATOMS]} {bond_line_num - 1 - removed[BONDS]} 0 0 0\n'
+    counts = f'M  V30 COUNTS {atom_line_num - 1 - removed[ATOMS]} {bond_line_num - 1 - len(removed[BONDS])} 0 0 0\n'
     mol_str += counts + mol_atom_blocks + mol_bond_blocks + 'M  V30 END CTAB\nM  END'
 
     return mol_str

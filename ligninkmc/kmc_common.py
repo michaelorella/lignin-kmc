@@ -499,7 +499,6 @@ class Monomer:
         elif unit_type == S:
             self.open = {4, 8}
         else:
-            # todo: update once H is added
             raise InvalidDataError(f"Encountered unit type {unit_type},  but only the following types are "
                                    f"currently available: 'G' ({G}), 'S' ({S}), 'C' ({C})")
         self.connectedTo = {i}

@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 import joblib as par
 import numpy as np
-from rdkit.Chem import MolFromMolBlock
+from rdkit.Chem import (MolFromMolBlock, GetMolFrags)
 from rdkit.Chem.AllChem import Compute2DCoords
 from rdkit.Chem.Draw import MolToFile
 from scipy.sparse import dok_matrix
@@ -623,7 +623,6 @@ class TestVisualization(unittest.TestCase):
             pass
 
     def testB1BondGenMol(self):
-        # TODO: Update test when the B1 bond problem is resolved.
         ini_mono_type_list = [S, S, S, G, S]
         sg_ratio = 1.0
         max_monos = 12
@@ -636,8 +635,20 @@ class TestVisualization(unittest.TestCase):
                          random_seed=random_num, sg_ratio=sg_ratio)
         nodes = result[MONO_LIST]
         adj = result[ADJ_MATRIX]
+        # generate_mol(adj, nodes)
         with capture_stderr(generate_mol, adj, nodes) as output:
-            self.assertTrue("B1 bonds" in output)
+            self.assertFalse(output)
+
+        mol = MolFromMolBlock(generate_mol(adj, nodes))
+        mols = GetMolFrags(mol)
+
+        analysis = analyze_adj_matrix(adj)
+        frag_sizes = analysis[CHAIN_LEN]
+
+        # Make sure there are the same number of separate fragments calculated by RDKIT
+        # as we get from just separating the alternate B1
+        self.assertEqual(np.sum(list(frag_sizes.values())), len(mols))
+
 
     def testDynamics(self):
         # Tests procedures in the Dynamics.ipynb
@@ -676,10 +687,6 @@ class TestVisualization(unittest.TestCase):
             self.assertEqual(len(val_list), expected_num_t_steps)
             olig_len_sum_dict[olig_len] = sum(val_list)
         self.assertEqual(olig_len_sum_dict, good_olig_len_sum_dict)
-
-        # sum_sums = int(sum(sum_list))
-        # good_sum_sum_list = 312
-        # self.assertEqual(sum_sums, good_sum_sum_list)
 
     def testIniRates(self):
         # Note: this test did not increase coverage. Added to help debug notebook.
