@@ -25,7 +25,7 @@ from ligninkmc.kmc_common import (Event, Monomer, E_BARRIER_KCAL_MOL, E_BARRIER_
                                   ADJ_MATRIX, RANDOM_SEED, S, G, CHAIN_LEN, BONDS, RCF_YIELDS, RCF_BONDS,
                                   MAX_NUM_DECIMAL, MONO_LIST, CHAIN_MONOS, CHAIN_BRANCH_COEFF, RCF_BRANCH_COEFF,
                                   CHAIN_ID, DEF_CHAIN_ID, PSF_FNAME, DEF_PSF_FNAME, DEF_TOPPAR, TOPPAR_DIR,
-                                  MANUSCRIPT_RATES, DEF_RXN_RATES, BOND_TYPE_LIST, INT_TO_TYPE_DICT)
+                                  DEF_RXN_RATES, BOND_TYPE_LIST, INT_TO_TYPE_DICT)
 from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_tcl, count_bonds,
                                      count_oligomer_yields, analyze_adj_matrix)
 
@@ -742,11 +742,7 @@ def validate_input(cfg):
     if cfg[E_BARRIER_KCAL_MOL] == DEF_CFG_VALS[E_BARRIER_KCAL_MOL] and (cfg[E_BARRIER_J_PART] ==
                                                                         DEF_CFG_VALS[E_BARRIER_J_PART]
                                                                         ) and (cfg[TEMP] == DEF_TEMP):
-        # todo: remove ENERGY_BARRIER_FLAG option when debugging is complete
-        if cfg[ENERGY_BARRIER_FLAG]:
-            cfg[RXN_RATES] = MANUSCRIPT_RATES
-        else:
-            cfg[RXN_RATES] = DEF_RXN_RATES
+        cfg[RXN_RATES] = DEF_RXN_RATES
     else:
         # todo: remove ENERGY_BARRIER_FLAG option when debugging is complete
         if cfg[ENERGY_BARRIER_FLAG]:
@@ -821,9 +817,6 @@ def main(argv=None):
         for add_rate in cfg[ADD_RATES]:
             sg_adjs = []
             add_rate_str = f'{add_rate:.{3}g}'.replace("+", "").replace(".", "-")
-            # todo: remove MANUSCRIPT_RATES when debugging done
-            if cfg[RXN_RATES] == MANUSCRIPT_RATES:
-                add_rate_str += "_m"
             for sg_ratio in cfg[SG_RATIOS]:
                 # the initialized lists below are for storing repeats
                 bond_types = defaultdict(list)

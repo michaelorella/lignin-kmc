@@ -204,50 +204,6 @@ DEF_RXN_RATES = {C5O4: {(G, G): {MON_MON: 38335.5972148372, MON_OLI: 123.4195937
                      C: {MONOMER: 45383.9995564285, OLIGOMER: 45383.9995564285}}
                  }
 
-# todo: remove MANUSCRIPT_RATES when debugging done
-MANUSCRIPT_RATES = {C5O4: {(G, G): {MON_MON: 5904261.55598695, MON_OLI: 80333.560184945, OLI_MON: 80333.560184945,
-                                    OLI_OLI: 31893540751.2937},
-                           (S, G): {MON_MON: 8626534.12830123, MON_OLI: 80333.560184945, OLI_MON: 80333.560184945,
-                                    OLI_OLI: 31893540751.2937}},
-                    C5C5: {(G, G): {MON_MON: 1141805.97148106, MON_OLI: 22698.3606666981, OLI_MON: 22698.3606666981,
-                                    OLI_OLI: 68083872447.6958}},
-                    B5: {(G, G): {MON_MON: 7941635722.59467, MON_OLI: 5435496317.66216, OLI_MON: 5435496317.66216,
-                                  OLI_OLI: 5435496317.66216},
-                         (G, S): {MON_MON: 7941635722.59467, MON_OLI: 5435496317.66216, OLI_MON: 5435496317.66216,
-                                  OLI_OLI: 5435496317.66216}},
-                    BB: {(G, G): {MON_MON: 11603278571.9039, MON_OLI: 11603278571.9039, OLI_MON: 11603278571.9039,
-                                  OLI_OLI: 11603278571.9039},
-                         (S, G): {MON_MON: 2243920367.77638, MON_OLI: 2243920367.77638, OLI_MON: 2243920367.77638,
-                                  OLI_OLI: 2243920367.77638},
-                         (S, S): {MON_MON: 11603278571.9039, MON_OLI: 11603278571.9039, OLI_MON: 11603278571.9039,
-                                  OLI_OLI: 11603278571.9039},
-                         (G, S): {MON_MON: 2243920367.77638, MON_OLI: 2243920367.77638, OLI_MON: 2243920367.77638,
-                                  OLI_OLI: 2243920367.77638}},
-                    BO4: {(G, G): {MON_MON: 2889268780.92427, MON_OLI: 3278522716.22094, OLI_MON: 3278522716.22094,
-                                   OLI_OLI: 3278522716.22094},
-                          (S, G): {MON_MON: 83919112.8376677, MON_OLI: 3278522716.22094, OLI_MON: 3278522716.22094,
-                                   OLI_OLI: 3278522716.22094},
-                          (G, S): {MON_MON: 108054134.329644, MON_OLI: 3278522716.22094, OLI_MON: 3278522716.22094,
-                                   OLI_OLI: 3278522716.22094},
-                          # below is where an entry is missing
-                          (S, S): {MON_MON: 34644086.8574001, MON_OLI: 16228844.7506668, OLI_MON: 16228844.7506668}},
-                    AO4: {(G, G): {MON_MON: 36.0239749057507, MON_OLI: 36.0239749057507, OLI_MON: 36.0239749057507,
-                                   OLI_OLI: 36.0239749057507},
-                          (S, G): {MON_MON: 36.0239749057507, MON_OLI: 36.0239749057507, OLI_MON: 36.0239749057507,
-                                   OLI_OLI: 36.0239749057507},
-                          (G, S): {MON_MON: 36.0239749057507, MON_OLI: 36.0239749057507, OLI_MON: 36.0239749057507,
-                                   OLI_OLI: 36.0239749057507},
-                          (S, S): {MON_MON: 36.0239749057507, MON_OLI: 36.0239749057507, OLI_MON: 36.0239749057507,
-                                   OLI_OLI: 36.0239749057507}},
-                    B1: {(G, G): {MON_OLI: 44607678.613794, OLI_MON: 44607678.613794, OLI_OLI: 44607678.613794},
-                         (S, G): {MON_OLI: 3138443.59211371, OLI_MON: 3138443.59211371, OLI_OLI: 3138443.59211371},
-                         (G, S): {MON_OLI: 11107513.4850607, OLI_MON: 11107513.4850607, OLI_OLI: 11107513.4850607},
-                         (S, S): {MON_OLI: 2437439.37772669, OLI_MON: 2437439.37772669, OLI_OLI: 2437439.37772669}},
-                    OX: {G: {MONOMER: 2659877051606.15, OLIGOMER: 2889268780.92427},
-                         S: {MONOMER: 3886264174644.99, OLIGOMER: 514384986527.191}},
-                    Q: {G: {MONOMER: 6699707.46979824, OLIGOMER: 6699707.46979824},
-                        S: {MONOMER: 3138443.59211371, OLIGOMER: 3138443.59211371}}}
-
 
 class Event:
     """
@@ -320,8 +276,32 @@ class Event:
         #     "By default, the __hash__() values of str and bytes objects are “salted” with an unpredictable random
         #     value. Although they remain constant within an individual Python process, they are not predictable
         #     between repeated invocations of Python."
-        key_as_num = sum([ord(x) % 32 for x in self.key])
-        return key_as_num + sum(self.index) * 1000 + int(self.rate * 10000)
+        # 3) Latest hash; repeatable and similar results to original hash
+        # Average time to complete simulation with 50, 100, 150 monomers: 0.54, 3.67, 13.91, O(N) ~ 2.5
+        if not self.index:
+            index_join = 0
+        else:
+            index_join = int("".join([str(x) for x in self.index]))
+        index_bytes = index_join.to_bytes((index_join.bit_length() + 7) // 8, 'big')
+        key_bytes = self.key.encode()
+        bond_list_str = "".join([str(x) for x in self.bond])
+        bond_list_bytes = bond_list_str.encode()
+        event_bytes = b''.join([index_bytes, key_bytes, bond_list_bytes])
+        temp = int.from_bytes(event_bytes, 'big')
+        # the hash call below "right-sizes" the value, but since it is hashing an int, will be repeatable
+        event_hash = hash(temp)
+
+        # # 2) second hash
+        # # Average time to complete simulation with 50, 100, 150 monomers: 0.28, 1.13, 2.64, O(N) ~ 2.1
+
+        # key_as_num = sum([ord(x) % 32 for x in self.key])
+        # event_hash = key_as_num + sum(self.index) * 1000 + int(self.rate * 10000)
+
+        # 1) original hash
+        # # Average time to complete simulation with 50, 100, 150 monomers: 0.36, 3.25, 14.88, O(N) ~ 2.5
+        # event_hash = hash ((tuple(self.index), self.key, self.bond))
+
+        return event_hash
 
 
 class Monomer:
