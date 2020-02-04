@@ -39,10 +39,12 @@ class TestScaling(unittest.TestCase):
         test_vals = np.linspace(50, 150, num=3, dtype ='int32')
         num_repeats = 5
         for num_monos in test_vals:
-            print(f"Starting batch simulation with {num_monos} monomers")
+            # print(f"Starting batch simulation with {num_monos} monomers")
             times.append([])
             for i in range(num_repeats):
-                print(f"    Starting repeat", i)
+                random_seed = 8 + i
+                np.random.seed(random_seed)
+                # print(f"    Starting repeat", i)
                 # Generate the initial monomers and events (oxidation)
                 monomer_draw = np.random.rand(num_monos)
                 initial_monomers = create_initial_monomers(pct_s, monomer_draw)
@@ -53,7 +55,7 @@ class TestScaling(unittest.TestCase):
                 #Start timing the actual KMC part
                 # noinspection PyUnboundLocalVariable
                 start = time.time()
-                run_kmc(DEF_RXN_RATES, initial_state, initial_events, sg_ratio=sg_ratio)
+                run_kmc(DEF_RXN_RATES, initial_state, initial_events, sg_ratio=sg_ratio, random_seed=random_seed)
                 end = time.time()
                 times[-1].append(end-start)
             print(f'Average time to complete simulation with {num_monos:5n} monomers: '
@@ -74,27 +76,6 @@ class TestScaling(unittest.TestCase):
         print(f'Scaling: {scaling_formula}')
 
 
-        # Now we should plot both the measured values and the fit all together
-        plt.figure(figsize=(3.5, 3.5))
-        plt.errorbar(test_vals, meas_t, yerr=sdev_t,
-                     capsize=3, ecolor='black', linestyle='None', marker='.', markerSize=15, color='black', zorder=1)
-        plt.plot(test_vals, sim_t(opt_p,meas_n), linestyle='--', color='r', linewidth=1.5, zorder=2)
-        plt.tick_params(axis='both', which ='major', labelsize=10, direction='in',
-                        pad=8, top = True, right=True, width=1.5, length=5)
-        plt.tick_params(axis='both', which='minor', direction='in',
-                        pad=8, top=True, right=True, width=1, length=3)
-        ax = plt.gca()
-        [ax.spines[i].set_linewidth(1.5) for i in ['top', 'right', 'bottom', 'left']]
-        ax.fontsize = 10
-        plt.xlabel('Number of Monomers', fontsize=10)
-        plt.ylabel('Execution Time (s)', fontsize=10)
-        plt.yscale('log')
-        plt.xscale('log')
-        plt.ylim([0.2, 200])
-        plt.xlim([40, 200])
-        plt.text(75, 0.4, scaling_formula, fontsize=10, color='red')
-        plt.text(200, 200, r'Measured', fontsize=10, color='black')
-        save_svg('temp_performance.svg')
 
 # With hash:
 # Average time to complete simulation with    50 monomers:    0.57 seconds
