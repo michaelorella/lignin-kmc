@@ -2,7 +2,7 @@
 # coding=utf-8
 
 """
-Code base for simulating the in planta polymerization of monolignols through Gillepsie algorithm adaptations.
+Code base for simulating the in planta polymerization of monolignols through Gillespie algorithm adaptations.
 Added the visualization tools here.
 """
 
@@ -16,12 +16,12 @@ from rdkit.Chem.Draw.MolDrawing import DrawingOptions
 from common_wrangler.common import (InvalidDataError, create_out_fname, warning, round_sig_figs)
 from ligninkmc.kmc_common import (Event, Monomer, AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q, GROW, TIME, OLIGOMER,
                                   MONOMER, AFFECTED, ADJ_MATRIX, MONO_LIST, MAX_NUM_DECIMAL, ATOMS, BONDS,
-                                  G, S, H, C, S4, G4, G7, B1_ALT, CHAIN_LEN, CHAIN_MONOS, CHAIN_BRANCHES,
+                                  G, S, H, C, S4, G4, G7, S7, B1_ALT, CHAIN_LEN, CHAIN_MONOS, CHAIN_BRANCHES,
                                   CHAIN_BRANCH_COEFF, RCF_BONDS, RCF_YIELDS, RCF_MONOS, RCF_BRANCHES, RCF_BRANCH_COEFF,
-                                  DEF_TCL_FNAME, DEF_CHAIN_ID, DEF_PSF_FNAME, DEF_TOPPAR, INT_TO_TYPE_DICT)
+                                  DEF_TCL_FNAME, DEF_CHAIN_ID, DEF_PSF_FNAME, DEF_TOPPAR, INT_TO_TYPE_DICT,
+                                  ATOM_BLOCKS, BOND_BLOCKS)
 
 DrawingOptions.bondLineWidth = 1.2
-S7 = 'S7'
 
 
 def find_fragments(adj):
@@ -172,18 +172,18 @@ def break_bond_type(adj, bond_type):
     # Copy the matrix into a new matrix
     new_adj = adj.todok(copy=True)
 
-    breakage = {B1: (lambda row, col: (adj[(row, col)] == 1 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
-                                                                                          adj[(col, row)] == 1)),
+    breakage = {B1: (lambda row, col: (adj[(row, col)] == 1 and adj[(col, row)] == 8) or
+                                      (adj[(row, col)] == 8 and adj[(col, row)] == 1)),
                 B1_ALT: (lambda row, col: (adj[(row, col)] == 1 and adj[(col, row)] == 8) or
                                           (adj[(row, col)] == 8 and adj[(col, row)] == 1)),
-                B5: (lambda row, col: (adj[(row, col)] == 5 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
-                                                                                          adj[(col, row)] == 5)),
-                BO4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 8) or (adj[(row, col)] == 8 and
-                                                                                           adj[(col, row)] == 4)),
-                AO4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 7) or (adj[(row, col)] == 7 and
-                                                                                           adj[(col, row)] == 4)),
-                C5O4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 5) or (adj[(row, col)] == 5 and
-                                                                                            adj[(col, row)] == 4)),
+                B5: (lambda row, col: (adj[(row, col)] == 5 and adj[(col, row)] == 8) or
+                                      (adj[(row, col)] == 8 and adj[(col, row)] == 5)),
+                BO4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 8) or
+                                       (adj[(row, col)] == 8 and adj[(col, row)] == 4)),
+                AO4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 7) or
+                                       (adj[(row, col)] == 7 and adj[(col, row)] == 4)),
+                C5O4: (lambda row, col: (adj[(row, col)] == 4 and adj[(col, row)] == 5) or
+                                        (adj[(row, col)] == 5 and adj[(col, row)] == 4)),
                 BB: (lambda row, col: (adj[(row, col)] == 8 and adj[(col, row)] == 8)),
                 C5C5: (lambda row, col: (adj[(row, col)] == 5 and adj[(col, row)] == 5))}
 
@@ -279,7 +279,7 @@ def count_oligomer_yields(adj):
     return olig_len_dict, olig_monos_dict, olig_branch_dict, olig_branch_coeff_dict
 
 
-def analyze_adj_matrix(adjacency):
+def analyze_adj_matrix(adjacency, break_co_bonds=False):
     """
     Performs the analysis for a single simulation to extract the relevant macroscopic properties, such as both the
     simulated frequency of different oligomer sizes and the number of each different type of bond before and after in
@@ -287,7 +287,9 @@ def analyze_adj_matrix(adjacency):
     count_oligomer_yields(adj) specifically.
 
     :param adjacency: scipy dok_matrix  -- the adjacency matrix for the lignin polymer that has been simulated
-    :return: A dictionary of results: Chain Lengths, RCF Yields, Bonds, and RCF Bonds
+    :param break_co_bonds: Boolean, to determine whether determine oligomers and remaining bonds after removing C-O
+        bonds to simulate RCF
+    :return: A dictionary of results, including: Chain Lengths, RCF Yields, Bonds, and RCF Bonds
     """
 
     # Remove any excess b1 bonds from the matrix, e.g. bonds that should be
@@ -300,11 +302,14 @@ def analyze_adj_matrix(adjacency):
 
     # Simulate the RCF process at complete conversion by breaking all of the
     # alkyl C-O bonds that were formed during the reaction
-    rcf_adj = break_bond_type(break_bond_type(break_bond_type(adjacency, BO4), AO4), C5O4)
+    if break_co_bonds:
+        rcf_adj = break_bond_type(break_bond_type(break_bond_type(adjacency, BO4), AO4), C5O4)
 
-    # Now count the bonds and yields remaining
-    rcf_yield_dict, rcf_monos_dict, rcf_branch_dict, rcf_branch_coeff_dict = count_oligomer_yields(rcf_adj)
-    rcf_bonds = count_bonds(rcf_adj)
+        # Now count the bonds and yields remaining
+        rcf_yield_dict, rcf_monos_dict, rcf_branch_dict, rcf_branch_coeff_dict = count_oligomer_yields(rcf_adj)
+        rcf_bonds = count_bonds(rcf_adj)
+    else:
+        rcf_yield_dict, rcf_monos_dict, rcf_branch_dict, rcf_branch_coeff_dict, rcf_bonds = None, None, None, None, None
 
     return {BONDS: bond_distributions, CHAIN_LEN: olig_yield_dict, CHAIN_MONOS:  olig_monos_dict,
             CHAIN_BRANCHES: olig_branch_dict, CHAIN_BRANCH_COEFF: olig_branch_coeff_dict,
@@ -312,7 +317,7 @@ def analyze_adj_matrix(adjacency):
             RCF_BRANCHES: rcf_branch_dict, RCF_BRANCH_COEFF: rcf_branch_coeff_dict}
 
 
-def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, max_mon=500):
+def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, possible_events, max_mon=500):
     """
     This method determines what the possible events are in a given state, where the state is the current simulation
     state. Most of the additional parameters in this method are added for performance benefits rather than necessity.
@@ -329,25 +334,32 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
     :param rate_vec: dict  -- The rates of all of the unique event_dict implemented in a hash map where the Event
         hash value is the key
     :param rate_dict: dict  -- The dictionary of the possible rates involved in each reaction
+    :param possible_events: dict -- maps monomer active state to the possible event_dict it can do
     :param max_mon: int -- The maximum number of monomers that should be stored in the simulation
     :return: n/a, updates state_dict, adj, event_dict, rate_vec
     """
+    if last_event.key == GROW:
+        cur_n, _ = adj.get_shape()
 
-    # Map the monomer active state to the possible event_dict it can do
-    possible_events = {0: [[OX, 1, rate_dict[OX]]],
-                       4: [[B1, 2, rate_dict[B1], [1, 8]],
-                           [C5O4, 2, rate_dict[C5O4], [4, 5]],
-                           [AO4, 2, rate_dict[AO4], [4, 7]],
-                           [BO4, 2, rate_dict[BO4], [4, 8]],
-                           [C5C5, 2, rate_dict[C5C5], [5, 5]],
-                           [B5, 2, rate_dict[B5], [5, 8]],
-                           [BB, 2, rate_dict[BB], [8, 8]]],
-                       7: [[Q, 1, rate_dict[Q]],
-                           [AO4, 2, rate_dict[AO4], [7, 4]]],
-                       -1: [[]]
-                       }
-    # Only do these for bonding and oxidation event_dict, any growth does not actually change the possible event_dict
-    if last_event.key != GROW:
+        # If the system has grown to the maximum size, delete the event for adding more monomers
+        if cur_n >= max_mon:
+            last_event_hash = hash(last_event)
+            del (event_dict[last_event_hash])
+            del (rate_vec[last_event_hash])
+
+            # Reflect the larger system volume
+        for i in rate_vec:
+            if event_dict[i].key != GROW:
+                rate_vec[i] = rate_vec[i] * (cur_n - 1) / cur_n
+
+            # Add an event to oxidize the monomer that was just added to the simulation
+        oxidation = Event(OX, [cur_n - 1], rate_dict[OX][state_dict[cur_n - 1][MONOMER].type][MONOMER])
+        state_dict[cur_n - 1][AFFECTED].add(oxidation)
+        ev_hash = hash(oxidation)
+        event_dict[ev_hash] = oxidation
+        rate_vec[ev_hash] = oxidation.rate / cur_n
+    else:
+        # Only do these for bonding and oxidation event_dict, any growth does not actually change the possible event_dict
         # Remove the last event that we just did from the set of event_dict that can be performed
         last_event_hash = hash(last_event)
         del (event_dict[last_event_hash])
@@ -402,6 +414,7 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
                 if rxn_event and rxn_event[1] == 1:  # Unimolecular reaction event
                     size = quick_frag_size(mon)
 
+                    # "/ cur_n" is like multiplying by concentration, ignoring any molecules not tracked by this script
                     rate = rxn_event[2][mon.type][size] / cur_n
 
                     # Add the event to the event_dict modifiable by changing the monomer, and update the set of all
@@ -409,6 +422,8 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
                     state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], [mon.identity], rate))
 
                 elif rxn_event and rxn_event[1] == 2:  # Bimolecular reaction event
+                    # update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, events_to_be_modified,
+                    #                                  mon, mon_id, rxn_event, state_dict)
                     bond = tuple(rxn_event[3])
                     alt = (bond[1], bond[0])
                     for partner in bonding_partners[rxn_event[0]]:
@@ -473,26 +488,6 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
                 event_dict[ev_hash] = event
                 rate_vec[ev_hash] = event.rate
         # END LOOP OVER MONOMERS THAT WERE AFFECTED BY LAST EVENT
-    else:
-        cur_n, _ = adj.get_shape()
-
-        # If the system has grown to the maximum size, delete the event for adding more monomers
-        if cur_n >= max_mon:
-            last_event_hash = hash(last_event)
-            del (event_dict[last_event_hash])
-            del (rate_vec[last_event_hash])
-
-        # Reflect the larger system volume
-        for i in rate_vec:
-            if event_dict[i].key != GROW:
-                rate_vec[i] = rate_vec[i] * (cur_n - 1) / cur_n
-
-        # Add an event to oxidize the monomer that was just added to the simulation
-        oxidation = Event(OX, [cur_n - 1], rate_dict[OX][state_dict[cur_n - 1][MONOMER].type][MONOMER])
-        state_dict[cur_n - 1][AFFECTED].add(oxidation)
-        ev_hash = hash(oxidation)
-        event_dict[ev_hash] = oxidation
-        rate_vec[ev_hash] = oxidation.rate / cur_n
 
 
 def connect_monos(mon1, mon2):
@@ -521,7 +516,7 @@ def do_event(event, state, adj, sg_ratio=None, random_seed=None):
     the chosen event on the current state and modifies it to reflect the updates.
 
     :param event: The event object that should be executed on the current state
-    :param state: dict, The dictionary of dictionaries that contains the state information for each monomer
+    :param state: OrderedDict, dict of dicts that contains the state information for each monomer
     :param adj: dok_matrix, The adjacency matrix in the current state
     :param sg_ratio: float needed if and only if:
                          a) there are S and G and only S and G, and
@@ -535,10 +530,9 @@ def do_event(event, state, adj, sg_ratio=None, random_seed=None):
     monomers = [state[i][MONOMER] for i in state]
     if len(indices) == 2:  # Doing bimolecular reaction, need to adjust adj
 
-        # Get the tuple of values corresponding to bond and state updates and
-        # unpack them
-        vals = event.eventDict[event.key]
-        state_updates = vals[0]
+        # Get the tuple of values corresponding to bond and state updates and unpack them
+        new_react_active_pt, open_pos0, open_pos1 = event.eventDict[event.key]
+
         bond_updates = event.bond
         order = event.activeDict[bond_updates]
 
@@ -558,12 +552,18 @@ def do_event(event, state, adj, sg_ratio=None, random_seed=None):
         mon1.open -= {bond_updates[1]}
 
         # Update the activated nature of the monomer
-        mon0.active = state_updates[order[0]]
-        mon1.active = state_updates[order[1]]
+        mon0.active = new_react_active_pt[order[0]]
+        mon1.active = new_react_active_pt[order[1]]
 
-        # Add any additional opened positions based on what just reacted
-        mon0.open |= set(vals[1 + order[0]])
-        mon1.open |= set(vals[1 + order[1]])
+        # Add any additional opened positions to open set based on what just reacted
+        if order[0] == 0 and order[1] == 1:
+            mon0.open.update(set(open_pos0))
+            mon1.open.update(set(open_pos1))
+        elif order[0] == 1 and order[1] == 0:
+            mon0.open.update(set(open_pos1))
+            mon1.open.update(set(open_pos0))
+        else:
+            raise InvalidDataError("Encountered unexpected values for order list.")
 
         if mon0.active == 7 and mon1.type == C:
             mon0.active = 0
@@ -622,7 +622,7 @@ def do_event(event, state, adj, sg_ratio=None, random_seed=None):
                     raise InvalidDataError(f"A numeric sg_ratio must be supplied. Instead, found{sg_note}")
 
             new_mon = Monomer(mon_type, current_size)
-            state[current_size] = {MONOMER: new_mon, AFFECTED: set()}
+            state[current_size] = {MONOMER: new_mon, AFFECTED: []}
 
 
 def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynamics=False, random_seed=None,
@@ -634,7 +634,7 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
     should be included in the simulation and the total simulation time.
 
     :param rate_dict:  dict   -- contains the reaction rate of each of the possible event_dict
-    :param initial_state: dict  -- The dictionary mapping the index of each monomer to a dictionary with the monomer
+    :param initial_state: OrderedDict  -- maps the index of each monomer to a dictionary with the monomer
         and the set of event_dict that a change to this monomer would impact
     :param initial_events: list of dicts dictionary -- The dictionary mapping event hash values to those event_dict
     :param n_max:   int   -- The maximum number of monomers in the simulation
@@ -669,6 +669,17 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
         adj_list = []
         mon_list = []
 
+    # Map the monomer active state to the possible event_dict it can do;
+    #     moved here because only needs to be computed once
+    possible_events = {0: [[OX, 1, rate_dict[OX]]],
+                       4: [[B1, 2, rate_dict[B1], [1, 8]], [C5O4, 2, rate_dict[C5O4], [4, 5]],
+                           [AO4, 2, rate_dict[AO4], [4, 7]], [BO4, 2, rate_dict[BO4], [4, 8]],
+                           [C5C5, 2, rate_dict[C5C5], [5, 5]], [B5, 2, rate_dict[B5], [5, 8]],
+                           [BB, 2, rate_dict[BB], [8, 8]]],
+                       7: [[Q, 1, rate_dict[Q]], [AO4, 2, rate_dict[AO4], [7, 4]]],
+                       -1: [[]]
+                       }
+
     # Run the Gillespie algorithm
     while t[-1] < t_max and len(event_dict) > 0:
         # Find the total rate for all of the possible event_dict and choose which event to do
@@ -688,20 +699,20 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
         else:
             rand_num = np.random.rand()
         j = np.random.choice(hashes, p=all_rates / r_tot)
-        event = event_dict[j]
+        chosen_event = event_dict[j]
         # See how much time has passed before this event happened; rounding to reduce platform dependency
         dt = round_sig_figs((1 / r_tot) * np.log(1 / rand_num))
         t.append(t[-1] + dt)
 
         # Do the event and update the state
-        do_event(event, cur_state, adj, sg_ratio, random_seed=random_seed)
+        do_event(chosen_event, cur_state, adj, sg_ratio, random_seed=random_seed)
 
         if dynamics:
             adj_list.append(adj.copy())
             mon_list.append([copy.copy(cur_state[i][MONOMER]) for i in cur_state])
 
         # Check the new state for what events are possible
-        update_events(cur_state, adj, event, event_dict, r_vec, rate_dict, max_mon=n_max)
+        update_events(cur_state, adj, chosen_event, event_dict, r_vec, rate_dict, possible_events, max_mon=n_max)
 
     if dynamics:
         return {TIME: t, MONO_LIST: mon_list, ADJ_MATRIX: adj_list}
@@ -717,148 +728,6 @@ def generate_mol(adj, node_list):
     :param node_list: list
     :return: mol_str, str in standard molfile
     """
-    # define dictionary for atoms within each monomer
-    atom_blocks = {G: ('C 0 0 0 0 \n' +  # 1
-                       'C 0 0 0 0 \n' +  # 2
-                       'C 0 0 0 0 \n' +  # 3
-                       'C 0 0 0 0 \n' +  # 4
-                       'C 0 0 0 0 \n' +  # 5
-                       'C 0 0 0 0 \n' +  # 6
-                       'C 0 0 0 0 \n' +  # 7
-                       'C 0 0 0 0 \n' +  # 8
-                       'C 0 0 0 0 \n' +  # 9
-                       'O 0 0 0 0 \n' +  # 9-OH
-                       'O 0 0 0 0 \n' +  # 3-OMe
-                       'C 0 0 0 0 \n' +  # 3-OMe
-                       'O 0 0 0 0 \n'),  # 4-OH
-                   S: ('C 0 0 0 0 \n' +  # 1
-                       'C 0 0 0 0 \n' +  # 2
-                       'C 0 0 0 0 \n' +  # 3
-                       'C 0 0 0 0 \n' +  # 4
-                       'C 0 0 0 0 \n' +  # 5
-                       'C 0 0 0 0 \n' +  # 6
-                       'C 0 0 0 0 \n' +  # 7
-                       'C 0 0 0 0 \n' +  # 8
-                       'C 0 0 0 0 \n' +  # 9
-                       'O 0 0 0 0 \n' +  # 9-OH
-                       'O 0 0 0 0 \n' +  # 3-OMe
-                       'C 0 0 0 0 \n' +  # 3-OMe
-                       'O 0 0 0 0 \n' +  # 4-OH
-                       'O 0 0 0 0 \n' +  # 5-OMe
-                       'C 0 0 0 0 \n'),  # 5-OMe
-                   C: ('C 0 0 0 0 \n' +  # 1
-                       'C 0 0 0 0 \n' +  # 2
-                       'C 0 0 0 0 \n' +  # 3
-                       'C 0 0 0 0 \n' +  # 4
-                       'C 0 0 0 0 \n' +  # 5
-                       'C 0 0 0 0 \n' +  # 6
-                       'C 0 0 0 0 \n' +  # 7
-                       'C 0 0 0 0 \n' +  # 8
-                       'C 0 0 0 0 \n' +  # 9
-                       'O 0 0 0 0 \n' +  # 9-OH
-                       'O 0 0 0 0 \n' +  # 3-OH
-                       'O 0 0 0 0 \n'),  # 4-OH
-                   G4: ('C 0 0 0 0 \n' +  # 1
-                        'C 0 0 0 0 \n' +  # 2
-                        'C 0 0 0 0 \n' +  # 3
-                        'C 0 0 0 0 \n' +  # 4
-                        'C 0 0 0 0 \n' +  # 5
-                        'C 0 0 0 0 \n' +  # 6
-                        'C 0 0 0 0 \n' +  # 7
-                        'C 0 0 0 0 \n' +  # 8
-                        'C 0 0 0 0 \n' +  # 9
-                        'O 0 0 0 0 \n' +  # 9-OH
-                        'O 0 0 0 0 \n' +  # 3-OMe
-                        'C 0 0 0 0 \n' +  # 3-OMe
-                        'O 0 0 0 0 RAD=2\n'),  # 4-O
-                   S4: ('C 0 0 0 0 \n' +  # 1
-                        'C 0 0 0 0 \n' +  # 2
-                        'C 0 0 0 0 \n' +  # 3
-                        'C 0 0 0 0 \n' +  # 4
-                        'C 0 0 0 0 \n' +  # 5
-                        'C 0 0 0 0 \n' +  # 6
-                        'C 0 0 0 0 \n' +  # 7
-                        'C 0 0 0 0 \n' +  # 8
-                        'C 0 0 0 0 \n' +  # 9
-                        'O 0 0 0 0 \n' +  # 9-OH
-                        'O 0 0 0 0 \n' +  # 3-OMe
-                        'C 0 0 0 0 \n' +  # 3-OMe
-                        'O 0 0 0 0 RAD=2\n' +  # 4-O
-                        'O 0 0 0 0 \n' +  # 5-OMe
-                        'C 0 0 0 0 \n')}  # 5-OMe
-
-    # Similarly define dictionary for bonds within each monomer -
-    # NOTE: THESE MAY NEED TO CHANGE DEPENDING ON INTER-UNIT LINKAGES
-
-    bond_blocks = {G7: ('1 1  2  \n' +  # Aromatic ring 1->2
-                        '2 2  3  \n' +  # Aromatic ring 2->3
-                        '1 3  4  \n' +  # Aromatic ring 3->4
-                        '1 4  5  \n' +  # Aromatic ring 4->5
-                        '2 5  6  \n' +  # Aromatic ring 5->6
-                        '1 6  1  \n' +  # Aromatic ring 6->1
-                        '2 1  7  \n' +  # Quinone methide propyl tail 1->A
-                        '1 7  8  \n' +  # Propyl tail A->B
-                        '1 8  9  \n' +  # Propyl tail B->G
-                        '1 9  10 \n' +  # Gamma hydroxyl G->OH
-                        '1 3  11 \n' +  # 3 methoxy 3->O
-                        '1 11 12 \n' +  # 3 methoxy O->12
-                        '2 4  13 \n'),  # 4 ketone 4->O
-                   G: ('2 1  2  \n' +  # Aromatic ring 1->2
-                       '1 2  3  \n' +  # Aromatic ring 2->3
-                       '2 3  4  \n' +  # Aromatic ring 3->4
-                       '1 4  5  \n' +  # Aromatic ring 4->5
-                       '2 5  6  \n' +  # Aromatic ring 5->6
-                       '1 6  1  \n' +  # Aromatic ring 6->1
-                       '1 1  7  \n' +  # Ring - propyl tail 1->A
-                       '2 7  8  \n' +  # Alkene propyl tail A->B
-                       '1 8  9  \n' +  # Propyl tail B->G
-                       '1 9  10 \n' +  # Gamma hydroxyl G->OH
-                       '1 3  11 \n' +  # 3 methoxy 3->O
-                       '1 11 12 \n' +  # 3 methoxy O->12
-                       '1 4  13 \n'),  # 4 hydroxyl 4->OH
-                   S7: ('1 1  2  \n' +  # Aromatic ring 1->2
-                        '2 2  3  \n' +  # Aromatic ring 2->3
-                        '1 3  4  \n' +  # Aromatic ring 3->4
-                        '1 4  5  \n' +  # Aromatic ring 4->5
-                        '2 5  6  \n' +  # Aromatic ring 5->6
-                        '1 6  1  \n' +  # Aromatic ring 6->1
-                        '2 1  7  \n' +  # Quinone methide 1->A
-                        '1 7  8  \n' +  # Propyl tail A->B
-                        '1 8  9  \n' +  # Propyl tail B->G
-                        '1 9  10 \n' +  # Gamma hydroxyl G->OH
-                        '1 3  11 \n' +  # 3 methoxy 3->O
-                        '1 11 12 \n' +  # 3 methoxy O->12
-                        '2 4  13 \n' +  # 4 ketone 4->O
-                        '1 5  14 \n' +  # 5 methoxy 5->O
-                        '1 14 15 \n'),  # 5 methoxy O->15
-                   S: ('2 1  2  \n' +  # Aromatic ring 1->2
-                       '1 2  3  \n' +  # Aromatic ring 2->3
-                       '2 3  4  \n' +  # Aromatic ring 3->4
-                       '1 4  5  \n' +  # Aromatic ring 4->5
-                       '2 5  6  \n' +  # Aromatic ring 5->6
-                       '1 6  1  \n' +  # Aromatic ring 6->1
-                       '1 1  7  \n' +  # Ring - propyl tail 1->A
-                       '2 7  8  \n' +  # Alkene propyl tail A->B
-                       '1 8  9  \n' +  # Propyl tail B->G
-                       '1 9  10 \n' +  # Gamma hydroxyl G->OH
-                       '1 3  11 \n' +  # 3 methoxy 3->O
-                       '1 11 12 \n' +  # 3 methoxy O->12
-                       '1 4  13 \n' +  # 4 hydroxyl 4->OH
-                       '1 5  14 \n' +  # 5 methoxy 5->O
-                       '1 14 15 \n'),  # 5 methoxy O->15
-                   C: ('2 1  2  \n' +  # Aromatic ring 1->2
-                       '1 2  3  \n' +  # Aromatic ring 2->3
-                       '2 3  4  \n' +  # Aromatic ring 3->4
-                       '1 4  5  \n' +  # Aromatic ring 4->5
-                       '2 5  6  \n' +  # Aromatic ring 5->6
-                       '1 6  1  \n' +  # Aromatic ring 6->1
-                       '1 1  7  \n' +  # Ring - propyl tail 1->A
-                       '2 7  8  \n' +  # Alkene propyl tail A->B
-                       '1 8  9  \n' +  # Propyl tail B->G
-                       '1 9  10 \n' +  # Gamma hydroxyl G->OH
-                       '1 3  11 \n' +  # 3 hydroxyl 3->O
-                       '1 4  12 \n')}  # 4 hydroxyl 4->OH
-
     mol_str = '\n\n\n  0  0  0  0  0  0  0  0  0  0999 V3000\nM  V30 BEGIN CTAB\n'  # Header information
     mol_atom_blocks = 'M  V30 BEGIN ATOM\n'
     mol_bond_blocks = 'M  V30 BEGIN BOND\n'
@@ -866,51 +735,17 @@ def generate_mol(adj, node_list):
     bond_line_num = 1
     mono_start_idx_bond = []
     mono_start_idx_atom = []
-    removed = {BONDS: 0, ATOMS: 0}
+    removed = {BONDS: [], ATOMS: 0}
 
-    site_positions = {1: {x: 0 for x in [G, S, C]},
-                      4: {C: 11, S: 12, G: 12},
-                      5: {x: 4 for x in [G, S, C]},
-                      7: {x: 6 for x in [G, S, C]},
-                      8: {x: 7 for x in [G, S, C]},
-                      10: {x: 9 for x in [G, S, C]}}
+    site_positions = {1: {x: 0 for x in [G, S, C]}, 4: {C: 11, S: 12, G: 12}, 5: {x: 4 for x in [G, S, C]},
+                      7: {x: 6 for x in [G, S, C]}, 8: {x: 7 for x in [G, S, C]}, 10: {x: 9 for x in [G, S, C]}}
     alpha_beta_alkene_location = 7
     alpha_ring_location = 6
-    alpha = 7
+    alpha_carbon_index = 7
 
-    # to make IDE happy:
-    atom_block = None
-    bond_block = None
-
-    # Build the individual monomers before they are linked by anything
     for i, mon in enumerate(node_list):
-        if mon.type == G or mon.type == S:
-            if mon.active == 0 or mon.active == -1:
-                if mon.type == G:
-                    atom_block = atom_blocks[G]
-                    bond_block = bond_blocks[G]
-                else:
-                    atom_block = atom_blocks[S]
-                    bond_block = bond_blocks[S]
-            elif mon.active == 4:
-                if mon.type == G:
-                    atom_block = atom_blocks[G4]
-                    bond_block = bond_blocks[G]
-                else:
-                    atom_block = atom_blocks[S4]
-                    bond_block = bond_blocks[S]
-            elif mon.active == 7:
-                if mon.type == G:
-                    atom_block = atom_blocks[G]
-                    bond_block = bond_blocks[G7]
-                else:
-                    atom_block = atom_blocks[S]
-                    bond_block = bond_blocks[S7]
-        elif mon.type == C:
-            atom_block = atom_blocks[C]
-            bond_block = bond_blocks[C]
-        else:
-            raise ValueError("Expected monomer types are {LIGNIN_SUBUNITS} but encountered type '{mon.type}'")
+        # Build the individual monomers before they are linked by anything
+        atom_block, bond_block = build_monomers(mon)
 
         # Extract each of the individual atoms from this monomer to add to the aggregate file
         lines = atom_block.splitlines(keepends=True)
@@ -966,7 +801,7 @@ def generate_mol(adj, node_list):
 
     for pair in paired_adj:
         # Find the types of bonds and indices associated with each of the elements in the adjacency matrix
-        # Indices are extracted as tuples (row,col) and we just want the row for each
+        # Indices are extracted as tuples (row,col) and we just want the row for each, as list for consistent order
         mono_indices = [x[0] for x in pair]
 
         # Get the monomers corresponding to the indices in this bond
@@ -999,13 +834,15 @@ def generate_mol(adj, node_list):
             for i in range(2):
                 if adj[pair[i]] == 8 and mons[i].active != 7:  # Monomer index is bound through beta
                     # Find the bond index corresponding to alkene bond
-                    alkene_bond_index = mono_start_idx_bond[mono_indices[i]] + alpha_beta_alkene_location - \
-                                        removed[BONDS]
+                    alkene_bond_index = mono_start_idx_bond[mono_indices[i]] + alpha_beta_alkene_location
+                    bonds_removed_before = len([x for x in removed[BONDS]
+                                                if x < alkene_bond_index])
+                    alkene_bond_index -= bonds_removed_before
 
                     # Get all of the required bond information (index,order,monIdx1,monIdx2)
                     bond_vals = re.split(' +', bonds[alkene_bond_index])[2:]
                     try:
-                        assert (int(bond_vals[0]) == alkene_bond_index + removed[BONDS])
+                        assert (int(bond_vals[0]) == alkene_bond_index + len(removed[BONDS]))
                     except AssertionError:
                         print(f'Expected index: {bond_vals[0]}, Index obtained: {alkene_bond_index}')
 
@@ -1058,17 +895,14 @@ def generate_mol(adj, node_list):
         #     1) Disconnect the original 1 -> A bond that existed from the not beta monomer
         #     2) Convert the new primary alcohol to an aldehyde
         if sorted(bond_loc) == [1, 8]:
-            # TODO: make sure all B1 bonds are correctly forms
-            warning("There are problems in how this program currently builds molecules with B1 bonds. Carefully "
-                    "check any output.")
             index_for_one = int(not beta[tuple(bond_loc)])
             # Convert the alpha alcohol on one's tail to an aldehyde
             alpha_idx = mono_start_idx_atom[mono_indices[index_for_one]
-                                            ] + site_positions[alpha][mons[index_for_one].type]
+                                            ] + site_positions[alpha_carbon_index][mons[index_for_one].type]
 
             # Temporarily join the bonds so that we can find the string
             temp = ''.join(bonds)
-            matches = re.findall(f'M {2}V30 [0-9]+ 1 {alpha_idx} [0-9]+', temp)
+            matches = re.findall(rf'M {{2}}V30 [0-9]+ 1 {alpha_idx} [0-9]+', temp)
 
             # Find the bond connecting the alpha to the alcohol
             others = []
@@ -1082,43 +916,91 @@ def generate_mol(adj, node_list):
             #     was added last
             try:
                 oxygen_atom_index = max(others)
+
                 bonds = re.sub(f'1 {alpha_idx} {oxygen_atom_index}',
                                f'2 {alpha_idx} {oxygen_atom_index}', temp).splitlines(keepends=True)
 
                 # Find where the index for the bond is and remove it from the array
-                alpha_ring_bond_index = mono_start_idx_bond[mono_indices[index_for_one]
-                                                            ] + alpha_ring_location - removed[BONDS]
+                alpha_ring_bond_index = (mono_start_idx_bond[mono_indices[
+                                                            index_for_one]]
+                                                        + alpha_ring_location)
+
+                bonds_removed_before = len([x for x in removed[BONDS]
+                                                if x < alpha_ring_bond_index])
+                alpha_ring_bond_index -= bonds_removed_before
+
+                # Only should be subtracting number of removed bonds that came BEFORE this location!
+                true_bond_index = int(re.split(' +', bonds[alpha_ring_bond_index])[2])
+
                 del (bonds[alpha_ring_bond_index])
-                removed[BONDS] += 1
+                removed[BONDS] += [true_bond_index]
             except ValueError:
-                raise InvalidDataError("This program cannot currently generate a molecule with this beta-1 bond. Sorry!"
-                                       "\n    Try running again, as this bond type is only occasionally created.")
+                raise ValueError(f'Could mot find the bond connecting α-carbon (atom index {alpha_idx}) to the alcohol '
+                                 f'(could not identify the oxygen atom index).')
 
     mol_bond_blocks = ''.join(bonds)
     mol_atom_blocks = ''.join(atoms)
 
     mol_atom_blocks += 'M  V30 END ATOM \n'
     mol_bond_blocks += 'M  V30 END BOND \n'
-    counts = f'M  V30 COUNTS {atom_line_num - 1 - removed[ATOMS]} {bond_line_num - 1 - removed[BONDS]} 0 0 0\n'
+    counts = f'M  V30 COUNTS {atom_line_num - 1 - removed[ATOMS]} {bond_line_num - 1 - len(removed[BONDS])} 0 0 0\n'
     mol_str += counts + mol_atom_blocks + mol_bond_blocks + 'M  V30 END CTAB\nM  END'
 
     return mol_str
 
 
-def write_patch(open_file, patch_name, segname, resid1, resid2=None):
+def build_monomers(mon):
+    """
+    As part of building a molecule, determine list of atoms and linkages, based on the monomer type and wht part is
+        active
+    :param mon: monomer object
+    :return: atom_block and bond_block: lists of atom types and bonding information for the given monomer
+    """
+    if mon.type == G or mon.type == S:
+        atom_block, bond_block = None, None  # Make IDE happy
+        if mon.active == 0 or mon.active == -1:
+            if mon.type == G:
+                atom_block = ATOM_BLOCKS[G]
+                bond_block = BOND_BLOCKS[G]
+            else:
+                atom_block = ATOM_BLOCKS[S]
+                bond_block = BOND_BLOCKS[S]
+        elif mon.active == 4:
+            if mon.type == G:
+                atom_block = ATOM_BLOCKS[G4]
+                bond_block = BOND_BLOCKS[G]
+            else:
+                atom_block = ATOM_BLOCKS[S4]
+                bond_block = BOND_BLOCKS[S]
+        elif mon.active == 7:
+            if mon.type == G:
+                atom_block = ATOM_BLOCKS[G]
+                bond_block = BOND_BLOCKS[G7]
+            else:
+                atom_block = ATOM_BLOCKS[S]
+                bond_block = BOND_BLOCKS[S7]
+    elif mon.type == C:
+        atom_block = ATOM_BLOCKS[C]
+        bond_block = BOND_BLOCKS[C]
+    else:
+        raise ValueError("Expected monomer types are {LIGNIN_SUBUNITS} but encountered type '{mon.type}'")
+    return atom_block, bond_block
+
+
+def write_patch(open_file, patch_name, seg_name, resid1, resid2=None):
     """
     Simple script to consistently format patch output for tcl script
     :param open_file: {TextIOWrapper}
     :param patch_name: str
-    :param segname: str
+    :param seg_name: str
     :param resid1: int
     :param resid2: int
     :return: what to write to file
     """
     if resid2:
-        open_file.write(f"patch {patch_name} {segname}:{resid1} {segname}:{resid2}\n")
+        open_file.write(f"patch {patch_name} {seg_name}:{resid1} {seg_name}:{resid2}\n")
     else:
-        open_file.write(f"patch {patch_name} {segname}:{resid1}\n")
+        open_file.write(f"patch {patch_name} {seg_name}:{resid1}\n")
 
 
 def gen_tcl(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FNAME, chain_id=DEF_CHAIN_ID,
