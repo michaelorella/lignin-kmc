@@ -322,13 +322,13 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
     This method determines what the possible events are in a given state, where the state is the current simulation
     state. Most of the additional parameters in this method are added for performance benefits rather than necessity.
 
-    :param state_dict: dict that maps the index of each monomer in the simulation to the monomer itself and the
+    :param state_dict: OrderedDict that maps the index of each monomer in the simulation to the monomer itself and the
         event_dict that would be effected by a change to the monomer key. This makes it easy to quickly
         determine which of the event_dict in the simulation need to be updated and which should not be changed.
     :param adj: dok_matrix  -- The current state of the simulation represented by the adjacency matrix containing all
         of the monomers and the bonds between them (if any)
-    :param last_event: The previous Event that occurred, which will tell us what monomers were effected. When combined
-        with the state dictionary, this allows for efficient updating of the set of event_dict that are possible
+    :param last_event: event -- the previous Event that occurred, which will tell us what monomers were effected. When
+        combined with the state dictionary, this allows for updating the list of events (event_dict) currently possible
     :param event_dict: dict  -- The set of all possible unique event_dict that must be updated and returned from this
         method, implemented in a hash map where the event hash value is the key
     :param rate_vec: dict  -- The rates of all of the unique event_dict implemented in a hash map where the Event
@@ -357,6 +357,7 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
         state_dict[cur_n - 1][AFFECTED].add(oxidation)
         ev_hash = hash(oxidation)
         event_dict[ev_hash] = oxidation
+        # "/ cur_n" is like multiplying by concentration, ignoring any molecules not tracked by this script
         rate_vec[ev_hash] = oxidation.rate / cur_n
     else:
         # Only do these for bonding and oxidation event_dict, any growth does not actually change the possible event_dict
