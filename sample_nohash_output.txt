@@ -1,0 +1,214 @@
+Input:         plot_input = ["-x", "-p",
+                      # next line: testing
+                      # "-i", "5", "-m", "100", "-a", "1", "-sg", "1, 10", "-n", "3", "-d", TEMP_DIR,
+                      # # alt lines: production
+                      "-i", "2", "-m", "500", "-l", "1e5", "-a", "1e8, 1e6, 1e4, 1e2, 1",
+                      "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10", "-n", "100", "-d", new_out_dir,
+Since we never got to 100, all data below from s/g ratio of 0.1 (started with 2, up to 500)
+Lignin KMC created 500 monomers, which formed:
+     152 dimer(s) (chain length 2)
+       2 trimer(s) (chain length 3)
+      11 oligomer(s) of chain length 4, with branching coefficient 0.0
+       1 oligomer(s) of chain length 5, with branching coefficient 0.0
+       2 oligomer(s) of chain length 6, with branching coefficient 0.083
+       5 oligomer(s) of chain length 7, with branching coefficient 0.114
+       1 oligomer(s) of chain length 8, with branching coefficient 0.25
+       2 oligomer(s) of chain length 9, with branching coefficient 0.167
+       1 oligomer(s) of chain length 13, with branching coefficient 0.154
+       2 oligomer(s) of chain length 17, with branching coefficient 0.265
+       1 oligomer(s) of chain length 21, with branching coefficient 0.286
+composed of the following bond types and number:
+    BO4:   49     BB:   86     B5:  128     B1:    0    5O4:   55    AO4:    0     55:    2
+Lignin KMC created 500 monomers, which formed:
+     158 dimer(s) (chain length 2)
+      11 oligomer(s) of chain length 4, with branching coefficient 0.0
+       2 oligomer(s) of chain length 5, with branching coefficient 0.0
+       3 oligomer(s) of chain length 6, with branching coefficient 0.167
+       2 oligomer(s) of chain length 7, with branching coefficient 0.143
+       1 oligomer(s) of chain length 8, with branching coefficient 0.25
+       1 oligomer(s) of chain length 10, with branching coefficient 0.3
+       2 oligomer(s) of chain length 11, with branching coefficient 0.227
+       1 oligomer(s) of chain length 12, with branching coefficient 0.25
+       1 oligomer(s) of chain length 13, with branching coefficient 0.231
+       1 oligomer(s) of chain length 14, with branching coefficient 0.214
+       1 oligomer(s) of chain length 19, with branching coefficient 0.263
+composed of the following bond types and number:
+    BO4:   49     BB:  101     B5:  108     B1:    0    5O4:   55    AO4:    0     55:    3
+Lignin KMC created 500 monomers, which formed:
+     149 dimer(s) (chain length 2)
+       3 trimer(s) (chain length 3)
+      11 oligomer(s) of chain length 4, with branching coefficient 0.0
+       2 oligomer(s) of chain length 5, with branching coefficient 0.1
+       1 oligomer(s) of chain length 6, with branching coefficient 0.167
+       1 oligomer(s) of chain length 7, with branching coefficient 0.143
+       2 oligomer(s) of chain length 8, with branching coefficient 0.188
+       2 oligomer(s) of chain length 9, with branching coefficient 0.222
+       1 oligomer(s) of chain length 12, with branching coefficient 0.167
+       5 oligomer(s) of chain length 13, with branching coefficient 0.262
+       1 oligomer(s) of chain length 15, with branching coefficient 0.267
+composed of the following bond types and number:
+    BO4:   55     BB:   93     B5:  114     B1:    0    5O4:   55    AO4:    0     55:    5
+Lignin KMC created 500 monomers, which formed:
+     152 dimer(s) (chain length 2)
+       3 trimer(s) (chain length 3)
+      17 oligomer(s) of chain length 4, with branching coefficient 0.0
+       3 oligomer(s) of chain length 5, with branching coefficient 0.0
+       6 oligomer(s) of chain length 6, with branching coefficient 0.111
+       3 oligomer(s) of chain length 7, with branching coefficient 0.048
+       2 oligomer(s) of chain length 9, with branching coefficient 0.222
+       1 oligomer(s) of chain length 14, with branching coefficient 0.286
+       1 oligomer(s) of chain length 15, with branching coefficient 0.267
+composed of the following bond types and number:
+    BO4:   41     BB:   81     B5:  138     B1:    0    5O4:   49    AO4:    0     55:    3
+Lignin KMC created 500 monomers, which formed:
+     164 dimer(s) (chain length 2)
+       6 trimer(s) (chain length 3)
+      13 oligomer(s) of chain length 4, with branching coefficient 0.0
+       4 oligomer(s) of chain length 5, with branching coefficient 0.0
+       3 oligomer(s) of chain length 6, with branching coefficient 0.111
+       2 oligomer(s) of chain length 7, with branching coefficient 0.071
+       1 oligomer(s) of chain length 9, with branching coefficient 0.222
+       1 oligomer(s) of chain length 11, with branching coefficient 0.273
+       1 oligomer(s) of chain length 13, with branching coefficient 0.154
+       1 oligomer(s) of chain length 17, with branching coefficient 0.235
+composed of the following bond types and number:
+    BO4:   35     BB:   83     B5:  142     B1:    0    5O4:   42    AO4:    0     55:    2
+Lignin KMC created 500 monomers, which formed:
+     164 dimer(s) (chain length 2)
+       2 trimer(s) (chain length 3)
+      17 oligomer(s) of chain length 4, with branching coefficient 0.0
+       2 oligomer(s) of chain length 5, with branching coefficient 0.0
+       1 oligomer(s) of chain length 6, with branching coefficient 0.167
+       1 oligomer(s) of chain length 7, with branching coefficient 0.143
+       2 oligomer(s) of chain length 8, with branching coefficient 0.125
+       2 oligomer(s) of chain length 9, with branching coefficient 0.111
+       1 oligomer(s) of chain length 12, with branching coefficient 0.167
+       1 oligomer(s) of chain length 14, with branching coefficient 0.214
+       1 oligomer(s) of chain length 15, with branching coefficient 0.267
+composed of the following bond types and number:
+    BO4:   35     BB:   95     B5:  130     B1:    0    5O4:   43    AO4:    0     55:    3
+Lignin KMC created 500 monomers, which formed:
+     167 dimer(s) (chain length 2)
+       3 trimer(s) (chain length 3)
+       9 oligomer(s) of chain length 4, with branching coefficient 0.0
+       3 oligomer(s) of chain length 5, with branching coefficient 0.0
+       1 oligomer(s) of chain length 6, with branching coefficient 0.167
+       1 oligomer(s) of chain length 7, with branching coefficient 0.143
+       1 oligomer(s) of chain length 9, with branching coefficient 0.0
+       1 oligomer(s) of chain length 11, with branching coefficient 0.182
+       3 oligomer(s) of chain length 12, with branching coefficient 0.222
+       1 oligomer(s) of chain length 15, with branching coefficient 0.267
+       1 oligomer(s) of chain length 22, with branching coefficient 0.364
+composed of the following bond types and number:
+    BO4:   41     BB:  100     B5:  121     B1:    0    5O4:   41    AO4:    0     55:    6
+Lignin KMC created 500 monomers, which formed:
+     179 dimer(s) (chain length 2)
+       2 trimer(s) (chain length 3)
+       5 oligomer(s) of chain length 4, with branching coefficient 0.0
+       1 oligomer(s) of chain length 5, with branching coefficient 0.0
+       1 oligomer(s) of chain length 6, with branching coefficient 0.167
+       1 oligomer(s) of chain length 7, with branching coefficient 0.0
+       1 oligomer(s) of chain length 8, with branching coefficient 0.125
+       1 oligomer(s) of chain length 9, with branching coefficient 0.111
+       1 oligomer(s) of chain length 11, with branching coefficient 0.091
+       1 oligomer(s) of chain length 18, with branching coefficient 0.222
+       1 oligomer(s) of chain length 23, with branching coefficient 0.261
+       1 oligomer(s) of chain length 29, with branching coefficient 0.276
+composed of the following bond types and number:
+    BO4:   37     BB:   86     B5:  141     B1:    0    5O4:   39    AO4:    0     55:    2
+Lignin KMC created 500 monomers, which formed:
+     167 dimer(s) (chain length 2)
+       3 trimer(s) (chain length 3)
+       8 oligomer(s) of chain length 4, with branching coefficient 0.0
+       2 oligomer(s) of chain length 5, with branching coefficient 0.0
+       1 oligomer(s) of chain length 6, with branching coefficient 0.167
+       2 oligomer(s) of chain length 7, with branching coefficient 0.143
+       4 oligomer(s) of chain length 8, with branching coefficient 0.156
+       2 oligomer(s) of chain length 10, with branching coefficient 0.2
+       1 oligomer(s) of chain length 13, with branching coefficient 0.154
+       1 oligomer(s) of chain length 14, with branching coefficient 0.286
+       1 oligomer(s) of chain length 16, with branching coefficient 0.25
+composed of the following bond types and number:
+    BO4:   33     BB:   93     B5:  135     B1:    0    5O4:   47    AO4:    0     55:    0
+Lignin KMC created 500 monomers, which formed:
+     161 dimer(s) (chain length 2)
+       1 trimer(s) (chain length 3)
+      12 oligomer(s) of chain length 4, with branching coefficient 0.0
+       5 oligomer(s) of chain length 5, with branching coefficient 0.0
+       1 oligomer(s) of chain length 6, with branching coefficient 0.167
+       3 oligomer(s) of chain length 7, with branching coefficient 0.095
+       1 oligomer(s) of chain length 8, with branching coefficient 0.25
+       2 oligomer(s) of chain length 9, with branching coefficient 0.167
+       1 oligomer(s) of chain length 10, with branching coefficient 0.2
+       1 oligomer(s) of chain length 11, with branching coefficient 0.182
+       1 oligomer(s) of chain length 13, with branching coefficient 0.231
+       1 oligomer(s) of chain length 15, with branching coefficient 0.267
+composed of the following bond types and number:
+    BO4:   43     BB:  103     B5:  114     B1:    0    5O4:   45    AO4:    0     55:    5
+Lignin KMC created 500 monomers, which formed:
+     152 dimer(s) (chain length 2)
+       4 trimer(s) (chain length 3)
+      14 oligomer(s) of chain length 4, with branching coefficient 0.0
+       4 oligomer(s) of chain length 5, with branching coefficient 0.0
+       4 oligomer(s) of chain length 6, with branching coefficient 0.125
+       3 oligomer(s) of chain length 7, with branching coefficient 0.143
+       2 oligomer(s) of chain length 9, with branching coefficient 0.167
+       1 oligomer(s) of chain length 12, with branching coefficient 0.167
+       1 oligomer(s) of chain length 14, with branching coefficient 0.286
+       1 oligomer(s) of chain length 19, with branching coefficient 0.263
+composed of the following bond types and number:
+    BO4:   42     BB:   92     B5:  126     B1:    0    5O4:   54    AO4:    0     55:    0
+Lignin KMC created 500 monomers, which formed:
+     171 dimer(s) (chain length 2)
+      11 oligomer(s) of chain length 4, with branching coefficient 0.0
+       2 oligomer(s) of chain length 5, with branching coefficient 0.0
+       2 oligomer(s) of chain length 6, with branching coefficient 0.083
+       3 oligomer(s) of chain length 7, with branching coefficient 0.143
+       1 oligomer(s) of chain length 8, with branching coefficient 0.125
+       4 oligomer(s) of chain length 9, with branching coefficient 0.167
+       1 oligomer(s) of chain length 13, with branching coefficient 0.231
+       1 oligomer(s) of chain length 14, with branching coefficient 0.214
+composed of the following bond types and number:
+    BO4:   33     BB:   90     B5:  136     B1:    0    5O4:   45    AO4:    0     55:    0
+Lignin KMC created 500 monomers, which formed:
+     150 dimer(s) (chain length 2)
+       4 trimer(s) (chain length 3)
+      15 oligomer(s) of chain length 4, with branching coefficient 0.0
+       2 oligomer(s) of chain length 5, with branching coefficient 0.0
+       2 oligomer(s) of chain length 6, with branching coefficient 0.167
+       1 oligomer(s) of chain length 8, with branching coefficient 0.25
+       2 oligomer(s) of chain length 9, with branching coefficient 0.222
+       2 oligomer(s) of chain length 12, with branching coefficient 0.208
+       1 oligomer(s) of chain length 13, with branching coefficient 0.231
+       1 oligomer(s) of chain length 18, with branching coefficient 0.167
+       1 oligomer(s) of chain length 25, with branching coefficient 0.36
+composed of the following bond types and number:
+    BO4:   44     BB:  104     B5:  112     B1:    0    5O4:   54    AO4:    0     55:    5
+Lignin KMC created 500 monomers, which formed:
+     169 dimer(s) (chain length 2)
+       3 trimer(s) (chain length 3)
+       6 oligomer(s) of chain length 4, with branching coefficient 0.0
+       1 oligomer(s) of chain length 5, with branching coefficient 0.0
+       3 oligomer(s) of chain length 6, with branching coefficient 0.056
+       3 oligomer(s) of chain length 7, with branching coefficient 0.095
+       1 oligomer(s) of chain length 8, with branching coefficient 0.125
+       1 oligomer(s) of chain length 9, with branching coefficient 0.222
+       2 oligomer(s) of chain length 10, with branching coefficient 0.2
+       1 oligomer(s) of chain length 11, with branching coefficient 0.273
+       2 oligomer(s) of chain length 12, with branching coefficient 0.208
+       1 oligomer(s) of chain length 13, with branching coefficient 0.154
+composed of the following bond types and number:
+    BO4:   42     BB:   78     B5:  142     B1:    0    5O4:   36    AO4:    0     55:    9
+Lignin KMC created 500 monomers, which formed:
+     169 dimer(s) (chain length 2)
+       2 trimer(s) (chain length 3)
+       9 oligomer(s) of chain length 4, with branching coefficient 0.0
+       3 oligomer(s) of chain length 5, with branching coefficient 0.0
+       4 oligomer(s) of chain length 6, with branching coefficient 0.083
+       1 oligomer(s) of chain length 9, with branching coefficient 0.111
+       1 oligomer(s) of chain length 14, with branching coefficient 0.214
+       1 oligomer(s) of chain length 16, with branching coefficient 0.312
+       1 oligomer(s) of chain length 20, with branching coefficient 0.2
+       1 oligomer(s) of chain length 22, with branching coefficient 0.273
+composed of the following bond types and number:
+    BO4:   41     BB:   95     B5:  122     B1:    0    5O4:   42    AO4:    0     55:    8

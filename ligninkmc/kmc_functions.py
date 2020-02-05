@@ -347,14 +347,14 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, ox_rates, p
             del (event_dict[last_event_hash])
             del (rate_vec[last_event_hash])
 
-            # Reflect the larger system volume
+        # Reflect the larger system volume
         for i in rate_vec:
             if event_dict[i].key != GROW:
                 rate_vec[i] = rate_vec[i] * (cur_n - 1) / cur_n
 
             # Add an event to oxidize the monomer that was just added to the simulation
         oxidation = Event(OX, [cur_n - 1], ox_rates[state_dict[cur_n - 1][MONOMER].type][MONOMER])
-        state_dict[cur_n - 1][AFFECTED].add(oxidation)
+        state_dict[cur_n - 1][AFFECTED].append(oxidation)
         ev_hash = hash(oxidation)
         event_dict[ev_hash] = oxidation
         # "/ cur_n" is like multiplying by concentration, ignoring any molecules not tracked by this script
@@ -685,12 +685,9 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
     # Run the Gillespie algorithm
     while t[-1] < t_max and len(event_dict) > 0:
         # Find the total rate for all of the possible event_dict and choose which event to do
-        # Less direct conversion of r_vec to lists (keys in hashes, vals in all_rates) for consistency
+        # r_vec is an ordered dict, lists of keys and values will align
         hashes = list(r_vec.keys())
-        hashes.sort()
-        all_rates = []
-        for r_vec_key in hashes:
-            all_rates.append(r_vec[r_vec_key])
+        all_rates = list(r_vec.values())
         r_tot = np.sum(all_rates)
 
         if random_seed:
@@ -700,6 +697,7 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
             rand_num = np.around(np.random.rand(), MAX_NUM_DECIMAL)
         else:
             rand_num = np.random.rand()
+        # the probabilities must first be normalized, or get "ValueError: probabilities do not sum to 1"
         j = np.random.choice(hashes, p=all_rates / r_tot)
         chosen_event = event_dict[j]
         # See how much time has passed before this event happened; rounding to reduce platform dependency

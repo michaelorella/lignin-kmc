@@ -502,9 +502,9 @@ class TestAnalyzeKMCSummary(unittest.TestCase):
         result = create_sample_kmc_result()
         summary = analyze_adj_matrix(result[ADJ_MATRIX], break_co_bonds=True)
         self.assertTrue(summary[CHAIN_LEN] == {10: 1})
-        self.assertTrue(summary[BONDS] == {BO4: 4, BB: 2, B5: 2, B1: 0, C5O4: 1, AO4: 0, C5C5: 0})
-        self.assertTrue(summary[RCF_YIELDS] == {1: 3, 2: 2, 3: 1})
-        self.assertTrue(summary[RCF_BONDS] == {BO4: 0, BB: 2, B5: 2, B1: 0, C5O4: 0, AO4: 0, C5C5: 0})
+        self.assertTrue(summary[BONDS] == {BO4: 6, BB: 1, B5: 2, B1: 0, C5O4: 0, AO4: 0, C5C5: 0})
+        self.assertTrue(summary[RCF_YIELDS] == {1: 4, 2: 3})
+        self.assertTrue(summary[RCF_BONDS] == {BO4: 0, BB: 1, B5: 2, B1: 0, C5O4: 0, AO4: 0, C5C5: 0})
 
     def testKMCResultSummaryDescription(self):
         break_co_bonds = True
@@ -806,9 +806,11 @@ class TestVisualization(unittest.TestCase):
 
     def testCheckBO4Fraction(self):
         # similar to a test above; was useful for comparing output from different versions
-        monomer_types = [[G, S, G, G, S, S, S, G, S, S, G, G, S, G, G, G, G, S, G, G, G, S, G, S, S, S, G, S, S, G, G],
-                         [S, S, G, G, S, G, S, G, G, G, G, S, S, S, S, S, G, S, S, S, G, G, S, G, S, G, S, S, G, S, S],
-                         [S, S, S, S, G, S, S, G, G, S, G, S, G, G, G, G, S, S, S, S, S, S, S, G, S, S, G, S, G, S, G]]
+        monomer_types = [[S, G, S, G, G, S, S, S, G, S, G, G, S, G, G, G, G, S, G, G, G, S, G, S, S, S, G, S, S, G, G],
+                         [G, S, S, G, G, S, G, S, G, G, G, S, S, S, S, S, G, S, S, S, G, G, S, G, S, G, S, S, G, S, S],
+                         [G, S, S, S, S, G, S, S, G, S, G, S, G, G, G, G, S, S, S, S, S, S, S, G, S, S, G, S, G, S, G],
+                         [S, S, S, G, S, S, S, G, S, G, G, S, G, S, G, G, G, G, S, S, G, S, S, G, S, S, S, G, S, G, S],
+                         [G, S, G, S, S, G, S, G, S, S, S, S, S, S, G, S, S, S, G, G, S, G, S, G, G, G, G, S, S, S, S]]
         num_repeats = len(monomer_types)
         sg_result_list = []
 
@@ -827,5 +829,5 @@ class TestVisualization(unittest.TestCase):
         av_bo4_bonds, std_bo4_bonds = get_avg_num_bonds_single_option(BO4, sg_result_list, num_repeats)
         print("Average fraction BO4 bonds: {:.3f}".format(av_bo4_bonds))
         print("Std dev fraction BO4 bonds: {:.3f}".format(std_bo4_bonds))
-        self.assertTrue(np.allclose(av_bo4_bonds, 0.21020733652312598))
-        self.assertTrue(np.allclose(std_bo4_bonds, 0.04743254939825481))
+        self.assertTrue(np.allclose(av_bo4_bonds, 0.13542761586239846))
+        self.assertTrue(np.allclose(std_bo4_bonds, 0.02866726831804407))
