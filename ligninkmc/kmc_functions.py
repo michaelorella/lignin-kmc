@@ -317,7 +317,7 @@ def analyze_adj_matrix(adjacency, break_co_bonds=False):
             RCF_BRANCHES: rcf_branch_dict, RCF_BRANCH_COEFF: rcf_branch_coeff_dict}
 
 
-def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, possible_events, max_mon=500):
+def update_events(state_dict, adj, last_event, event_dict, rate_vec, ox_rates, possible_events, max_mon=500):
     """
     This method determines what the possible events are in a given state, where the state is the current simulation
     state. Most of the additional parameters in this method are added for performance benefits rather than necessity.
@@ -333,7 +333,7 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
         method, implemented in a hash map where the event hash value is the key
     :param rate_vec: dict  -- The rates of all of the unique event_dict implemented in a hash map where the Event
         hash value is the key
-    :param rate_dict: dict  -- The dictionary of the possible rates involved in each reaction
+    :param ox_rates: dict  -- The dictionary of the possible oxidation rates mapped to substrate
     :param possible_events: dict -- maps monomer active state to the possible event_dict it can do
     :param max_mon: int -- The maximum number of monomers that should be stored in the simulation
     :return: n/a, updates state_dict, adj, event_dict, rate_vec
@@ -353,7 +353,7 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
                 rate_vec[i] = rate_vec[i] * (cur_n - 1) / cur_n
 
             # Add an event to oxidize the monomer that was just added to the simulation
-        oxidation = Event(OX, [cur_n - 1], rate_dict[OX][state_dict[cur_n - 1][MONOMER].type][MONOMER])
+        oxidation = Event(OX, [cur_n - 1], ox_rates[state_dict[cur_n - 1][MONOMER].type][MONOMER])
         state_dict[cur_n - 1][AFFECTED].add(oxidation)
         ev_hash = hash(oxidation)
         event_dict[ev_hash] = oxidation
@@ -423,65 +423,8 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
                     state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], [mon.identity], rate))
 
                 elif rxn_event and rxn_event[1] == 2:  # Bimolecular reaction event
-                    # update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, events_to_be_modified,
-                    #                                  mon, mon_id, rxn_event, state_dict)
-                    bond = tuple(rxn_event[3])
-                    alt = (bond[1], bond[0])
-                    for partner in bonding_partners[rxn_event[0]]:
-                        # Sanitize the set of event_dict that can be effected
-                        if partner not in cleaned_partners:
-                            # Remove any old event_dict from
-                            state_dict[partner.identity][AFFECTED].difference_update(events_to_be_modified)
-                            cleaned_partners.add(partner)
-
-                        index = [mon.identity, partner.identity]
-                        back = [partner.identity, mon.identity]
-
-                        # Add the bond from one active unit to the other in the default config
-                        size = (quick_frag_size(mon), quick_frag_size(partner))
-                        if bond[0] in mon.open and bond[1] in partner.open:
-                            try:
-                                # todo: delete when questions re olig-olig b04 bond is resolved
-                                if size == (OLIGOMER, OLIGOMER):
-                                    if rxn_event[0] == BO4:
-                                        print(f"{rxn_event[0]} reaction between oligomers with {mon.identity} and "
-                                              f"{partner.identity}")
-                                rate = rxn_event[2][(mon.type, partner.type)][size] / (cur_n ** 2)
-                            except KeyError:
-                                raise InvalidDataError(f"Error while attempting to update event_dict: event "
-                                                       f"{rxn_event[0]} between indices {mon.identity} and "
-                                                       f"{partner.identity} ")
-
-                            # Add this to both the monomer and it's bonding partners list of event_dict that need to be
-                            # modified upon manipulation of either monomer
-                            # this -> other
-                            state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], index, rate, bond))
-                            state_dict[partner.identity][AFFECTED].add(Event(rxn_event[0], index, rate, bond))
-
-                            # Switch the order
-                            # other -> this
-                            state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], back, rate, alt))
-                            state_dict[partner.identity][AFFECTED].add(Event(rxn_event[0], back, rate, alt))
-
-                        # Add the bond from one monomer to the other in the reverse config if not symmetric
-                        if rxn_event[0] != BB and rxn_event[0] != C5C5:  # non-symmetric bond
-                            if bond[1] in mon.open and bond[0] in partner.open:
-                                # Adjust the rate using the correct monomer types
-                                try:
-                                    rate = rxn_event[2][(partner.type, mon.type)][(size[1], size[0])] / (cur_n ** 2)
-                                except KeyError:
-                                    raise InvalidDataError(f"Error on determining the rate for rxn_event type "
-                                                           f"{rxn_event[0]}, bonding index {mon.identity} to "
-                                                           f"{partner.identity}")
-                                # this -> other alt
-                                state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], index, rate, alt))
-                                state_dict[partner.identity][AFFECTED].add(Event(rxn_event[0], index, rate, alt))
-
-                                # Switch the order
-                                # other -> this alt
-                                state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], back, rate, bond))
-                                state_dict[partner.identity][AFFECTED].add(Event(rxn_event[0], back, rate, bond))
-                    # END LOOP OVER PARTNERS
+                    update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, events_to_be_modified,
+                                                     mon, mon_id, rxn_event, state_dict)
                 # END UNIMOLECULAR/BIMOLECULAR BRANCH
             # END LOOP OVER NEW REACTION POSSIBILITIES
             for event in state_dict[mon_id][AFFECTED]:
@@ -489,6 +432,64 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, rate_dict, 
                 event_dict[ev_hash] = event
                 rate_vec[ev_hash] = event.rate
         # END LOOP OVER MONOMERS THAT WERE AFFECTED BY LAST EVENT
+
+
+def update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, events_to_be_modified,
+                                     mon, mon_id, rxn_event, state_dict):
+    bond = tuple(rxn_event[3])
+    alt = (bond[1], bond[0])
+    for partner in bonding_partners[rxn_event[0]]:
+        # Sanitize the set of event_dict that can be effected
+        if partner not in cleaned_partners:
+            # Remove any old event_dict from
+            state_dict[partner.identity][AFFECTED].difference_update(events_to_be_modified)
+            cleaned_partners.add(partner)
+
+        index = [mon.identity, partner.identity]
+        back = [partner.identity, mon.identity]
+
+        # Add the bond from one active unit to the other in the default config
+        size = (quick_frag_size(mon), quick_frag_size(partner))
+        if bond[0] in mon.open and bond[1] in partner.open:
+            try:
+                # "/ cur_n**2" is like multiplying by concentration of each of 2 monomers,
+                #     ignoring any molecules not tracked by this script
+                rate = rxn_event[2][(mon.type, partner.type)][size] / (cur_n ** 2)
+            except KeyError:
+                raise InvalidDataError(f"Error while attempting to update event_dict: event {rxn_event[0]} between "
+                                       f"indices {mon.identity} and {partner.identity} ")
+
+            # Add this to both the monomer and it's bonding partners list of event_dict that need to be
+            #     modified upon manipulation of either monomer
+            # this -> other
+            state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], index, rate, bond))
+            state_dict[partner.identity][AFFECTED].add(Event(rxn_event[0], index, rate, bond))
+
+            # Switch the order
+            # other -> this
+            state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], back, rate, alt))
+            state_dict[partner.identity][AFFECTED].add(Event(rxn_event[0], back, rate, alt))
+
+        # Add the bond from one monomer to the other in the reverse config if not symmetric
+        if rxn_event[0] != BB and rxn_event[0] != C5C5:  # non-symmetric bond
+            if bond[1] in mon.open and bond[0] in partner.open:
+                # Adjust the rate using the correct monomer types
+                try:
+                    # "/ cur_n**2" is like multiplying by concentration of each of 2 monomers,
+                    #     ignoring any molecules not tracked by this script
+                    rate = rxn_event[2][(partner.type, mon.type)][(size[1], size[0])] / (cur_n ** 2)
+                except KeyError:
+                    raise InvalidDataError(f"Error on determining the rate for rxn_event type "
+                                           f"{rxn_event[0]}, bonding index {mon.identity} to "
+                                           f"{partner.identity}")
+                # this -> other alt
+                state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], index, rate, alt))
+                state_dict[partner.identity][AFFECTED].add(Event(rxn_event[0], index, rate, alt))
+
+                # Switch the order
+                # other -> this alt
+                state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], back, rate, bond))
+                state_dict[partner.identity][AFFECTED].add(Event(rxn_event[0], back, rate, bond))
 
 
 def connect_monos(mon1, mon2):
@@ -713,7 +714,7 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
             mon_list.append([copy.copy(cur_state[i][MONOMER]) for i in cur_state])
 
         # Check the new state for what events are possible
-        update_events(cur_state, adj, chosen_event, event_dict, r_vec, rate_dict, possible_events, max_mon=n_max)
+        update_events(cur_state, adj, chosen_event, event_dict, r_vec, rate_dict[OX], possible_events, max_mon=n_max)
 
     if dynamics:
         return {TIME: t, MONO_LIST: mon_list, ADJ_MATRIX: adj_list}

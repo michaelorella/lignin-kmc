@@ -1,20 +1,16 @@
 #!/usr/bin/env python3
 import logging
-import os
+import time
 import unittest
+
 import matplotlib.pyplot as plt
 import numpy as np
-import time
 from scipy import optimize
-from ligninkmc.create_lignin import (DEF_TEMP, calc_rates, create_initial_monomers, create_initial_events,
-                                     degree, create_initial_state, overall_branching_coefficient,
-                                     adj_analysis_to_stdout, get_bond_type_v_time_dict)
-from ligninkmc.kmc_common import (Event, Monomer, G, S, H, C, C5O4, OX, C5C5, B5, BB, BO4, AO4, B1, DEF_RXN_RATES,
-                                  MON_OLI, MONOMER, GROW, TIME, MONO_LIST, ADJ_MATRIX, CHAIN_LEN, BONDS,
-                                  RCF_YIELDS, RCF_BONDS, B1_ALT, DEF_E_BARRIER_KCAL_MOL, MAX_NUM_DECIMAL)
-from ligninkmc.kmc_functions import (run_kmc, generate_mol, gen_tcl, find_fragments, fragment_size, break_bond_type,
-                                     analyze_adj_matrix, count_oligomer_yields, count_bonds)
 
+from ligninkmc.create_lignin import (create_initial_monomers, create_initial_events,
+                                     create_initial_state)
+from ligninkmc.kmc_common import (DEF_RXN_RATES)
+from ligninkmc.kmc_functions import (run_kmc)
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -64,7 +60,7 @@ class TestScaling(unittest.TestCase):
         # Now we want to fit the times that we just calculated to a generic power law expression $t = aN^b$ to find the
         # scaling of our algorithm.
         meas_t = [np.mean(one_time) for one_time in times]
-        sdev_t = [np.sqrt(np.var(one_time)) for one_time in times]
+        # sdev_t = [np.sqrt(np.var(one_time)) for one_time in times]
         meas_n = test_vals
 
         sim_t = lambda p, n: p[0] * np.power (n, p[1])
@@ -78,6 +74,6 @@ class TestScaling(unittest.TestCase):
 
 
 # With hash:
-# Average time to complete simulation with    50 monomers:    0.57 seconds
-# Average time to complete simulation with   100 monomers:    3.93 seconds
-# Average time to complete simulation with   150 monomers:   14.67 seconds
+# Average time to complete simulation with    50 monomers:    0.55 seconds
+# Average time to complete simulation with   100 monomers:    3.77 seconds
+# Average time to complete simulation with   150 monomers:   13.55 seconds
