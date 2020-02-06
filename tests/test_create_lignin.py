@@ -539,13 +539,13 @@ class TestDynamics(unittest.TestCase):
 
     # Added as an easy way to run this for its production output
     def testProduction(self):
-        new_out_dir = os.path.join(DATA_DIR, 'new_plots')
+        # new_out_dir = os.path.join(DATA_DIR, 'new_plots')
         plot_input = ["-x", "-p",
                       # next line: testing
-                      # "-i", "5", "-m", "100", "-a", "1", "-sg", "1, 10", "-n", "3", "-d", TEMP_DIR,
+                      "-i", "5", "-m", "100", "-a", "1", "-sg", "1, 10", "-n", "3", "-d", TEMP_DIR,
                       # # alt lines: production
-                      "-i", "2", "-m", "500", "-l", "1e5", "-a", "1e8, 1e6, 1e4, 1e2, 1",
-                      "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10", "-n", "100", "-d", new_out_dir,
+                      # "-i", "2", "-m", "500", "-l", "1e5", "-a", "1e8, 1e6, 1e4, 1e2, 1",
+                      # "-sg", "0.1, 0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 10", "-n", "100", "-d", new_out_dir,
                       ]
         try:
             with capture_stderr(main, plot_input) as output:
@@ -561,8 +561,7 @@ class TestDynamics(unittest.TestCase):
                       # "-i", "5", "-m", "100", "-a", "1", "-sg", "1, 10", "-n", "3", "-d", TEMP_DIR,
                       # larger number for better stats
                       # -i is initial number of monomers, m is maximum
-                      "-i", "5",
-                      "-m", "250",
+                      "-i", "5", "-m", "250", "-a", "1",
                       "-sg", "0.5, 1, 5", "-n", "5000", "-d", TEMP_DIR,
                       # # alt lines: production
                       # "-i", "2", "-m", "500", "-l", "1e5", "-a", "1e8, 1e6, 1e4, 1e2, 1",
