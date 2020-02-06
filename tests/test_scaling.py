@@ -72,26 +72,7 @@ class TestScaling(unittest.TestCase):
         scaling_formula = f'$t = {opt_p[0]:3.1e}N^{{ {opt_p[1]:4.2f} }}$'
         print(f'Scaling: {scaling_formula}')
 
-    def testOrderedDict(self):
-        temp_dict = OrderedDict()
-        repeats = 50000
-        for i in range(repeats):
-            temp_dict[i] = i * .1
-        temp_keys = list(temp_dict.keys())
-        temp_vals = list(temp_dict.values())
-        sum_vals = np.sum(temp_vals)
-        for _ in range(20):
-            j = np.random.choice(temp_keys, p=temp_vals / sum_vals)
-            self.assertAlmostEqual(j*.1, temp_vals[j])
-            print(j*.1, temp_vals[j])
-
-
-# With hash:
-# Average time to complete simulation with    50 monomers:    0.55 seconds
-# Average time to complete simulation with   100 monomers:    3.77 seconds
-# Average time to complete simulation with   150 monomers:   13.55 seconds
-
-# After removing an unnecessary loop:
-# Average time to complete simulation with    50 monomers:    0.47 seconds
-# Average time to complete simulation with   100 monomers:    2.73 seconds
-# Average time to complete simulation with   150 monomers:    8.35 seconds
+# Last timing check:
+# Average time to complete simulation with    50 monomers:    0.43 seconds
+# Average time to complete simulation with   100 monomers:    2.53 seconds
+# Average time to complete simulation with   150 monomers:    8.28 seconds

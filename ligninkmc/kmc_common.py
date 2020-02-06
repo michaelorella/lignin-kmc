@@ -391,23 +391,24 @@ class Event:
         :param bond: int, 2 x 1 list of updates to the adjacency matrix when a bond is formed
         :return: new instance of an event object that corresponds to the attributes provided
         """
-        self.key = event_name
+        self.event_name = event_name
         self.index = ids
         self.rate = rate
         self.bond = bond
 
     def __str__(self):
-        if self.key == Q or self.key == OX:
-            msg = f'Performing {self.key} on index {str(self.index[0])}'
+        if self.event_name == Q or self.event_name == OX:
+            msg = f'Performing {self.event_name} on index {str(self.index[0])}'
         else:
-            msg = f'Forming {self.key} bond between indices {str(self.index)} ({ADJ_MATRIX} update {str(self.bond)})'
+            msg = f'Forming {self.event_name} bond between indices {str(self.index)} ({ADJ_MATRIX} ' \
+                  f'update {str(self.bond)})'
         return msg
 
     def __repr__(self):
         return self.__str__()
 
     def __eq__(self, other):
-        return self.index == other.index and self.bond == other.bond and self.key == other.key
+        return self.index == other.index and self.bond == other.bond and self.event_name == other.event_name
 
     def __lt__(self, other):
         return self.index < other.index
@@ -418,20 +419,19 @@ class Event:
         #     "By default, the __hash__() values of str and bytes objects are “salted” with an unpredictable random
         #     value. Although they remain constant within an individual Python process, they are not predictable
         #     between repeated invocations of Python."
-        # Original hash method, which did not allow testing because of random salting:
-        #    return hash((tuple(self.index), self.key, self.bond))
-        # Replacement hash method which gave consistent results, but unexpected changed outcomes
-        #    key_as_num = sum([ord(x) % 32 for x in self.key])
-        #    return key_as_num + sum(self.index) * 1000 + int(self.rate * 10000)
-        # The bash below is repeatable and gives similar results to the original hash. It is not directly invoked
-        #     in the package (unsettling that the hash method used for dictionary keys would change results), but it
-        #     is left in case there is any behind the scenes hashing
+        # 1) Original hash method, which did not allow testing because of random salting:
+        #        return hash((tuple(self.index), self.key, self.bond))
+        # 2) Replacement hash method which gave consistent results, but unexpected changed outcomes
+        #        key_as_num = sum([ord(x) % 32 for x in self.key])
+        #        return key_as_num + sum(self.index) * 1000 + int(self.rate * 10000)
+        # 3) Hash below is repeatable and gives similar results to the original hash. While no longer directly called,
+        #    left in case there is any behind the scenes hashing
         if not self.index:
             index_join = 0
         else:
             index_join = int("".join([str(x) for x in self.index]))
         index_bytes = index_join.to_bytes((index_join.bit_length() + 7) // 8, 'big')
-        key_bytes = self.key.encode()
+        key_bytes = self.event_name.encode()
         bond_list_str = "".join([str(x) for x in self.bond])
         bond_list_bytes = bond_list_str.encode()
         event_bytes = b''.join([index_bytes, key_bytes, bond_list_bytes])

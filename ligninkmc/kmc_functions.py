@@ -330,41 +330,40 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, ox_rates, p
     :param last_event: event -- the previous Event that occurred, which will tell us what monomers were effected. When
         combined with the state dictionary, this allows for updating the list of events (event_dict) currently possible
     :param event_dict: dict  -- The set of all possible unique event_dict that must be updated and returned from this
-        method, implemented in a hash map where the event hash value is the key
-    :param rate_vec: dict  -- The rates of all of the unique event_dict implemented in a hash map where the Event
-        hash value is the key
+        method, where the event str is the key
+    :param rate_vec: dict  -- The rates of all of the unique event_dict in a dict with the event str as the key
     :param ox_rates: dict  -- The dictionary of the possible oxidation rates mapped to substrate
     :param possible_events: dict -- maps monomer active state to the possible event_dict it can do
     :param max_mon: int -- The maximum number of monomers that should be stored in the simulation
     :return: n/a, updates state_dict, adj, event_dict, rate_vec
     """
-    if last_event.key == GROW:
+    if last_event.event_name == GROW:
         cur_n, _ = adj.get_shape()
 
         # If the system has grown to the maximum size, delete the event for adding more monomers
         if cur_n >= max_mon:
-            last_event_hash = hash(last_event)
-            del (event_dict[last_event_hash])
-            del (rate_vec[last_event_hash])
+            event_str = str(last_event)
+            del (event_dict[event_str])
+            del (rate_vec[event_str])
 
         # Reflect the larger system volume
         for i in rate_vec:
-            if event_dict[i].key != GROW:
+            if event_dict[i].event_name != GROW:
                 rate_vec[i] = rate_vec[i] * (cur_n - 1) / cur_n
 
             # Add an event to oxidize the monomer that was just added to the simulation
-        oxidation = Event(OX, [cur_n - 1], ox_rates[state_dict[cur_n - 1][MONOMER].type][MONOMER])
-        state_dict[cur_n - 1][AFFECTED].append(oxidation)
-        ev_hash = hash(oxidation)
-        event_dict[ev_hash] = oxidation
+        new_oxidation_event = Event(OX, [cur_n - 1], ox_rates[state_dict[cur_n - 1][MONOMER].type][MONOMER])
+        state_dict[cur_n - 1][AFFECTED].append(new_oxidation_event)
+        event_str = str(new_oxidation_event)
+        event_dict[event_str] = new_oxidation_event
         # "/ cur_n" is like multiplying by concentration, ignoring any molecules not tracked by this script
-        rate_vec[ev_hash] = oxidation.rate / cur_n
+        rate_vec[event_str] = new_oxidation_event.rate / cur_n
     else:
         # Only do these for bonding and oxidation event_dict, any growth does not actually change the possible event_dict
         # Remove the last event that we just did from the set of event_dict that can be performed
-        last_event_hash = hash(last_event)
-        del (event_dict[last_event_hash])
-        del (rate_vec[last_event_hash])
+        last_event_str = str(last_event)
+        del (event_dict[last_event_str])
+        del (rate_vec[last_event_str])
 
         # Make sure to keep track of which partners have been "cleaned" already - i.e. what monomers have already had
         #     all of the old event_dict removed
@@ -402,10 +401,10 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, ox_rates, p
 
             # Take any event_dict to be modified out of the set so that we can replace with the updated event_dict
             for event in events_to_be_modified:
-                ev_hash = hash(event)
-                if ev_hash in event_dict:
-                    del (event_dict[ev_hash])
-                    del (rate_vec[ev_hash])
+                event_str = str(event)
+                if event_str in event_dict:
+                    del (event_dict[event_str])
+                    del (rate_vec[event_str])
 
             # Overwrite the old event_dict that could have been modified from this monomer being updated
             state_dict[mon_id][AFFECTED] = set()
@@ -428,9 +427,9 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, ox_rates, p
                 # END UNIMOLECULAR/BIMOLECULAR BRANCH
             # END LOOP OVER NEW REACTION POSSIBILITIES
             for event in state_dict[mon_id][AFFECTED]:
-                ev_hash = hash(event)
-                event_dict[ev_hash] = event
-                rate_vec[ev_hash] = event.rate
+                event_str = str(event)
+                event_dict[event_str] = event
+                rate_vec[event_str] = event.rate
         # END LOOP OVER MONOMERS THAT WERE AFFECTED BY LAST EVENT
 
 
@@ -533,7 +532,7 @@ def do_event(event, state, adj, sg_ratio=None, random_seed=None):
     if len(indices) == 2:  # Doing bimolecular reaction, need to adjust adj
 
         # Get the tuple of values corresponding to bond and state updates and unpack them
-        new_react_active_pt, open_pos0, open_pos1 = event.eventDict[event.key]
+        new_react_active_pt, open_pos0, open_pos1 = event.eventDict[event.event_name]
 
         bond_updates = event.bond
         order = event.activeDict[bond_updates]
@@ -584,20 +583,20 @@ def do_event(event, state, adj, sg_ratio=None, random_seed=None):
                 mon.connectedTo = mon0.connectedTo
 
     elif len(indices) == 1:
-        if event.key == Q:
+        if event.event_name == Q:
             mon = monomers[indices[0]]
             mon.active = 0
             mon.open.remove(7)
             mon.open.add(1)
-        elif event.key == OX:
+        elif event.event_name == OX:
             mon = monomers[indices[0]]
 
             # Make the monomer appear oxidized
             mon.active = 4
         else:
-            raise InvalidDataError(f'Unexpected event: {event.key} for index {indices[0]}')
+            raise InvalidDataError(f'Unexpected event: {event.event_name} for index {indices[0]}')
     else:
-        if event.key == GROW:
+        if event.event_name == GROW:
             current_size, _ = adj.get_shape()
 
             # Add another monomer to the adjacency matrix
@@ -638,7 +637,7 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
     :param rate_dict:  dict   -- contains the reaction rate of each of the possible event_dict
     :param initial_state: OrderedDict  -- maps the index of each monomer to a dictionary with the monomer
         and the set of event_dict that a change to this monomer would impact
-    :param initial_events: list of dicts dictionary -- The dictionary mapping event hash values to those event_dict
+    :param initial_events: list of dicts dictionary -- The dictionary mapping event str (description) to those event_dict
     :param n_max:   int   -- The maximum number of monomers in the simulation
     :param t_max: float -- The final simulation time (units depend on units of rates)
     :param dynamics: boolean -- if True, will keep values for every time step
@@ -660,9 +659,9 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
     # Build the dictionary of event_dict
     event_dict = OrderedDict()
     for event in initial_events:
-        event_hash = hash(event)
-        r_vec[event_hash] = event.rate / num_monos
-        event_dict[event_hash] = event
+        event_str = str(event)
+        r_vec[event_str] = event.rate / num_monos
+        event_dict[event_str] = event
 
     if dynamics:
         adj_list = [adj.copy()]
@@ -686,7 +685,7 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
     while t[-1] < t_max and len(event_dict) > 0:
         # Find the total rate for all of the possible event_dict and choose which event to do
         # r_vec is an ordered dict, lists of keys and values will align
-        hashes = list(r_vec.keys())
+        dict_keys = list(r_vec.keys())
         all_rates = list(r_vec.values())
         r_tot = np.sum(all_rates)
 
@@ -698,8 +697,8 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
         else:
             rand_num = np.random.rand()
         # the probabilities must first be normalized, or get "ValueError: probabilities do not sum to 1"
-        j = np.random.choice(hashes, p=all_rates / r_tot)
-        chosen_event = event_dict[j]
+        chosen_key = np.random.choice(dict_keys, p=all_rates / r_tot)
+        chosen_event = event_dict[chosen_key]
         # See how much time has passed before this event happened; rounding to reduce platform dependency
         dt = round_sig_figs((1 / r_tot) * np.log(1 / rand_num))
         t.append(t[-1] + dt)
