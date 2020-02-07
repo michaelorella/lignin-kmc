@@ -19,7 +19,7 @@ from ligninkmc.kmc_common import (Event, Monomer, AO4, B1, B5, BB, BO4, C5C5, C5
                                   G, S, H, C, S4, G4, G7, S7, B1_ALT, CHAIN_LEN, CHAIN_MONOS, CHAIN_BRANCHES,
                                   CHAIN_BRANCH_COEFF, RCF_BONDS, RCF_YIELDS, RCF_MONOS, RCF_BRANCHES, RCF_BRANCH_COEFF,
                                   DEF_TCL_FNAME, DEF_CHAIN_ID, DEF_PSF_FNAME, DEF_TOPPAR, INT_TO_TYPE_DICT,
-                                  ATOM_BLOCKS, BOND_BLOCKS, ordered_dedup)
+                                  ATOM_BLOCKS, BOND_BLOCKS)
 
 DrawingOptions.bondLineWidth = 1.2
 
@@ -316,6 +316,16 @@ def analyze_adj_matrix(adjacency, break_co_bonds=False):
             RCF_BONDS: rcf_bonds, RCF_YIELDS: rcf_yield_dict, RCF_MONOS: rcf_monos_dict,
             RCF_BRANCHES: rcf_branch_dict, RCF_BRANCH_COEFF: rcf_branch_coeff_dict}
 
+def append_if_unique(unique_list, potential_new_item):
+    """
+    Instead of using a set, want to use a list for maintaining order
+    :param unique_list: list to potentially append
+    :param potential_new_item: item to append if not already in the list
+    :return: n/a, updated list
+    """
+    if potential_new_item not in unique_list:
+        unique_list.append(potential_new_item)
+
 
 def update_events(state_dict, adj, last_event, event_dict, rate_vec, ox_rates, possible_events, max_mon=500):
     """
@@ -441,10 +451,9 @@ def update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, 
     for partner in bonding_partners[rxn_event[0]]:
         # Sanitize the set of event_dict that can be effected
         if partner not in cleaned_partners:
-            # Remove any old event_dict from
+            # Remove any old event_dict
             for mod_event in events_to_be_modified:
-                state_dict[partner.identity][AFFECTED].append(mod_event)
-            state_dict[partner.identity][AFFECTED] = ordered_dedup(state_dict[partner.identity][AFFECTED])
+                append_if_unique(state_dict[partner.identity][AFFECTED], mod_event)
             cleaned_partners.add(partner)
 
         index = [mon.identity, partner.identity]
@@ -465,13 +474,12 @@ def update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, 
             #     modified upon manipulation of either monomer
             # this -> other
             state_dict[mon_id][AFFECTED].append(Event(rxn_event[0], index, rate, bond))
-            state_dict[partner.identity][AFFECTED].append(Event(rxn_event[0], index, rate, bond))
+            append_if_unique(state_dict[partner.identity][AFFECTED], Event(rxn_event[0], index, rate, bond))
 
             # Switch the order
             # other -> this
             state_dict[mon_id][AFFECTED].append(Event(rxn_event[0], back, rate, alt))
-            state_dict[partner.identity][AFFECTED].append(Event(rxn_event[0], back, rate, alt))
-            state_dict[partner.identity][AFFECTED] = ordered_dedup(state_dict[partner.identity][AFFECTED])
+            append_if_unique(state_dict[partner.identity][AFFECTED], Event(rxn_event[0], back, rate, alt))
 
         # Add the bond from one monomer to the other in the reverse config if not symmetric
         if rxn_event[0] != BB and rxn_event[0] != C5C5:  # non-symmetric bond
@@ -486,13 +494,12 @@ def update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, 
                                            f"bonding index {mon.identity} to {partner.identity}")
                 # this -> other alt
                 state_dict[mon_id][AFFECTED].append(Event(rxn_event[0], index, rate, alt))
-                state_dict[partner.identity][AFFECTED].append(Event(rxn_event[0], index, rate, alt))
+                append_if_unique(state_dict[partner.identity][AFFECTED], Event(rxn_event[0], index, rate, alt))
 
                 # Switch the order
                 # other -> this alt
                 state_dict[mon_id][AFFECTED].append(Event(rxn_event[0], back, rate, bond))
-                state_dict[partner.identity][AFFECTED].append(Event(rxn_event[0], back, rate, bond))
-                state_dict[partner.identity][AFFECTED] = ordered_dedup(state_dict[partner.identity][AFFECTED])
+                append_if_unique(state_dict[partner.identity][AFFECTED], Event(rxn_event[0], back, rate, bond))
 
 
 def connect_monos(mon1, mon2):
