@@ -78,12 +78,12 @@ class TestScaling(unittest.TestCase):
 # After set to list change:
 # Average time to complete simulation with    50 monomers:    2.92 seconds
 # Average time to complete simulation with   100 monomers:   31.18 seconds
-# Average time to complete simulation with   150 monomers:  163.57 seconds
+# Average time to complete simulation with   150 monomers:  163.57 seconds (21 times longer)
 
 # After pruning the checks before appending:
 # Average time to complete simulation with    50 monomers:    2.88 seconds
 # Average time to complete simulation with   100 monomers:   32.42 seconds
-# Average time to complete simulation with   150 monomers:  182.79 seconds
+# Average time to complete simulation with   150 monomers:  182.79 seconds (23 times longer)
 
 # If use pytest:  before minimize check before append: 3.5e-06N^3.43
 # Average time to complete simulation with    50 monomers:    2.13 seconds
