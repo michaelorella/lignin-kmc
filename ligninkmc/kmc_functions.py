@@ -317,6 +317,17 @@ def analyze_adj_matrix(adjacency, break_co_bonds=False):
             RCF_BRANCHES: rcf_branch_dict, RCF_BRANCH_COEFF: rcf_branch_coeff_dict}
 
 
+def append_if_unique(unique_list, potential_new_item):
+    """
+    Instead of using a set, want to use a list for maintaining order
+    :param unique_list: list to potentially append
+    :param potential_new_item: item to append if not already in the list
+    :return: n/a, updated list
+    """
+    if potential_new_item not in unique_list:
+        unique_list.append(potential_new_item)
+
+
 def update_events(state_dict, adj, last_event, event_dict, rate_vec, ox_rates, possible_events, max_mon=500):
     """
     This method determines what the possible events are in a given state, where the state is the current simulation
@@ -343,8 +354,8 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, ox_rates, p
         # If the system has grown to the maximum size, delete the event for adding more monomers
         if cur_n >= max_mon:
             event_str = str(last_event)
-            del (event_dict[event_str])
-            del (rate_vec[event_str])
+            del event_dict[event_str]
+            del rate_vec[event_str]
 
         # Reflect the larger system volume
         for i in rate_vec:
@@ -359,11 +370,11 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, ox_rates, p
         # "/ cur_n" is like multiplying by concentration, ignoring any molecules not tracked by this script
         rate_vec[event_str] = new_oxidation_event.rate / cur_n
     else:
-        # Only do these for bonding and oxidation event_dict, any growth does not actually change the possible event_dict
+        # Only do these for bonding and oxidation event_dict, as growth does not change the possible event_dict
         # Remove the last event that we just did from the set of event_dict that can be performed
         last_event_str = str(last_event)
-        del (event_dict[last_event_str])
-        del (rate_vec[last_event_str])
+        del event_dict[last_event_str]
+        del rate_vec[last_event_str]
 
         # Make sure to keep track of which partners have been "cleaned" already - i.e. what monomers have already had
         #     all of the old event_dict removed
@@ -403,11 +414,11 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, ox_rates, p
             for event in events_to_be_modified:
                 event_str = str(event)
                 if event_str in event_dict:
-                    del (event_dict[event_str])
-                    del (rate_vec[event_str])
+                    del event_dict[event_str]
+                    del rate_vec[event_str]
 
             # Overwrite the old event_dict that could have been modified from this monomer being updated
-            state_dict[mon_id][AFFECTED] = set()
+            state_dict[mon_id][AFFECTED] = []
             cur_n, _ = adj.get_shape()
 
             for rxn_event in new_event_list:
@@ -419,7 +430,7 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, ox_rates, p
 
                     # Add the event to the event_dict modifiable by changing the monomer, and update the set of all
                     # event_dict at the next time step
-                    state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], [mon.identity], rate))
+                    append_if_unique(state_dict[mon_id][AFFECTED], Event(rxn_event[0], [mon.identity], rate))
 
                 elif rxn_event and rxn_event[1] == 2:  # Bimolecular reaction event
                     update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, events_to_be_modified,
@@ -441,7 +452,8 @@ def update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, 
         # Sanitize the set of event_dict that can be effected
         if partner not in cleaned_partners:
             # Remove any old event_dict from
-            state_dict[partner.identity][AFFECTED].difference_update(events_to_be_modified)
+            for mod_event in events_to_be_modified:
+                append_if_unique(state_dict[partner.identity][AFFECTED], mod_event)
             cleaned_partners.add(partner)
 
         index = [mon.identity, partner.identity]
@@ -461,13 +473,13 @@ def update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, 
             # Add this to both the monomer and it's bonding partners list of event_dict that need to be
             #     modified upon manipulation of either monomer
             # this -> other
-            state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], index, rate, bond))
-            state_dict[partner.identity][AFFECTED].add(Event(rxn_event[0], index, rate, bond))
+            append_if_unique(state_dict[mon_id][AFFECTED], Event(rxn_event[0], index, rate, bond))
+            append_if_unique(state_dict[partner.identity][AFFECTED], Event(rxn_event[0], index, rate, bond))
 
             # Switch the order
             # other -> this
-            state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], back, rate, alt))
-            state_dict[partner.identity][AFFECTED].add(Event(rxn_event[0], back, rate, alt))
+            append_if_unique(state_dict[mon_id][AFFECTED], Event(rxn_event[0], back, rate, alt))
+            append_if_unique(state_dict[partner.identity][AFFECTED], Event(rxn_event[0], back, rate, alt))
 
         # Add the bond from one monomer to the other in the reverse config if not symmetric
         if rxn_event[0] != BB and rxn_event[0] != C5C5:  # non-symmetric bond
@@ -478,17 +490,16 @@ def update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, 
                     #     ignoring any molecules not tracked by this script
                     rate = rxn_event[2][(partner.type, mon.type)][(size[1], size[0])] / (cur_n ** 2)
                 except KeyError:
-                    raise InvalidDataError(f"Error on determining the rate for rxn_event type "
-                                           f"{rxn_event[0]}, bonding index {mon.identity} to "
-                                           f"{partner.identity}")
+                    raise InvalidDataError(f"Error on determining the rate for rxn_event type {rxn_event[0]}, "
+                                           f"bonding index {mon.identity} to {partner.identity}")
                 # this -> other alt
-                state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], index, rate, alt))
-                state_dict[partner.identity][AFFECTED].add(Event(rxn_event[0], index, rate, alt))
+                append_if_unique(state_dict[mon_id][AFFECTED], Event(rxn_event[0], index, rate, alt))
+                append_if_unique(state_dict[partner.identity][AFFECTED], Event(rxn_event[0], index, rate, alt))
 
                 # Switch the order
                 # other -> this alt
-                state_dict[mon_id][AFFECTED].add(Event(rxn_event[0], back, rate, bond))
-                state_dict[partner.identity][AFFECTED].add(Event(rxn_event[0], back, rate, bond))
+                append_if_unique(state_dict[mon_id][AFFECTED], Event(rxn_event[0], back, rate, bond))
+                append_if_unique(state_dict[partner.identity][AFFECTED], Event(rxn_event[0], back, rate, bond))
 
 
 def connect_monos(mon1, mon2):
@@ -653,7 +664,7 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
     adj = dok_matrix((num_monos, num_monos))
     t = [0, ]
 
-    # Calculate the rates of all of the event_dict available at the current state; ordered dict for consistency
+    # Calculate the rates of all of the events available at the current state; ordered dict for consistency
     r_vec = OrderedDict()
 
     # Build the dictionary of event_dict
@@ -909,8 +920,6 @@ def generate_mol(adj, node_list):
                 bound_atoms = re.split(' +', possibility)[4:]
                 others.extend([int(x) for x in bound_atoms if int(x) != alpha_idx])
 
-            # TODO: Fix the section below--it does not work; for now, simply catch the error and provide a
-            #   descriptive failure message (instead of a stack trace)
             # The oxygen atom should have the greatest index of the atoms bound to the alpha position because it
             #     was added last
             try:
@@ -931,7 +940,7 @@ def generate_mol(adj, node_list):
                 # Only should be subtracting number of removed bonds that came BEFORE this location!
                 true_bond_index = int(re.split(' +', bonds[alpha_ring_bond_index])[2])
 
-                del (bonds[alpha_ring_bond_index])
+                del bonds[alpha_ring_bond_index]
                 removed[BONDS] += [true_bond_index]
             except ValueError:
                 raise ValueError(f'Could mot find the bond connecting α-carbon (atom index {alpha_idx}) to the alcohol '

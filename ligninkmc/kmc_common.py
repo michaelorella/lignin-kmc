@@ -420,23 +420,27 @@ class Event:
         #     value. Although they remain constant within an individual Python process, they are not predictable
         #     between repeated invocations of Python."
         # 1) Original hash method, which did not allow testing because of random salting:
-        #        return hash((tuple(self.index), self.key, self.bond))
+        #         return hash((tuple(self.index), self.key, self.bond))
         # 2) Replacement hash method which gave consistent results, but unexpected changed outcomes
-        #        key_as_num = sum([ord(x) % 32 for x in self.key])
-        #        return key_as_num + sum(self.index) * 1000 + int(self.rate * 10000)
+        #         key_as_num = sum([ord(x) % 32 for x in self.key])
+        #         return key_as_num + sum(self.index) * 1000 + int(self.rate * 10000)
         # 3) Hash below is repeatable and gives similar results to the original hash. While no longer directly called,
         #    left in case there is any behind the scenes hashing
-        if not self.index:
-            index_join = 0
-        else:
-            index_join = int("".join([str(x) for x in self.index]))
-        index_bytes = index_join.to_bytes((index_join.bit_length() + 7) // 8, 'big')
-        key_bytes = self.event_name.encode()
-        bond_list_str = "".join([str(x) for x in self.bond])
-        bond_list_bytes = bond_list_str.encode()
-        event_bytes = b''.join([index_bytes, key_bytes, bond_list_bytes])
+        #         if not self.index:
+        #             index_join = 0
+        #         else:
+        #             index_join = int("".join([str(x) for x in self.index]))
+        #         index_bytes = index_join.to_bytes((index_join.bit_length() + 7) // 8, 'big')
+        #         key_bytes = self.event_name.encode()
+        #         bond_list_str = "".join([str(x) for x in self.bond])
+        #         bond_list_bytes = bond_list_str.encode()
+        #         event_bytes = b''.join([index_bytes, key_bytes, bond_list_bytes])
+        #         # the hash call below "right-sizes" the value
+        #         return hash(int.from_bytes(event_bytes, 'big'))
+        # 4) Simplification of 3: the string encompasses all components of above, so just hash that
+        str_as_bytes = str(self).encode()
         # the hash call below "right-sizes" the value
-        return hash(int.from_bytes(event_bytes, 'big'))
+        return hash(int.from_bytes(str_as_bytes, 'big'))
 
 
 class Monomer:

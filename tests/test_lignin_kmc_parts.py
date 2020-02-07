@@ -193,7 +193,7 @@ class TestEvent(unittest.TestCase):
         # noinspection PyTypeChecker
         event1 = Event(rxn, [2], DEF_RXN_RATES[rxn][G][MONOMER])
         self.assertTrue(str(event1) == "Performing oxidation on index 2")
-        self.assertEqual(hash(event1), 1759047499192566505)
+        self.assertEqual(hash(event1), 608380436325519251)
 
     def testIDReprBond(self):
         rxn = BO4
@@ -202,7 +202,7 @@ class TestEvent(unittest.TestCase):
         good_str = "Forming bo4 bond between indices [1, 2] (adjacency_matrix update (4, 8))"
         self.assertTrue(str(event1) == good_str)
         self.assertTrue(repr(event1) == good_str)
-        self.assertEqual(hash(event1), 13616912020536)
+        self.assertEqual(hash(event1), 1430209995307831012)
 
 
     def testEventIDHash(self):
@@ -258,32 +258,29 @@ class TestRunKMC(unittest.TestCase):
 
     def testSampleRunKMC(self):
         result = create_sample_kmc_result()
-        self.assertTrue(len(result[TIME]) == 43)
-        self.assertAlmostEqual(result[TIME][-1], 0.002224777676694563)
+        self.assertTrue(len(result[TIME]) == 41)
+        self.assertAlmostEqual(result[TIME][-1], 0.002627864716612143)
         self.assertTrue(len(result[MONO_LIST]) == 10)
         self.assertTrue(str(result[MONO_LIST][-1]) == '9: sinapyl alcohol is connected to '
                                                       '{0, 1, 2, 3, 4, 5, 6, 7, 8, 9} and active at position 4')
-        good_dok_keys = [(0, 1), (1, 0), (1, 2), (2, 1), (3, 2), (2, 3), (4, 0), (0, 4), (5, 3), (3, 5), (6, 5),
-                         (5, 6), (7, 4), (4, 7), (7, 8), (8, 7), (8, 9), (9, 8)]
-        good_dok_vals = [8.0, 8.0, 4.0, 8.0, 8.0, 5.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 8.0, 5.0, 4.0, 8.0, 4.0, 8.0]
-
+        good_dok_keys = [(0, 1), (1, 0), (1, 2), (2, 1), (2, 3), (3, 2), (3, 4), (4, 3), (4, 5), (5, 4), (5, 6),
+                         (6, 5), (7, 8), (8, 7), (8, 6), (6, 8), (7, 9), (9, 7)]
+        good_dok_vals = [8.0, 8.0, 4.0, 8.0, 4.0, 8.0, 5.0, 8.0, 5.0, 8.0, 4.0, 8.0, 8.0, 8.0, 5.0, 4.0, 4.0, 8.0]
         self.assertTrue(list(result[ADJ_MATRIX].keys()) == good_dok_keys)
         self.assertTrue(list(result[ADJ_MATRIX].values()) == good_dok_vals)
 
     def testSampleRunKMCCLignin(self):
         result = create_sample_kmc_result_c_lignin()
-        self.assertTrue(len(result[TIME]) == 45)
-        self.assertAlmostEqual(result[TIME][-1], 0.0022741585174056098)
+        self.assertTrue(len(result[TIME]) == 35)
+        self.assertAlmostEqual(result[TIME][-1], 0.001749379102515669)
         self.assertTrue(len(result[MONO_LIST]) == 12)
-        self.assertTrue(str(result[MONO_LIST][-1]) == '11: caffeoyl alcohol is connected to '
-                                                      '{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11} and active at position 4')
-        good_dok_keys = [(1, 0), (0, 1), (0, 2), (2, 0), (3, 2), (2, 3), (3, 4), (4, 3), (5, 4), (4, 5), (6, 5),
-                         (5, 6), (7, 6), (6, 7), (8, 7), (7, 8), (8, 9), (9, 8), (10, 9), (9, 10), (10, 11), (11, 10)]
-        good_dok_vals = [5.0, 8.0, 4.0, 8.0, 8.0, 4.0, 4.0, 8.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 8.0, 4.0, 4.0, 8.0,
-                         8.0, 4.0, 4.0, 8.0]
+        self.assertTrue(str(result[MONO_LIST][-1]) == '11: caffeoyl alcohol is connected to {9, 10, 11} '
+                                                      'and active at position 0')
+        good_dok_keys = [(1, 0), (0, 1), (0, 2), (2, 0), (3, 2), (2, 3), (5, 4), (4, 5), (6, 7), (7, 6), (8, 7),
+                         (7, 8), (10, 9), (9, 10), (11, 9), (9, 11)]
+        good_dok_vals = [5.0, 8.0, 4.0, 8.0, 8.0, 4.0, 8.0, 5.0, 5.0, 8.0, 8.0, 4.0, 5.0, 8.0, 8.0, 4.0]
         self.assertTrue(list(result[ADJ_MATRIX].keys()) == good_dok_keys)
         self.assertTrue(list(result[ADJ_MATRIX].values()) == good_dok_vals)
-
 
 # noinspection DuplicatedCode
 class TestAnalyzeKMCParts(unittest.TestCase):
@@ -507,9 +504,9 @@ class TestAnalyzeKMCSummary(unittest.TestCase):
         result = create_sample_kmc_result()
         summary = analyze_adj_matrix(result[ADJ_MATRIX], break_co_bonds=True)
         self.assertTrue(summary[CHAIN_LEN] == {10: 1})
-        self.assertTrue(summary[BONDS] == {BO4: 6, BB: 1, B5: 2, B1: 0, C5O4: 0, AO4: 0, C5C5: 0})
-        self.assertTrue(summary[RCF_YIELDS] == {1: 4, 2: 3})
-        self.assertTrue(summary[RCF_BONDS] == {BO4: 0, BB: 1, B5: 2, B1: 0, C5O4: 0, AO4: 0, C5C5: 0})
+        self.assertTrue(summary[BONDS] == {BO4: 4, BB: 2, B5: 2, B1: 0, C5O4: 1, AO4: 0, C5C5: 0})
+        self.assertTrue(summary[RCF_YIELDS] == {1: 3, 2: 2, 3: 1})
+        self.assertTrue(summary[RCF_BONDS] == {BO4: 0, BB: 2, B5: 2, B1: 0, C5O4: 0, AO4: 0, C5C5: 0})
 
     def testKMCResultSummaryDescription(self):
         break_co_bonds = True
@@ -517,11 +514,11 @@ class TestAnalyzeKMCSummary(unittest.TestCase):
         summary = analyze_adj_matrix(result[ADJ_MATRIX], break_co_bonds=break_co_bonds)
         good_chain_summary = "Lignin KMC created 10 monomers, which formed:\n" \
                              "       1 oligomer(s) of chain length 10, with branching coefficient 0.0"
-        good_bond_summary = "composed of the following bond types and number:\n    BO4:    6     BB:    1" \
-                            "     B5:    2     B1:    0    5O4:    0    AO4:    0     55:    0"
-        good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n       4 monomer(s) (chain length " \
-                                 "1)\n       3 dimer(s) (chain length 2)"
-        good_rcf_bond_summary = "with the following remaining bond types and number:\n    BO4:    0     BB:    1    " \
+        good_bond_summary = "composed of the following bond types and number:\n    BO4:    4     BB:    2" \
+                            "     B5:    2     B1:    0    5O4:    1    AO4:    0     55:    0"
+        good_rcf_chain_summary = "Breaking C-O bonds to simulate RCF results in:\n       3 monomer(s) (chain length " \
+                                 "1)\n       2 dimer(s) (chain length 2)\n       1 trimer(s) (chain length 3)"
+        good_rcf_bond_summary = "with the following remaining bond types and number:\n    BO4:    0     BB:    2    " \
                                 " B5:    2     B1:    0    5O4:    0    AO4:    0     55:    0"
         with capture_stdout(adj_analysis_to_stdout, summary, break_co_bonds=break_co_bonds) as output:
             self.assertTrue(good_chain_summary in output)
@@ -553,15 +550,13 @@ class TestAnalyzeKMCSummary(unittest.TestCase):
         result = create_sample_kmc_result(max_time=SHORT_TIME, num_initial_monos=20, max_monos=40)
         summary = analyze_adj_matrix(result[ADJ_MATRIX], break_co_bonds=break_co_bonds)
         # adj_analysis_to_stdout(summary)
-        good_chain_summary = "Lignin KMC created 20 monomers, which formed:\n" \
-                             "       5 dimer(s) (chain length 2)\n       1 trimer(s) (chain length 3)\n" \
-                             "       1 oligomer(s) of chain length 7, with branching coefficient 0.143"
-        good_bond_summary = "composed of the following bond types and number:\n    BO4:    2     BB:    7" \
-                            "     B5:    2     B1:    0    5O4:    2    AO4:    0     55:    0"
+        good_chain_summary = "Lignin KMC created 21 monomers, which formed:\n       2 monomer(s) (chain length 1)\n" \
+                             "       8 dimer(s) (chain length 2)\n       1 trimer(s) (chain length 3)"
+        good_bond_summary = "composed of the following bond types and number:\n    BO4:    1     BB:    6" \
+                            "     B5:    3     B1:    0    5O4:    0    AO4:    0     55:    0"
         with capture_stdout(adj_analysis_to_stdout, summary, break_co_bonds=break_co_bonds) as output:
             self.assertTrue(good_chain_summary in output)
             self.assertTrue(good_bond_summary in output)
-
 
 # noinspection DuplicatedCode
 class TestVisualization(unittest.TestCase):
@@ -602,7 +597,7 @@ class TestVisualization(unittest.TestCase):
             monos = 7
             silent_remove(TCL_FILE_LOC)
             result = create_sample_kmc_result_c_lignin(num_monos=monos, max_monos=monos*2, seed=seed)
-            good_last_time = 0.006382924563345461
+            good_last_time = 0.004474718478040326
             self.assertAlmostEqual(result[TIME][-1], good_last_time)
             gen_tcl(result[ADJ_MATRIX], result[MONO_LIST], tcl_fname=TCL_FNAME, chain_id="L", toppar_dir=None,
                     out_dir=SUB_DATA_DIR)
@@ -670,7 +665,7 @@ class TestVisualization(unittest.TestCase):
         # With dynamics, the MONO_LIST will be a list of monomer lists:
         #    the inner list is the usual MONO_LIST, but here is it saved for every time step
         t_steps = result[TIME]
-        expected_num_t_steps = 87
+        expected_num_t_steps = 61
         self.assertEqual(len(t_steps), expected_num_t_steps)
         self.assertTrue(len(result[MONO_LIST]) == expected_num_t_steps)
         self.assertTrue(len(result[MONO_LIST][-1]) == num_monos)
@@ -681,15 +676,14 @@ class TestVisualization(unittest.TestCase):
             sum_count_list) = get_bond_type_v_time_dict(adj_list, sum_len_larger_than=10)
 
         # test results by checking sums
-        good_bond_type_sum_dict = {BO4: 188, BB: 278, B1: 0, B5: 213, C5O4: 164, AO4: 0, C5C5: 0}
+        good_bond_type_sum_dict = {BO4: 16, BB: 171, B5: 119, B1: 0, C5O4: 23, AO4: 0, C5C5: 0}
         bond_type_sum_dict = {}
         for bond_type, val_list in bond_type_dict.items():
             self.assertEqual(len(val_list), expected_num_t_steps)
             bond_type_sum_dict[bond_type] = sum(val_list)
         self.assertEqual(bond_type_sum_dict, good_bond_type_sum_dict)
 
-        good_olig_len_sum_dict = {1: 1164, 2: 676, 3: 111, 4: 64, 5: 85, 6: 0, 7: 0, 8: 24, 9: 0, 10: 0, 11: 0, 12: 0,
-                                  13: 52, 14: 0, 15: 0, 16: 64, 17: 0, 18: 72, 19: 0, 20: 80, 21: 0, 22: 44}
+        good_olig_len_sum_dict = {1: 1112, 2: 474, 3: 21, 4: 56, 5: 45}
         olig_len_sum_dict = {}
         for olig_len, val_list in olig_len_dict.items():
             self.assertEqual(len(val_list), expected_num_t_steps)
@@ -735,8 +729,8 @@ class TestVisualization(unittest.TestCase):
 
         av_bo4_bonds, std_bo4_bonds = get_avg_num_bonds(BO4, num_rates, add_rates_result_list, num_repeats)
 
-        good_av_bo4 = [0.6272727272727272, 0.20656565656565656, 0.1361111111111111]
-        good_std_bo4 = [0.06618281717527745, 0.01692484452536973, 0.09308664488953355]
+        good_av_bo4 = [0.3680555555555555, 0.28055555555555556, 0.1468253968253968]
+        good_std_bo4 = [0.08187379251771941, 0.06988747569671737, 0.09075076687324818]
         self.assertTrue(np.allclose(av_bo4_bonds, good_av_bo4))
         self.assertTrue(np.allclose(std_bo4_bonds, good_std_bo4))
 
@@ -773,7 +767,7 @@ class TestVisualization(unittest.TestCase):
             # since GROW is not added to event_dict, no additional monomers will be added
             result = run_kmc(DEF_RXN_RATES, initial_state, sorted(initial_events), t_max=2, random_seed=8)
             # quick tests to make sure run_kmc gives expected results (not what we want to test here)
-            # self.assertAlmostEqual(result[TIME][-1], 0.000766574526703574)
+            self.assertAlmostEqual(result[TIME][-1], 0.00015059250794459398)
             self.assertTrue(len(result[MONO_LIST]) == num_monos)
             # the function we want to test here is below
             with capture_stderr(gen_tcl, result[ADJ_MATRIX], result[MONO_LIST], chain_id="lignin",
@@ -799,7 +793,7 @@ class TestVisualization(unittest.TestCase):
             # since GROW is not added to event_dict, no additional monomers will be added
             result = run_kmc(DEF_RXN_RATES, initial_state, sorted(initial_events), t_max=2, random_seed=8)
             # quick tests to make sure run_kmc gives expected results (not what we want to test here)
-            self.assertAlmostEqual(result[TIME][-1], 5.1005816194e-08)
+            self.assertAlmostEqual(result[TIME][-1], 0.00015059250794459398)
             self.assertTrue(len(result[MONO_LIST]) == num_monos)
             # the function we want to test here is below
             with capture_stderr(gen_tcl, result[ADJ_MATRIX], result[MONO_LIST], chain_id=" ",
@@ -817,7 +811,9 @@ class TestVisualization(unittest.TestCase):
                          [G, G, S, G, S, S, G, S, G, S, G, G, G, S, S, S, G, S, S, G, S, G, S, G],
                          [S, S, S, S, S, G, S, G, G, S, G, G, G, G, S, S, G, S, S, S, G, S, G, S],
                          [S, G, S, G, S, G, S, S, S, S, S, G, S, S, G, S, G, G, G, G, S, S, S, S],
-                         [S, G, S, S, S, G, S, G, S, S, G, S, S, G, G, G, G, G, S, S, G, S, S, S],]
+                         [G, S, S, G, S, S, G, G, G, S, G, S, S, S, S, S, G, S, G, G, S, S, G, S],
+                         [S, G, S, G, G, G, S, S, S, G, G, S, G, S, G, S, S, G, G, S, S, G, S, G],
+                         [G, G, S, S, S, S, G, G, S, S, G, G, G, S, S, G, S, G, G, S, G, S, S, S],]
         num_repeats = len(monomer_types)
         sg_result_list = []
 
@@ -836,5 +832,5 @@ class TestVisualization(unittest.TestCase):
         av_bo4_bonds, std_bo4_bonds = get_avg_num_bonds_single_option(BO4, sg_result_list, num_repeats)
         print("Average fraction BO4 bonds: {:.3f}".format(av_bo4_bonds))
         print("Std dev fraction BO4 bonds: {:.3f}".format(std_bo4_bonds))
-        self.assertTrue(np.allclose(av_bo4_bonds, 0.11133895344421658))
-        self.assertTrue(np.allclose(std_bo4_bonds, 0.0619784776955296))
+        self.assertTrue(np.allclose(av_bo4_bonds, 0.10782967032967034))
+        self.assertTrue(np.allclose(std_bo4_bonds, 0.07040337693133296))

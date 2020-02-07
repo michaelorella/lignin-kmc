@@ -2,8 +2,6 @@
 import logging
 import time
 import unittest
-from collections import OrderedDict
-
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import optimize
@@ -72,7 +70,17 @@ class TestScaling(unittest.TestCase):
         scaling_formula = f'$t = {opt_p[0]:3.1e}N^{{ {opt_p[1]:4.2f} }}$'
         print(f'Scaling: {scaling_formula}')
 
-# Last timing check:
-# Average time to complete simulation with    50 monomers:    0.43 seconds
-# Average time to complete simulation with   100 monomers:    2.53 seconds
-# Average time to complete simulation with   150 monomers:    8.28 seconds
+# Before set to list change:
+# Average time to complete simulation with    50 monomers:    0.40 seconds
+# Average time to complete simulation with   100 monomers:    2.45 seconds
+# Average time to complete simulation with   150 monomers:    7.80 seconds
+
+# After set to list change:
+# # Average time to complete simulation with    50 monomers:    0.40 seconds
+# # Average time to complete simulation with   100 monomers:    2.45 seconds
+# # Average time to complete simulation with   150 monomers:    7.80 seconds
+
+# After set to list change:
+# Average time to complete simulation with    50 monomers:    2.92 seconds
+# Average time to complete simulation with   100 monomers:   31.18 seconds
+# Average time to complete simulation with   150 monomers:  163.57 seconds
