@@ -316,7 +316,6 @@ def analyze_adj_matrix(adjacency, break_co_bonds=False):
             RCF_BONDS: rcf_bonds, RCF_YIELDS: rcf_yield_dict, RCF_MONOS: rcf_monos_dict,
             RCF_BRANCHES: rcf_branch_dict, RCF_BRANCH_COEFF: rcf_branch_coeff_dict}
 
-
 def append_if_unique(unique_list, potential_new_item):
     """
     Instead of using a set, want to use a list for maintaining order
@@ -430,7 +429,7 @@ def update_events(state_dict, adj, last_event, event_dict, rate_vec, ox_rates, p
 
                     # Add the event to the event_dict modifiable by changing the monomer, and update the set of all
                     # event_dict at the next time step
-                    append_if_unique(state_dict[mon_id][AFFECTED], Event(rxn_event[0], [mon.identity], rate))
+                    state_dict[mon_id][AFFECTED].append(Event(rxn_event[0], [mon.identity], rate))
 
                 elif rxn_event and rxn_event[1] == 2:  # Bimolecular reaction event
                     update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, events_to_be_modified,
@@ -473,12 +472,12 @@ def update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, 
             # Add this to both the monomer and it's bonding partners list of event_dict that need to be
             #     modified upon manipulation of either monomer
             # this -> other
-            append_if_unique(state_dict[mon_id][AFFECTED], Event(rxn_event[0], index, rate, bond))
+            state_dict[mon_id][AFFECTED].append(Event(rxn_event[0], index, rate, bond))
             append_if_unique(state_dict[partner.identity][AFFECTED], Event(rxn_event[0], index, rate, bond))
 
             # Switch the order
             # other -> this
-            append_if_unique(state_dict[mon_id][AFFECTED], Event(rxn_event[0], back, rate, alt))
+            state_dict[mon_id][AFFECTED].append(Event(rxn_event[0], back, rate, alt))
             append_if_unique(state_dict[partner.identity][AFFECTED], Event(rxn_event[0], back, rate, alt))
 
         # Add the bond from one monomer to the other in the reverse config if not symmetric
@@ -493,12 +492,12 @@ def update_state_for_bimolecular_rxn(bonding_partners, cleaned_partners, cur_n, 
                     raise InvalidDataError(f"Error on determining the rate for rxn_event type {rxn_event[0]}, "
                                            f"bonding index {mon.identity} to {partner.identity}")
                 # this -> other alt
-                append_if_unique(state_dict[mon_id][AFFECTED], Event(rxn_event[0], index, rate, alt))
+                state_dict[mon_id][AFFECTED].append(Event(rxn_event[0], index, rate, alt))
                 append_if_unique(state_dict[partner.identity][AFFECTED], Event(rxn_event[0], index, rate, alt))
 
                 # Switch the order
                 # other -> this alt
-                append_if_unique(state_dict[mon_id][AFFECTED], Event(rxn_event[0], back, rate, bond))
+                state_dict[mon_id][AFFECTED].append(Event(rxn_event[0], back, rate, bond))
                 append_if_unique(state_dict[partner.identity][AFFECTED], Event(rxn_event[0], back, rate, bond))
 
 

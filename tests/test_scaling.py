@@ -76,11 +76,11 @@ class TestScaling(unittest.TestCase):
 # Average time to complete simulation with   150 monomers:    7.80 seconds
 
 # After set to list change:
-# # Average time to complete simulation with    50 monomers:    0.40 seconds
-# # Average time to complete simulation with   100 monomers:    2.45 seconds
-# # Average time to complete simulation with   150 monomers:    7.80 seconds
-
-# After set to list change:
 # Average time to complete simulation with    50 monomers:    2.92 seconds
 # Average time to complete simulation with   100 monomers:   31.18 seconds
 # Average time to complete simulation with   150 monomers:  163.57 seconds
+
+# After pruning the checks before appending:
+# Average time to complete simulation with    50 monomers:    2.88 seconds
+# Average time to complete simulation with   100 monomers:   32.42 seconds
+# Average time to complete simulation with   150 monomers:  182.79 seconds
