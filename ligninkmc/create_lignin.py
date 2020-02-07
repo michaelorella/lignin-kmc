@@ -602,7 +602,7 @@ def create_initial_events(initial_monomers, rxn_rates):
 
 
 def create_initial_state(initial_events, initial_monomers):
-    return {i: {MONOMER: initial_monomers[i], AFFECTED: [initial_events[i]]} for i in range(len(initial_monomers))}
+    return {i: {MONOMER: initial_monomers[i], AFFECTED: {initial_events[i]}} for i in range(len(initial_monomers))}
 
 
 def produce_output(adj_matrix, mono_list, cfg):
@@ -832,7 +832,8 @@ def main(argv=None):
 
                     # begin simulation
                     result = run_kmc(cfg[RXN_RATES], initial_state, initial_events, n_max=cfg[MAX_MONOS],
-                                     t_max=cfg[SIM_TIME], sg_ratio=sg_ratio, dynamics=cfg[DYNAMICS])
+                                     t_max=cfg[SIM_TIME], sg_ratio=sg_ratio, dynamics=cfg[DYNAMICS],
+                                     random_seed=cfg[RANDOM_SEED])
 
                     if cfg[DYNAMICS]:
                         last_adj = result[ADJ_MATRIX][-1]

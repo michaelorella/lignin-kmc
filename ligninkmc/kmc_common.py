@@ -1,7 +1,5 @@
 # !/usr/bin/env python
 # coding=utf-8
-import collections
-import sys
 
 from common_wrangler.common import InvalidDataError
 
@@ -79,11 +77,6 @@ DEF_CHAIN_ID = 'L'
 DEF_PSF_FNAME = 'lignin'
 DEF_TOPPAR = "toppar/"
 
-_make_ordered_mapping = (dict.fromkeys if sys.version_info >= (3, 7)
-                         else collections.OrderedDict.fromkeys)
-
-def ordered_dedup(items):
-    return list(_make_ordered_mapping(items))
 
 # Data
 

@@ -11,10 +11,11 @@ segment L {
     residue 7 G
     residue 8 S
 }
-patch BO4 L:3 L:7
-patch BB L:2 L:8
-patch BB L:1 L:4
-patch BB L:5 L:6
-patch 4O4 L:2 L:3
+patch B5G L:1 L:3
+patch BB L:2 L:6
+patch BB L:4 L:8
+patch BO4 L:7 L:2
+patch BO4 L:5 L:8
+patch 4O4 L:5 L:7
 regenerate angles dihedrals
 writepsf lignin.psf

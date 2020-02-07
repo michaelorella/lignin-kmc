@@ -70,6 +70,19 @@ class TestScaling(unittest.TestCase):
         scaling_formula = f'$t = {opt_p[0]:3.1e}N^{{ {opt_p[1]:4.2f} }}$'
         print(f'Scaling: {scaling_formula}')
 
+# Back to sets, pytest: 4.9e-06N^2.87
+# Average time to complete simulation with    50 monomers:    0.45 seconds
+# Average time to complete simulation with   100 monomers:    2.66 seconds
+# Average time to complete simulation with   150 monomers:    8.60 seconds
+
+
+# Back to sets, IDE: 4.5e-06N^2.89
+# Average time to complete simulation with    50 monomers:    0.43 seconds
+# Average time to complete simulation with   100 monomers:    2.67 seconds
+# Average time to complete simulation with   150 monomers:    8.71 seconds
+
+
+
 # Before set to list change:
 # Average time to complete simulation with    50 monomers:    0.40 seconds
 # Average time to complete simulation with   100 monomers:    2.45 seconds
