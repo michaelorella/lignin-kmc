@@ -84,3 +84,17 @@ class TestScaling(unittest.TestCase):
 # Average time to complete simulation with    50 monomers:    2.88 seconds
 # Average time to complete simulation with   100 monomers:   32.42 seconds
 # Average time to complete simulation with   150 monomers:  182.79 seconds
+
+# If use pytest:  before minimize check before append: 3.5e-06N^3.43
+# Average time to complete simulation with    50 monomers:    2.13 seconds
+# Average time to complete simulation with   100 monomers:   25.68 seconds
+# Average time to complete simulation with   150 monomers:  102.96 seconds
+# After:  2.8e-06N^{ 3.46 }
+# Average time to complete simulation with    50 monomers:    1.60 seconds
+# Average time to complete simulation with   100 monomers:   22.29 seconds
+# Average time to complete simulation with   150 monomers:   93.69 seconds
+
+# Pytest results from after switch to ordered_dedup (instead of check list before adding), 7.9e-05N^2.95
+# Average time to complete simulation with    50 monomers:    7.79 seconds
+# Average time to complete simulation with   100 monomers:   62.96 seconds
+# Average time to complete simulation with   150 monomers:  207.74 seconds
