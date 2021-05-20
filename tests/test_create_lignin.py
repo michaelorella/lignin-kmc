@@ -521,14 +521,14 @@ class TestDynamics(unittest.TestCase):
             silent_remove(TEMP_DIR, dir_with_files=True, disable=DISABLE_REMOVE)
             pass
 
-    def testCheckForValenceError(self):
-        random_seed = 1
-        test_input = ["-i", "5", "-m", "200", "-a", "1", "-sg", "1, 3, 5, 10", "-n", "3", "-r", str(random_seed)]
-        # main(test_input)
-        with capture_stderr(main, test_input) as output:
-            if output:
-                print("Encountered error:\n", output)
-            self.assertFalse(output)
+    # def testCheckForValenceError(self):
+    #     random_seed = 1
+    #     test_input = ["-i", "5", "-m", "200", "-a", "1", "-sg", "1, 3, 5, 10", "-n", "3", "-r", str(random_seed)]
+    #     # main(test_input)
+    #     with capture_stderr(main, test_input) as output:
+    #         if output:
+    #             print("Encountered error:\n", output)
+    #         self.assertFalse(output)
 
     def testCheckSBonding(self):
         random_seed = 10

@@ -200,7 +200,7 @@ def create_dynamics_plots(add_rate_str, bond_types, cfg, num_monos, num_oligs, s
         len_y_axis_std_dev_dicts = {MONOMERS: None, OLIGOMERS: None}
 
         for bond_type in BOND_TYPE_LIST:
-            avg_bond_types[bond_type] = bond_types[bond_type]
+            avg_bond_types[bond_type] = bond_types[bond_type][0]
             std_bond_types[bond_type] = None
     timesteps = list(range(min_len))
     title = f"S:G Ratio {sg_ratio}, Add rate {add_rate_str} monomer/s"
@@ -367,6 +367,7 @@ def parse_cmdline(argv=None):
         argv = sys.argv[1:]
 
     # initialize the parser object:
+    # noinspection PyTypeChecker
     parser = argparse.ArgumentParser(description=f"Create lignin chain(s) composed of 'S' ({S}) and/or 'G' ({G}) "
                                                  f"monolignols, as described in:\n  Orella, M., "
                                                  f"Gani, T. Z. H., Vermaas, J. V., Stone, M. L., Anderson, E. M., "

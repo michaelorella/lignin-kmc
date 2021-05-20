@@ -3,7 +3,6 @@ import logging
 import os
 import unittest
 from collections import OrderedDict
-
 import joblib as par
 import numpy as np
 from rdkit.Chem import (MolFromMolBlock, GetMolFrags)
@@ -648,7 +647,6 @@ class TestVisualization(unittest.TestCase):
         # Make sure there are the same number of separate fragments calculated by RDKIT
         # as we get from just separating the alternate B1
         self.assertEqual(np.sum(list(frag_sizes.values())), len(mols))
-
 
     def testDynamics(self):
         # Tests procedures in the Dynamics.ipynb

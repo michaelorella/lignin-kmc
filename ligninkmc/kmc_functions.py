@@ -10,7 +10,7 @@ import re
 import copy
 import numpy as np
 from collections import (defaultdict, OrderedDict)
-from scipy import triu
+from numpy import triu
 from scipy.sparse import dok_matrix
 from rdkit.Chem.Draw.MolDrawing import DrawingOptions
 from common_wrangler.common import (InvalidDataError, create_out_fname, warning, round_sig_figs)
@@ -913,8 +913,6 @@ def generate_mol(adj, node_list):
                 bound_atoms = re.split(' +', possibility)[4:]
                 others.extend([int(x) for x in bound_atoms if int(x) != alpha_idx])
 
-            # TODO: Fix the section below--it does not work; for now, simply catch the error and provide a
-            #   descriptive failure message (instead of a stack trace)
             # The oxygen atom should have the greatest index of the atoms bound to the alpha position because it
             #     was added last
             try:
