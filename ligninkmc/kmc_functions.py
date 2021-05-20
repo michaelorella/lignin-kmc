@@ -690,7 +690,8 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
     # Run the Gillespie algorithm
     while t[-1] < t_max and len(event_list) > 0:
         r_tot = np.sum(rate_list)
-        event_probabilities = rate_list / r_tot
+        # event_probabilities = rate_list / r_tot
+        event_probabilities = [x / r_tot for x in rate_list]
 
         # don't want same dt for every iteration, yet want it repeatable, so add to seed with each iteration and then
         #     call the np.random, and round if looking for repeatability to the result does not depend on the platform
@@ -922,12 +923,9 @@ def generate_mol(adj, node_list):
                                f'2 {alpha_idx} {oxygen_atom_index}', temp).splitlines(keepends=True)
 
                 # Find where the index for the bond is and remove it from the array
-                alpha_ring_bond_index = (mono_start_idx_bond[mono_indices[
-                                                            index_for_one]]
-                                                        + alpha_ring_location)
+                alpha_ring_bond_index = (mono_start_idx_bond[mono_indices[index_for_one]] + alpha_ring_location)
 
-                bonds_removed_before = len([x for x in removed[BONDS]
-                                                if x < alpha_ring_bond_index])
+                bonds_removed_before = len([x for x in removed[BONDS] if x < alpha_ring_bond_index])
                 alpha_ring_bond_index -= bonds_removed_before
 
                 # Only should be subtracting number of removed bonds that came BEFORE this location!
@@ -1032,7 +1030,7 @@ def gen_tcl(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FNAME
         else:
             chain_id = DEF_CHAIN_ID
         warning(f"ChainID's for PDBs should be one character. Will use: '{chain_id}' as the chainID.")
-    residue_letter = {G: 'G', S: 'S', H: 'H', C: 'C'}
+    residue_name = {G: 'GUAI', S: 'SYR', H: 'PHP', C: 'CAT'}
     f_out = create_out_fname(tcl_fname, base_dir=out_dir)
     # add a mac/linux dir separator if there isn't already a directory separator, and if there is to be a subdirectory
     #   (not None or "")
@@ -1048,7 +1046,7 @@ def gen_tcl(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FNAME
                 f"segment {chain_id} {{\n")
         for monomer in monomers:
             resid = monomer.identity + 1
-            res_name = residue_letter[monomer.type]
+            res_name = residue_name[monomer.type]
             f.write(f"    residue {resid} {res_name}\n")
         f.write(f"}}\n")
 
@@ -1084,9 +1082,9 @@ def gen_tcl(orig_adj, monomers, tcl_fname=DEF_TCL_FNAME, psf_fname=DEF_PSF_FNAME
             elif bond_loc1 == 4 and bond_loc2 == 7:  # Reverse alpha-O-4 linkage
                 write_patch(f, "AO4", chain_id, psf_patch_resid2, psf_patch_resid1)
             elif bond_loc1 == 4 and bond_loc2 == 5:  # 4O5 linkage
-                write_patch(f, "4O4", chain_id, psf_patch_resid1, psf_patch_resid2)
+                write_patch(f, "4O5", chain_id, psf_patch_resid1, psf_patch_resid2)
             elif bond_loc1 == 5 and bond_loc2 == 4:  # Reverse 4O5 linkage
-                write_patch(f, "4O4", chain_id, psf_patch_resid2, psf_patch_resid1)
+                write_patch(f, "4O5", chain_id, psf_patch_resid2, psf_patch_resid1)
             elif bond_loc1 == 8 and bond_loc2 == 1:  # Beta-1 linkage
                 write_patch(f, "B1", chain_id, psf_patch_resid1, psf_patch_resid2)
             elif bond_loc1 == 1 and bond_loc2 == 8:  # Reverse beta-1 linkage

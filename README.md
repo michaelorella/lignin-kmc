@@ -44,7 +44,7 @@ This project runs on Python ≥3.6 with the following packages installed:
 -  In either case, Conda will install any missing required dependencies when it does so, and thus this may take a few 
  minutes.
  
--  You can then install [lignin-kmc](https://pypi.org/project/common-wrangler/) using  pip (`pip install lignin-kmc`). 
+-  You can then install lignin-kmc using  pip (`pip install ligninkmc`). 
 Additional dependencies will again be installed as required.
 
 ### Command-Line Use
