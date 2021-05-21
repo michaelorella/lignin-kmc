@@ -2,30 +2,30 @@ package require psfgen
 topology toppar/top_all36_cgenff.rtf
 topology toppar/top_lignin.top
 segment L {
-    residue 1 S
-    residue 2 S
-    residue 3 S
-    residue 4 S
-    residue 5 G
-    residue 6 S
-    residue 7 S
-    residue 8 S
-    residue 9 S
-    residue 10 S
-    residue 11 S
-    residue 12 G
-    residue 13 S
-    residue 14 S
-    residue 15 S
-    residue 16 S
-    residue 17 S
-    residue 18 S
-    residue 19 S
-    residue 20 S
-    residue 21 S
-    residue 22 S
-    residue 23 S
-    residue 24 S
+    residue 1 SYR
+    residue 2 SYR
+    residue 3 SYR
+    residue 4 SYR
+    residue 5 GUAI
+    residue 6 SYR
+    residue 7 SYR
+    residue 8 SYR
+    residue 9 SYR
+    residue 10 SYR
+    residue 11 SYR
+    residue 12 GUAI
+    residue 13 SYR
+    residue 14 SYR
+    residue 15 SYR
+    residue 16 SYR
+    residue 17 SYR
+    residue 18 SYR
+    residue 19 SYR
+    residue 20 SYR
+    residue 21 SYR
+    residue 22 SYR
+    residue 23 SYR
+    residue 24 SYR
 }
 patch BB L:8 L:10
 patch BB L:2 L:15
