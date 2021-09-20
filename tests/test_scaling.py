@@ -63,8 +63,8 @@ class TestScaling(unittest.TestCase):
                 print(f'Average time to complete simulation with {num_monos:5n} monomers: '
                       f'{np.sum(times[-1]) / num_repeats:7.2f} seconds')
 
-            # Now we want to fit the times that we just calculated to a generic power law expression $t = aN^b$ to find the
-            # scaling of our algorithm.
+        # Now we want to fit the times that we just calculated to a generic power law expression $t = aN^b$ to find the
+        # scaling of our algorithm.
             meas_t = [np.mean(one_time) for one_time in times]
             # sdev_t = [np.sqrt(np.var(one_time)) for one_time in times]
             meas_n = test_vals
