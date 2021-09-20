@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import (defaultdict)
 from configparser import ConfigParser
-from common_wrangler.common import (MAIN_SEC, GOOD_RET, INPUT_ERROR, KB, H, KCAL_MOL_TO_J_PART,
+from common_wrangler.common import (MAIN_SEC, GOOD_RET, INPUT_ERROR, KB, PLANCK_CONST_JS, KCAL_MOL_TO_J_PART,
                                     INVALID_DATA, OUT_DIR, InvalidDataError, warning, process_cfg, make_dir,
                                     create_out_fname, str_to_file, round_sig_figs)
 from rdkit.Chem import (MolToSmiles, MolFromMolBlock)
@@ -574,7 +574,7 @@ def calc_rates(temp, ea_j_part_dict=None, ea_kcal_mol_dict=None):
             rxn_rates[rxn_type][substrate] = {}
             for substrate_type in ea_j_part_dict[rxn_type][substrate]:
                 # rounding to reduce difference due to solely to platform running package
-                rate = KB * temp / H * np.exp(-ea_j_part_dict[rxn_type][substrate][substrate_type] / KB / temp)
+                rate = KB * temp / PLANCK_CONST_JS * np.exp(-ea_j_part_dict[rxn_type][substrate][substrate_type] / KB / temp)
                 rxn_rates[rxn_type][substrate][substrate_type] = round_sig_figs(rate, sig_figs=15)
     return rxn_rates
 
