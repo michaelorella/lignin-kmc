@@ -4,7 +4,7 @@ import os
 import unittest
 from collections import OrderedDict
 
-import joblib as par
+# import joblib as par
 import numpy as np
 from rdkit.Chem import (MolFromMolBlock, GetMolFrags)
 from rdkit.Chem.AllChem import Compute2DCoords
@@ -649,7 +649,6 @@ class TestVisualization(unittest.TestCase):
         # as we get from just separating the alternate B1
         self.assertEqual(np.sum(list(frag_sizes.values())), len(mols))
 
-
     def testDynamics(self):
         # Tests procedures in the Dynamics.ipynb
         # minimize number of random calls during testing (here, set monomer type distribution)
@@ -690,14 +689,15 @@ class TestVisualization(unittest.TestCase):
 
     def testIniRates(self):
         # Note: this test did not increase coverage. Added to help debug notebook.
-        run_multi = False
+        # run_multi = False
+        # if run_multi:
+        #     fun = par.delayed(run_kmc)
+        #     num_jobs = num_repeats
+        # else:
         num_repeats = 4
-        if run_multi:
-            fun = par.delayed(run_kmc)
-            num_jobs = num_repeats
-        else:
-            fun = None
-            num_jobs = None
+
+        # fun = None
+        # num_jobs = None
 
         sg_ratio = 1.1
 
@@ -717,14 +717,14 @@ class TestVisualization(unittest.TestCase):
         for add_rate in add_rates:
             initial_state = create_initial_state(initial_events, initial_monomers)
             initial_events.append(Event(GROW, [], rate=add_rate))
-            if run_multi:
-                results = par.Parallel(n_jobs=num_jobs)([fun(DEF_RXN_RATES, initial_state, initial_events,
-                                                             n_max=max_monos, t_max=1, sg_ratio=sg_ratio,
-                                                             random_seed=(random_seed + i))
-                                                         for i in range(num_repeats)])
-            else:
-                results = [run_kmc(DEF_RXN_RATES, initial_state, initial_events, n_max=max_monos, t_max=1,
-                                   sg_ratio=sg_ratio, random_seed=(random_seed + i)) for i in range(num_repeats)]
+            # if run_multi:
+            #     results = par.Parallel(n_jobs=num_jobs)([fun(DEF_RXN_RATES, initial_state, initial_events,
+            #                                                  n_max=max_monos, t_max=1, sg_ratio=sg_ratio,
+            #                                                  random_seed=(random_seed + i))
+            #                                              for i in range(num_repeats)])
+            # else:
+            results = [run_kmc(DEF_RXN_RATES, initial_state, initial_events, n_max=max_monos, t_max=1,
+                               sg_ratio=sg_ratio, random_seed=(random_seed + i)) for i in range(num_repeats)]
             add_rates_result_list.append(results)
 
         av_bo4_bonds, std_bo4_bonds = get_avg_num_bonds(BO4, num_rates, add_rates_result_list, num_repeats)

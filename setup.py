@@ -28,6 +28,6 @@ setup(name='ligninkmc',
       python_requires=">3.6",  # Required for f-strings support
       test_suite='tests',
       # rdkit isn't installable via pip, so not included on list below
-      install_requires=['scipy', 'numpy', 'matplotlib', 'common_wrangler>=0.2.3'],
+      install_requires=['scipy', 'numpy', 'matplotlib', 'common_wrangler>=0.3.7.5'],
       # zip_safe=False,
       )

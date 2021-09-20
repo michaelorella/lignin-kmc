@@ -426,25 +426,25 @@ class TestCreateLigninNormalUse(unittest.TestCase):
 
 
 class TestDynamics(unittest.TestCase):
-    def testDyn1(self):
-        expected_files = [BOND_V_STEP_PNG, MONO_V_STEP_PNG]
-        try:
-            for fname in expected_files:
-                silent_remove(fname)
-            test_input = ["-r", "10", "-i", "3", "-m", "15", "-dy", "-a", "1e6", "-x"]
-            # main(test_input)
-            with capture_stdout(main, test_input) as output:
-                self.assertTrue("Lignin KMC created 15 monomers, which formed:\n       "
-                                "5 dimer(s) (chain length 2)\n       "
-                                "1 oligomer(s) of chain length 5, with branching coefficient 0.0" in output)
-                self.assertTrue("BO4:    1     BB:    5     B5:    2     B1:    0    5O4:    1    AO4:    0     "
-                                "55:    0" in output)
-            for fname in expected_files:
-                self.assertTrue(os.path.isfile(fname))
-        finally:
-            for fname in expected_files:
-                silent_remove(fname, disable=DISABLE_REMOVE)
-            pass
+    # def testDyn1(self):
+    #     expected_files = [BOND_V_STEP_PNG, MONO_V_STEP_PNG]
+    #     try:
+    #         for fname in expected_files:
+    #             silent_remove(fname)
+    #         test_input = ["-r", "10", "-i", "3", "-m", "15", "-dy", "-a", "1e6", "-x"]
+    #         # main(test_input)
+    #         with capture_stdout(main, test_input) as output:
+    #             self.assertTrue("Lignin KMC created 15 monomers, which formed:\n       "
+    #                             "5 dimer(s) (chain length 2)\n       "
+    #                             "1 oligomer(s) of chain length 5, with branching coefficient 0.0" in output)
+    #             self.assertTrue("BO4:    1     BB:    5     B5:    2     B1:    0    5O4:    1    AO4:    0     "
+    #                             "55:    0" in output)
+    #         for fname in expected_files:
+    #             self.assertTrue(os.path.isfile(fname))
+    #     finally:
+    #         for fname in expected_files:
+    #             silent_remove(fname, disable=DISABLE_REMOVE)
+    #         pass
 
     def testDyn2(self):
         expected_files = [BOND_V_STEP_PNG, MONO_V_STEP_PNG]
@@ -490,21 +490,21 @@ class TestDynamics(unittest.TestCase):
                 silent_remove(fname, disable=DISABLE_REMOVE)
             pass
 
-    def testDynPlot1(self):
-        expected_files = [PLOT_BOND_V_SG6_PNG, PLOT_BOND_V_STEP_PNG, PLOT_MONO_V_STEP_PNG]
-        try:
-            for fname in expected_files:
-                silent_remove(fname)
-            test_input = ["-r", "10", "-i", "6", "-m", "18", "-a", "1e6", "-dy", "-p", "-d", PLOT_DIR, "-x"]
-            # main(test_input)
-            with capture_stdout(main, test_input) as output:
-                self.assertTrue("1 trimer(s) (chain length 3)\n       "
-                                "3 oligomer(s) of chain length 5, with branching coefficient 0.0" in output)
-            for fname in expected_files:
-                self.assertTrue(os.path.isfile(fname))
-        finally:
-            silent_remove(PLOT_DIR, dir_with_files=True, disable=DISABLE_REMOVE)
-            pass
+    # def testDynPlot1(self):
+    #     expected_files = [PLOT_BOND_V_SG6_PNG, PLOT_BOND_V_STEP_PNG, PLOT_MONO_V_STEP_PNG]
+    #     try:
+    #         for fname in expected_files:
+    #             silent_remove(fname)
+    #         test_input = ["-r", "10", "-i", "6", "-m", "18", "-a", "1e6", "-dy", "-p", "-d", PLOT_DIR, "-x"]
+    #         # main(test_input)
+    #         with capture_stdout(main, test_input) as output:
+    #             self.assertTrue("1 trimer(s) (chain length 3)\n       "
+    #                             "3 oligomer(s) of chain length 5, with branching coefficient 0.0" in output)
+    #         for fname in expected_files:
+    #             self.assertTrue(os.path.isfile(fname))
+    #     finally:
+    #         silent_remove(PLOT_DIR, dir_with_files=True, disable=DISABLE_REMOVE)
+    #         pass
 
     def testSGPlot3(self):
         # also has multiple sg_ratio; smoke test only (that files are created, but not testing content

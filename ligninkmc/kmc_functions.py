@@ -10,8 +10,7 @@ import re
 import copy
 import numpy as np
 from collections import (defaultdict, OrderedDict)
-from scipy import triu
-from scipy.sparse import dok_matrix
+from scipy.sparse import (dok_matrix, triu)
 from rdkit.Chem.Draw.MolDrawing import DrawingOptions
 from common_wrangler.common import (InvalidDataError, create_out_fname, warning, round_sig_figs)
 from ligninkmc.kmc_common import (Event, Monomer, AO4, B1, B5, BB, BO4, C5C5, C5O4, OX, Q, GROW, TIME, OLIGOMER,
@@ -690,7 +689,7 @@ def run_kmc(rate_dict, initial_state, initial_events, n_max=10, t_max=10, dynami
     # Run the Gillespie algorithm
     while t[-1] < t_max and len(event_list) > 0:
         r_tot = np.sum(rate_list)
-        event_probabilities = rate_list / r_tot
+        event_probabilities = np.divide(rate_list, r_tot)
 
         # don't want same dt for every iteration, yet want it repeatable, so add to seed with each iteration and then
         #     call the np.random, and round if looking for repeatability to the result does not depend on the platform
@@ -924,12 +923,9 @@ def generate_mol(adj, node_list):
                                f'2 {alpha_idx} {oxygen_atom_index}', temp).splitlines(keepends=True)
 
                 # Find where the index for the bond is and remove it from the array
-                alpha_ring_bond_index = (mono_start_idx_bond[mono_indices[
-                                                            index_for_one]]
-                                                        + alpha_ring_location)
+                alpha_ring_bond_index = (mono_start_idx_bond[mono_indices[index_for_one]] + alpha_ring_location)
 
-                bonds_removed_before = len([x for x in removed[BONDS]
-                                                if x < alpha_ring_bond_index])
+                bonds_removed_before = len([x for x in removed[BONDS] if x < alpha_ring_bond_index])
                 alpha_ring_bond_index -= bonds_removed_before
 
                 # Only should be subtracting number of removed bonds that came BEFORE this location!
